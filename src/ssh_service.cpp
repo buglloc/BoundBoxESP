@@ -188,6 +188,7 @@ cpp::result<TSshAuthInfo&, int> TSshService::authenticate(ssh_session session)
 
   ssh_set_auth_methods(session, SSH_AUTH_METHOD_PUBLICKEY);
 
+  bool isSysop = false;
   ssh_key auth_key = nullptr;
   ssh_message message = nullptr;
   for (int patience = 0; patience < IMPATIENCE; ++patience) {
@@ -217,15 +218,20 @@ cpp::result<TSshAuthInfo&, int> TSshService::authenticate(ssh_session session)
       continue;
     }
 
-    if (rootLogin.equals(ssh_message_auth_user(message)) && !rootKeys.Contains(auth_key)) {
-      REPLY_AGAIN(message);
-      continue;
+    if (rootLogin.equals(ssh_message_auth_user(message))) {
+      if (!rootKeys.Contains(auth_key)) {
+        REPLY_AGAIN(message);
+        continue;
+      }
+
+      isSysop = true;
     }
 
     switch (acceptUserKey(message)) {
       case 0: {
         TSshAuthInfo out = {
-          .User = ssh_message_auth_user(message)
+          .User = ssh_message_auth_user(message),
+          .IsSysop = isSysop
         };
 
         auto keyFp = XSsh::KeyFingerprint(auth_key);

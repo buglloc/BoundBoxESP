@@ -26,6 +26,7 @@ struct TSshAuthInfo
 {
   String User;
   String Key;
+  bool IsSysop;
 };
 
 using TSshActionCallback = std::function<bool(const TSshAuthInfo& sess, const String& cmd, const Stream& r, Print& w)>;
