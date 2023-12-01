@@ -29,7 +29,9 @@ struct TSshAuthInfo
   bool IsSysop;
 };
 
-using TSshActionCallback = std::function<bool(const TSshAuthInfo& sess, const String& cmd, const Stream& r, Print& w)>;
+using TSshReader = XSsh::ChanStream;
+using TSshWriter = XSsh::ChanPrinter;
+using TSshActionCallback = std::function<bool(const TSshAuthInfo& sess, const String& cmd, TSshReader& r, TSshWriter& w)>;
 
 class TSshService
 {
