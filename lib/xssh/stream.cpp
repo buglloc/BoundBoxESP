@@ -43,7 +43,7 @@ namespace XSsh
 
     do {
       rc = ssh_channel_read_timeout(chan, buffer, length, 0, readTimeout);
-    } while (rc != SSH_AGAIN);
+    } while (rc == SSH_AGAIN);
     return rc < 0 ? 0 : rc;
   }
 
@@ -61,7 +61,7 @@ namespace XSsh
     int rc = 0;
     do {
       rc = ssh_channel_write(chan, buffer, length);
-    } while (rc != SSH_AGAIN);
+    } while (rc == SSH_AGAIN);
     return rc < 0 ? 0 : rc;
   }
 }

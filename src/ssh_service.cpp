@@ -165,8 +165,8 @@ void TSshService::Tick(TSshActionCallback actionCallback)
     ssh_message_channel_request_reply_success(message);
     ssh_set_blocking(sshSession, 0);
 
-    XSsh::ChanStream readStream(chan);
-    XSsh::ChanPrinter writeStream(chan);
+    TSshReader readStream(chan);
+    TSshWriter writeStream(chan);
     String cmd = ssh_message_channel_request_command(message);
     bool ok = actionCallback(authInfo.value(), cmd, readStream, writeStream);
     if (!ok) {
