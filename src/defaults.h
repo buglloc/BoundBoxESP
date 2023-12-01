@@ -1,0 +1,16 @@
+#ifndef BB_DEFAULTS_H
+#define BB_DEFAULTS_H
+
+// #define USE_PERSISTENT_CONFIG 1
+#define PREFERENCES_NAMESPACE "bb_preferences"
+#define CONFIG_KEY "config.json"
+#define SECRET_KEY_PREFIX "scrt_"
+
+#define DEFAULT_HOSTNAME "BoundBoxESP"
+
+#define DEFAULT_SSH_ROOT_USER "buglloc"
+#define DEFAULT_SSH_ROOT_KEY "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMoBFbg9zagjN1z2vBi5eE62qG/9vCxsZXlAiNcmTFak"
+#define DEFAULT_SSH_HOST_KEY_TYPE XSsh::KeyType::Ed25519
+#define DEFAULT_SSH_HOST_KEY_BITS 256
+
+#endif
