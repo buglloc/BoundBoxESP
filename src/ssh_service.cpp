@@ -168,6 +168,8 @@ void TSshService::Tick(TSshActionCallback actionCallback)
     TSshReader readStream(chan);
     TSshWriter writeStream(chan);
     String cmd = ssh_message_channel_request_command(message);
+    cmd.trim();
+
     bool ok = actionCallback(authInfo, cmd, readStream, writeStream);
     if (!ok) {
       Log.warningln("failed to execute action: %s", cmd.c_str());
@@ -260,18 +262,17 @@ TSshAuthInfoHolder TSshService::authenticate(ssh_session session)
 
 size_t TSshAuthInfo::printTo(Print& p) const
 {
-  // return p.printf("%s", (IsSysop ? "admin" : "user"));
   return p.printf("%s[%s]", (IsSysop ? "admin" : "user"), KeyFingerprint.c_str());
 }
 
-cpp::result<TSshConfig&, TSshConfig::MarshalErr> TSshConfig::FromJson(const JsonObjectConst& obj) noexcept
+cpp::result<std::unique_ptr<TSshConfig>, TSshConfig::MarshalErr> TSshConfig::FromJson(const JsonObjectConst& obj) noexcept
 {
-  TSshConfig cfg;
-  cfg.RootUser = obj["root_user"] || DEFAULT_SSH_ROOT_USER;
+  std::unique_ptr<TSshConfig> cfg(new TSshConfig());
+  cfg->RootUser = obj["root_user"] | DEFAULT_SSH_ROOT_USER;
   if (!obj.containsKey("root_keys")) {
     auto key = XSsh::ParsePublicKey(DEFAULT_SSH_ROOT_KEY);
     if (!key.has_error()) {
-      cfg.RootKeys.Add(key.value());
+      cfg->RootKeys.Add(key.value());
     }
   } else {
     JsonArrayConst keys = obj["root_keys"].as<JsonArrayConst>();
@@ -282,19 +283,17 @@ cpp::result<TSshConfig&, TSshConfig::MarshalErr> TSshConfig::FromJson(const Json
         continue;
       }
 
-      cfg.RootKeys.Add(key.value());
+      cfg->RootKeys.Add(key.value());
     }
   }
 
   return cfg;
 }
 
-cpp::result<JsonObject, TSshConfig::MarshalErr> TSshConfig::ToJson() noexcept
+cpp::result<void, TSshConfig::MarshalErr> TSshConfig::ToJson(JsonObject& out) const noexcept
 {
-  StaticJsonDocument<1024> obj;
-  obj["root_user"] = RootUser;
-  DynamicJsonDocument jsonRootKeysObj(RootKeys.Size());
-  JsonArray jsonRootKeys = jsonRootKeysObj.to<JsonArray>();
+  out["root_user"] = RootUser;
+  JsonArray jsonRootKeys = out.createNestedArray("root_keys");
   RootKeys.Visit([&jsonRootKeys](ssh_key key) -> bool {
     auto authorizedKey = XSsh::MarshalAuthorizedKey(key);
     if (authorizedKey.has_error()) {
@@ -306,5 +305,5 @@ cpp::result<JsonObject, TSshConfig::MarshalErr> TSshConfig::ToJson() noexcept
     return true;
   });
 
-  return obj.as<JsonObject>();
+  return {};
 }

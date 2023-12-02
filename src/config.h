@@ -10,11 +10,12 @@
 class TConfig
 {
 public:
-  enum Err
+  enum Error
   {
     None,
     InvalidJson,
-    InvalidTNetConfig,
+    InvalidNetConfig,
+    InvalidSshConfig,
     InvalidConfig,
     PrefError,
     Unsupported,
@@ -23,20 +24,24 @@ public:
 
 public:
   String Hostname;
-  TNetConfig Net;
-  TSshConfig Ssh;
+  std::unique_ptr<TNetConfig> Net;
+  std::unique_ptr<TSshConfig> Ssh;
 
 public:
   TConfig() = default;
 
   static bool Begin();
-  static cpp::result<TConfig, Err> Load(const String& key) noexcept;
-  static cpp::result<TConfig, Err> LoadOrStore(const String& key) noexcept;
-  cpp::result<void, Err> Store(const String& key) noexcept;
+  static cpp::result<std::unique_ptr<TConfig>, Error> Load(const String& key) noexcept;
+  static cpp::result<std::unique_ptr<TConfig>, Error> LoadOrStore(const String& key) noexcept;
+  cpp::result<void, Error> Store(const String& key) noexcept;
+
+  static cpp::result<std::unique_ptr<TConfig>, Error> FromJson(const JsonObjectConst& obj) noexcept;
+  cpp::result<void, Error> ToJson(JsonObject& out) const noexcept;
 
 private:
-  static cpp::result<TConfig, Err> Unmarshal(char* buf) noexcept;
-  cpp::result<String, Err> Marshal() noexcept;
+  static cpp::result<std::unique_ptr<TConfig>, Error> Default() noexcept;
+  static cpp::result<std::unique_ptr<TConfig>, Error> Unmarshal(char* buf) noexcept;
+  cpp::result<String, Error> Marshal() const noexcept;
 };
 
 #endif

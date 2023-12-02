@@ -19,8 +19,8 @@ struct TSshConfig
     ShitHappens
   };
 
-  static cpp::result<TSshConfig&, MarshalErr> FromJson(const JsonObjectConst& obj) noexcept;
-  cpp::result<JsonObject, MarshalErr> ToJson() noexcept;
+  static cpp::result<std::unique_ptr<TSshConfig>, MarshalErr> FromJson(const JsonObjectConst& obj) noexcept;
+  cpp::result<void, MarshalErr> ToJson(JsonObject& out) const noexcept;
 };
 
 struct TSshAuthInfo: public Printable

@@ -10,9 +10,9 @@ public:
   static TBoardManager &Instance();
   bool Begin();
   void Tick();
-  long Uptime();
-  TNetManager& Net();
-  TConfig& RuntimeConfig();
+  long Uptime() const;
+  const TNetManager& Net() const;
+  const TConfig& RuntimeConfig() const;
 
 private:
   TBoardManager() = default;
@@ -20,7 +20,7 @@ private:
 
 private:
   unsigned long startTime;
-  TConfig runtimeConfig;
+  std::unique_ptr<TConfig> runtimeConfig;
 };
 
 #endif

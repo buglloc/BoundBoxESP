@@ -61,44 +61,43 @@ bool TNetManager::Begin(const String& hostname, const TNetConfig& cfg)
   return ok;
 }
 
-cpp::result<TNetConfig&, TNetConfig::MarshalErr> TNetConfig::FromJson(const JsonObjectConst& obj) noexcept
+cpp::result<std::unique_ptr<TNetConfig>, TNetConfig::MarshalErr> TNetConfig::FromJson(const JsonObjectConst& obj) noexcept
 {
-  TNetConfig cfg;
-  // some defaults
-  cfg.Kind = NetKind::WiFi;
-  fillMac(cfg.Mac);
+  std::unique_ptr<TNetConfig> cfg(new TNetConfig());
 
-  if (obj.isNull() || !obj.containsKey("kind")) {
-    // that's fine
-    return cfg;
-  }
-
-  String kind = obj["kind"];
+  String kind = obj["kind"] | "default";
   if (kind == "wifi") {
-    cfg.Kind = NetKind::WiFi;
+    cfg->Kind = NetKind::WiFi;
+
   } else if (kind == "ethernet") {
-    cfg.Kind = NetKind::Ethernet;
+    cfg->Kind = NetKind::Ethernet;
+
+  } else if (kind == "default") {
+    cfg->Kind = NetKind::WiFi;
+    fillMac(cfg->Mac);
+    return cfg;
+
   } else {
     Log.errorln("net config: unexpected net kind: %s", kind);
     return cpp::fail(TNetConfig::MarshalErr::ShitHappens);
   }
 
-  if (fillAddress(obj["ip"].as<String>(), &cfg.IP)) {
+  if (fillAddress(obj["ip"].as<String>(), &cfg->IP)) {
     Log.errorln("net config: invalid ip: %s", obj["ip"]);
     return cpp::fail(TNetConfig::MarshalErr::ShitHappens);
   }
 
-  if (fillAddress(obj["subnet"].as<String>(), &cfg.Subnet)) {
+  if (fillAddress(obj["subnet"].as<String>(), &cfg->Subnet)) {
     Log.errorln("net config: invalid subnet: %s", obj["subnet"]);
     return cpp::fail(TNetConfig::MarshalErr::ShitHappens);
   }
 
-  if (fillAddress(obj["dns"].as<String>(), &cfg.DNS)) {
+  if (fillAddress(obj["dns"].as<String>(), &cfg->DNS)) {
     Log.errorln("net config: invalid dns: %s", obj["dns"]);
     return cpp::fail(TNetConfig::MarshalErr::ShitHappens);
   }
 
-  if (fillAddress(obj["gateway"].as<String>(), &cfg.Gateway)) {
+  if (fillAddress(obj["gateway"].as<String>(), &cfg->Gateway)) {
     Log.errorln("net config: invalid gateway: %s", obj["gateway"]);
     return cpp::fail(TNetConfig::MarshalErr::ShitHappens);
   }
@@ -106,7 +105,7 @@ cpp::result<TNetConfig&, TNetConfig::MarshalErr> TNetConfig::FromJson(const Json
   int macFields = sscanf(
     obj["mac"].as<String>().c_str(),
     "%2hhx:%2hhx:%2hhx:%2hhx:%2hhx:%2hhx",
-    &cfg.Mac[0], &cfg.Mac[1], &cfg.Mac[2], &cfg.Mac[3], &cfg.Mac[4], &cfg.Mac[5]
+    &cfg->Mac[0], &cfg->Mac[1], &cfg->Mac[2], &cfg->Mac[3], &cfg->Mac[4], &cfg->Mac[5]
   );
   if (macFields != 6) {
     Log.errorln("net config: invalid mac: %s", obj["mac"]);
@@ -116,35 +115,35 @@ cpp::result<TNetConfig&, TNetConfig::MarshalErr> TNetConfig::FromJson(const Json
   return cfg;
 }
 
-cpp::result<JsonObject, TNetConfig::MarshalErr> TNetConfig::ToJson() noexcept {
-  StaticJsonDocument<1024> obj;
+cpp::result<void, TNetConfig::MarshalErr> TNetConfig::ToJson(JsonObject& out) const noexcept
+{
   switch (Kind) {
   case NetKind::WiFi:
-    obj["kind"] = "wifi";
+    out["kind"] = "wifi";
     break;
 
   case NetKind::Ethernet:
-    obj["kind"] = "ethernet";
+    out["kind"] = "ethernet";
     break;
 
   default:
-    return obj.as<JsonObject>();
+    return {};
   }
 
   if (IP != IPAddressNone) {
-    obj["ip"] = IP.toString();
+    out["ip"] = IP.toString();
   }
 
   if (Subnet != IPAddressNone) {
-    obj["subnet"] = Subnet.toString();
+    out["subnet"] = Subnet.toString();
   }
 
   if (DNS != IPAddressNone) {
-    obj["dns"] = DNS.toString();
+    out["dns"] = DNS.toString();
   }
 
   if (Gateway != IPAddressNone) {
-    obj["gateway"] = Gateway.toString();
+    out["gateway"] = Gateway.toString();
   }
 
   char macBuf[17];
@@ -154,9 +153,9 @@ cpp::result<JsonObject, TNetConfig::MarshalErr> TNetConfig::ToJson() noexcept {
     Mac[0], Mac[1], Mac[2], Mac[3], Mac[4], Mac[5]
   );
   macBuf[17] = '\0';
-  obj["mac"] = String(macBuf);
+  out["mac"] = String(macBuf);
 
-  return obj.as<JsonObject>();
+  return {};
 }
 
 #ifdef NET_HAVE_ETHERNET

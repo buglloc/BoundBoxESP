@@ -31,8 +31,8 @@ struct TNetConfig
     ShitHappens
   };
 
-  static cpp::result<TNetConfig&, MarshalErr> FromJson(const JsonObjectConst& obj) noexcept;
-  cpp::result<JsonObject, MarshalErr> ToJson() noexcept;
+  static cpp::result<std::unique_ptr<TNetConfig>, MarshalErr> FromJson(const JsonObjectConst& obj) noexcept;
+  cpp::result<void, MarshalErr> ToJson(JsonObject& out) const noexcept;
 };
 
 class INetImpl

@@ -4,6 +4,7 @@
 #include "defaults.h"
 
 #define SERIAL_BAUD 115200
+#define REQ_RSP_CAPACITY 16384
 
 // SPI config
 #define SPI_MOSI_PIN 11
