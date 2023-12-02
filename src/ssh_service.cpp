@@ -102,8 +102,8 @@ void TSshService::Tick(TSshActionCallback actionCallback)
 
   Log.verboseln("sshd: auth client...");
   auto authInfo = authenticate(sshSession);
-  if (authInfo.has_error()) {
-    Log.errorln("sshd: auth failed: %d", authInfo.error());
+  if (!authInfo) {
+    Log.errorln("sshd: auth failed, abort");
     return;
   }
 
@@ -168,7 +168,7 @@ void TSshService::Tick(TSshActionCallback actionCallback)
     TSshReader readStream(chan);
     TSshWriter writeStream(chan);
     String cmd = ssh_message_channel_request_command(message);
-    bool ok = actionCallback(authInfo.value(), cmd, readStream, writeStream);
+    bool ok = actionCallback(authInfo, cmd, readStream, writeStream);
     if (!ok) {
       Log.warningln("failed to execute action: %s", cmd.c_str());
     }
@@ -178,7 +178,7 @@ void TSshService::Tick(TSshActionCallback actionCallback)
   }
 }
 
-cpp::result<TSshAuthInfo&, int> TSshService::authenticate(ssh_session session)
+TSshAuthInfoHolder TSshService::authenticate(ssh_session session)
 {
   #define REPLY_AGAIN(m) { \
     ssh_message_auth_set_methods(m, SSH_AUTH_METHOD_PUBLICKEY); \
@@ -195,7 +195,7 @@ cpp::result<TSshAuthInfo&, int> TSshService::authenticate(ssh_session session)
     message = ssh_message_get(session);
     if (!message) {
       Log.errorln("sshd: no auth message");
-      return cpp::fail(SSH_ERROR);
+      return nullptr;
     }
 
     Log.verboseln("sshd: [%d] trying %d:%d...", patience, ssh_message_type(message), ssh_message_subtype(message));
@@ -229,19 +229,18 @@ cpp::result<TSshAuthInfo&, int> TSshService::authenticate(ssh_session session)
 
     switch (acceptUserKey(message)) {
       case 0: {
-        TSshAuthInfo out = {
-          .User = ssh_message_auth_user(message),
-          .IsSysop = isSysop
-        };
+        TSshAuthInfoHolder out(new TSshAuthInfo());
+        out->User = ssh_message_auth_user(message);
+        out->IsSysop = isSysop;
 
         auto keyFp = XSsh::KeyFingerprint(auth_key);
         if (keyFp.has_error()) {
-          out.Key = "N/A";
+          out->KeyFingerprint = "N/A";
         } else {
-          out.Key = keyFp.value();
+          out->KeyFingerprint = keyFp.value();
         }
 
-        Log.infoln("user '%s' was authenticated by key '%s'", out.User.c_str(), out.Key.c_str());
+        Log.infoln("user '%s' was authenticated by key '%s'", out->User.c_str(), out->KeyFingerprint.c_str());
         ssh_message_free(message);
         return out;
       }
@@ -256,7 +255,13 @@ cpp::result<TSshAuthInfo&, int> TSshService::authenticate(ssh_session session)
   }
 
   Log.warningln("too much auth failures, aborting");
-  return cpp::fail(SSH_ERROR);
+  return nullptr;
+}
+
+size_t TSshAuthInfo::printTo(Print& p) const
+{
+  // return p.printf("%s", (IsSysop ? "admin" : "user"));
+  return p.printf("%s[%s]", (IsSysop ? "admin" : "user"), KeyFingerprint.c_str());
 }
 
 cpp::result<TSshConfig&, TSshConfig::MarshalErr> TSshConfig::FromJson(const JsonObjectConst& obj) noexcept

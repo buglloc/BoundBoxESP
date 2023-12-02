@@ -3,9 +3,10 @@
 
 #include <libssh_esp.h>
 #include <xssh.h>
+#include <Result.h>
 #include <Arduino.h>
 #include <ArduinoJson.h>
-#include <Result.h>
+#include <Printable.h>
 
 struct TSshConfig
 {
@@ -22,16 +23,19 @@ struct TSshConfig
   cpp::result<JsonObject, MarshalErr> ToJson() noexcept;
 };
 
-struct TSshAuthInfo
+struct TSshAuthInfo: public Printable
 {
   String User;
-  String Key;
+  String KeyFingerprint;
   bool IsSysop;
+
+  size_t printTo(Print& p) const override;
 };
 
 using TSshReader = XSsh::ChanStream;
 using TSshWriter = XSsh::ChanPrinter;
-using TSshActionCallback = std::function<bool(const TSshAuthInfo& sess, const String& cmd, TSshReader& r, TSshWriter& w)>;
+using TSshAuthInfoHolder = std::unique_ptr<TSshAuthInfo>;
+using TSshActionCallback = std::function<bool(const TSshAuthInfoHolder& sess, const String& cmd, TSshReader& r, TSshWriter& w)>;
 
 class TSshService
 {
@@ -42,7 +46,7 @@ public:
 
 private:
   TSshService() = default;
-  cpp::result<TSshAuthInfo&,int> authenticate(ssh_session session);
+  std::unique_ptr<TSshAuthInfo> authenticate(ssh_session session);
 
 private:
   XSsh::Key hostKey;

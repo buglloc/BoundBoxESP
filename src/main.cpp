@@ -39,7 +39,7 @@ void setup()
     nullptr,    /* parameter of the task */
     1,          /* priority of the task */
     &gBgTask,   /* Task handle to keep track of created task */
-    0           /* pin task to core 0 */        
+    0           /* pin task to core 0 */
   );
 
   xTaskCreatePinnedToCore(
@@ -49,7 +49,7 @@ void setup()
     nullptr,    /* parameter of the task */
     1,          /* priority of the task */
     &gMainTask,   /* Task handle to keep track of created task */
-    1           /* pin task to core 0 */        
+    1           /* pin task to core 0 */
   );
 
   Log.infoln("started");
@@ -66,16 +66,16 @@ void doBgTask(void* params)
 void doMainTask(void* params)
 {
   do {
-    gSshService.Tick([](const TSshAuthInfo& sess, const String& cmd, TSshReader& r, TSshWriter& w) -> bool {
+    gSshService.Tick([](const TSshAuthInfoHolder& sess, const String& cmd, TSshReader& r, TSshWriter& w) -> bool {
       StaticJsonDocument<1024> doc;
       DeserializationError jsonErr = deserializeJson(doc, r);
-      if (jsonErr) {
+      if (jsonErr && jsonErr != DeserializationError::Code::EmptyInput) {
         Log.errorln("unable to read request: %s", jsonErr.c_str());
         return false;
       }
 
-      const char* data = doc["in"] | "N/A"; 
-      Log.infoln("data for command '%s': %s", cmd.c_str(), data);
+      const char* data = doc["in"] | "Empty";
+      Log.infoln("data for command '%s' by %p: %s", cmd.c_str(), sess.get(), data);
       doc["uptime"] = gBoardManager.Uptime();
 
       if (serializeJson(doc, w) == 0) {

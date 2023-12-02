@@ -185,7 +185,7 @@ bool TEthernetNetManager::Begin(const String& hostname, const TNetConfig& cfg)
     delay(100); // do nothing, no point running without Ethernet hardware
   }
 
-  Log.infoln("ethernet network initialized (Local IP: %s)", Ethernet.localIP().toString());
+  Log.infoln("ethernet network initialized (Local IP: %p)", Ethernet.localIP());
   return true;
 }
 
@@ -220,7 +220,7 @@ bool TWiFiNetManager::Begin(const String& hostname, const TNetConfig& cfg)
     return false;
   }
 
-  Log.infoln("ethernet network initialized (Local IP: %s)", WiFi.localIP().toString());
+  Log.infoln("ethernet network initialized (Local IP: %p)", WiFi.localIP());
   return true;
 }
 
