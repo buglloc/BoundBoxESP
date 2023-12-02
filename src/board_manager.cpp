@@ -75,7 +75,7 @@ bool TBoardManager::Begin()
     Log.errorln("load runtime config fail: %d", cfgRes.error());
     return false;
   }
-  runtimeConfig = cfgRes.value();
+  runtimeConfig = std::move(cfgRes.value());
 
   Log.infoln("setup SPI (SCK: %d, MISO: %d, MOSI: %d)", SPI_SCK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN);
   SPI.begin(SPI_SCK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN);
@@ -89,7 +89,7 @@ bool TBoardManager::Begin()
 #endif
 
   Log.infoln("setup network");
-  if (!netManager.Begin(runtimeConfig.Hostname, runtimeConfig.Net)) {
+  if (!netManager.Begin(runtimeConfig->Hostname, *runtimeConfig->Net)) {
     Log.errorln("unable to setup network");
     return false;
   }
@@ -106,20 +106,20 @@ void TBoardManager::Tick()
 #endif
 }
 
-long TBoardManager::Uptime()
+long TBoardManager::Uptime() const
 {
   unsigned long elapsedTime = millis() - startTime;
   return elapsedTime / 1000;
 }
 
-TNetManager& TBoardManager::Net()
+const TNetManager& TBoardManager::Net() const
 {
   return netManager;
 }
 
-TConfig& TBoardManager::RuntimeConfig()
+const TConfig& TBoardManager::RuntimeConfig() const
 {
-  return runtimeConfig;
+  return *runtimeConfig;
 }
 
 void TBoardManager::tickIntruder()

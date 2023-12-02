@@ -19,18 +19,16 @@ TConfig::Begin()
   return true;
 }
 
-cpp::result<TConfig, TConfig::Err>
+cpp::result<std::unique_ptr<TConfig>, TConfig::Error>
 TConfig::LoadOrStore(const String& key) noexcept
 {
 #ifndef USE_PERSISTENT_CONFIG
   Log.infoln("config persistence disabled: use default one");
-  char empty[3] = "{}";
-  return TConfig::Unmarshal(empty);
+  return TConfig::Default();
 #else
   if (preferences.HasKey(key.c_str())) {
     Log.infoln("no stored runtime config '%s' exists: load default", key);
-    char empty[3] = "{}";
-    auto result = TConfig::Unmarshal(empty);
+    auto result = TConfig::Default();
     if (result.has_error()) {
       return cpp::fail(result.error());
     }
@@ -48,11 +46,11 @@ TConfig::LoadOrStore(const String& key) noexcept
 #endif
 }
 
-cpp::result<void, TConfig::Err>
+cpp::result<void, TConfig::Error>
 TConfig::Store(const String& key) noexcept
 {
 #ifndef USE_PERSISTENT_CONFIG
-  return cpp::fail(TConfig::Err::Unsupported);
+  return cpp::fail(TConfig::Error::Unsupported);
 #else
   auto result = Marshal();
   if (result.has_error()) {
@@ -62,19 +60,19 @@ TConfig::Store(const String& key) noexcept
   String data = std::move(result.value());
   auto res = preferences.StoreBytes(key.c_str(), data.c_str(), data.length());
   if (res.has_error()) {
-    return cpp::fail(TConfig::Err::PrefError);
+    return cpp::fail(TConfig::Error::PrefError);
   }
 
   return {};
 #endif
 }
 
-cpp::result<TConfig, TConfig::Err>
+cpp::result<std::unique_ptr<TConfig>, TConfig::Error>
 TConfig::Load(const String& key) noexcept
 {
   auto res = preferences.GetBytes(key.c_str());
   if (res.has_error()) {
-    return cpp::fail(TConfig::Err::PrefError);
+    return cpp::fail(TConfig::Error::PrefError);
   }
 
   char* blob = std::move(res.value());
@@ -83,46 +81,84 @@ TConfig::Load(const String& key) noexcept
   return out;
 }
 
-cpp::result<TConfig, TConfig::Err>
-TConfig::Unmarshal(char* buf) noexcept
+cpp::result<std::unique_ptr<TConfig>, TConfig::Error>
+TConfig::FromJson(const JsonObjectConst& obj) noexcept
 {
-  StaticJsonDocument<1024> doc;
-  DeserializationError jsonErr = deserializeJson(doc, buf);
-  if (jsonErr) {
-    Log.errorln("runtime config: trying to load invalid json: %s", jsonErr.c_str());
-    return cpp::fail(TConfig::Err::InvalidJson);
-  }
-
-  auto netCfg = TNetConfig::FromJson(doc["net"].as<JsonObject>());
+  auto netCfg = TNetConfig::FromJson(obj["net"].as<JsonObjectConst>());
   if (netCfg.has_error()) {
-    return cpp::fail(TConfig::Err::InvalidTNetConfig);
+    return cpp::fail(TConfig::Error::InvalidNetConfig);
   }
 
-  TConfig cfg;
-  cfg.Hostname = doc["hostname"] | DEFAULT_HOSTNAME,
-  cfg.Net = netCfg.value();
+  auto sshCfg = TSshConfig::FromJson(obj["ssh"].as<JsonObjectConst>());
+  if (sshCfg.has_error()) {
+    return cpp::fail(TConfig::Error::InvalidSshConfig);
+  }
+
+  std::unique_ptr<TConfig> cfg(new TConfig());
+  cfg->Hostname = obj["hostname"] | DEFAULT_HOSTNAME,
+  cfg->Net = std::move(netCfg.value());
+  cfg->Ssh = std::move(sshCfg.value());
 
   return std::move(cfg);
 }
 
-cpp::result<String, TConfig::Err>
-TConfig::Marshal() noexcept
+cpp::result<void, TConfig::Error>
+TConfig::ToJson(JsonObject& out) const noexcept
 {
-  auto netCfg = Net.ToJson();
-  if (netCfg.has_error()) {
-    Log.errorln("runtime config: unable to serialize net config: %d", netCfg.error());
-    return cpp::fail(TConfig::Err::ShitHappens);
+  out["hostname"] = Hostname;
+  JsonObject netCfg = out.createNestedObject("net");
+  auto netError = Net->ToJson(netCfg);
+  if (netError.has_error()) {
+    Log.errorln("runtime config: unable to serialize net config: %d", netError.error());
+    return cpp::fail(TConfig::Error::ShitHappens);
   }
 
-  StaticJsonDocument<512> doc;
-  doc["hostname"] = Hostname;
-  doc["net"] = netCfg.value();
+  JsonObject sshCfg = out.createNestedObject("ssh");
+  auto sshError = Ssh->ToJson(sshCfg);
+  if (sshError.has_error()) {
+    Log.errorln("runtime config: unable to serialize ssh config: %d", sshError.error());
+    return cpp::fail(TConfig::Error::ShitHappens);
+  }
+
+  return {};
+}
+
+cpp::result<String, TConfig::Error>
+TConfig::Marshal() const noexcept
+{
+  StaticJsonDocument<4096> doc;
+  JsonObject obj = doc.as<JsonObject>();
+  auto jsonErr = ToJson(obj);
+  if (jsonErr.has_error()) {
+    Log.errorln("runtime config: unable to jsonify");
+    return cpp::fail(TConfig::Error::ShitHappens);
+  }
 
   String out;
   if (serializeJson(doc, out) == 0) {
     Log.errorln("runtime config: unable to serialize json");
-    return cpp::fail(TConfig::Err::ShitHappens);
+    return cpp::fail(TConfig::Error::ShitHappens);
   }
 
   return out;
+}
+
+cpp::result<std::unique_ptr<TConfig>, TConfig::Error>
+TConfig::Unmarshal(char* buf) noexcept
+{
+  StaticJsonDocument<4096> doc;
+  DeserializationError jsonErr = deserializeJson(doc, buf);
+  if (jsonErr) {
+    Log.errorln("runtime config: trying to load invalid json: %s", jsonErr.c_str());
+    return cpp::fail(TConfig::Error::InvalidJson);
+  }
+
+  return FromJson(doc.as<JsonObjectConst>());
+}
+
+cpp::result<std::unique_ptr<TConfig>, TConfig::Error>
+TConfig::Default() noexcept
+{
+  StaticJsonDocument<0> doc;
+  return FromJson(doc.as<JsonObjectConst>());
 }

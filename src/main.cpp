@@ -1,6 +1,7 @@
 #include "board_config.h"
 #include "board_manager.h"
 #include "ssh_service.h"
+#include "ssh_handler.h"
 
 #include <Arduino.h>
 #include <ArduinoLog.h>
@@ -10,6 +11,7 @@
 
 TBoardManager& gBoardManager = TBoardManager::Instance();
 TSshService& gSshService = TSshService::Instance();
+TCommandDispatcher& gCommandDispatcher = TCommandDispatcher::Instance();
 TaskHandle_t gBgTask;
 TaskHandle_t gMainTask;
 
@@ -26,9 +28,13 @@ void setup()
     LOG_FOREVER("Unable to setup board manager, check log for details");
   }
 
-  TConfig& cfg = gBoardManager.RuntimeConfig();
-  if (!gSshService.Begin(cfg.Ssh)) {
+  const TConfig& cfg = gBoardManager.RuntimeConfig();
+  if (!gSshService.Begin(*cfg.Ssh)) {
     LOG_FOREVER("Unable to setup SSH service, check log for details");
+  }
+
+  if (!gCommandDispatcher.Begin()) {
+    LOG_FOREVER("Unable to setup command dispatcher, check log for details");
   }
 
   Log.infoln("setup tasks");
@@ -67,18 +73,20 @@ void doMainTask(void* params)
 {
   do {
     gSshService.Tick([](const TSshAuthInfoHolder& sess, const String& cmd, TSshReader& r, TSshWriter& w) -> bool {
-      StaticJsonDocument<1024> doc;
-      DeserializationError jsonErr = deserializeJson(doc, r);
+      Log.infoln("%p called: %s", sess.get(), cmd.c_str());
+
+      DynamicJsonDocument req(REQ_RSP_CAPACITY);
+      DeserializationError jsonErr = deserializeJson(req, r);
       if (jsonErr && jsonErr != DeserializationError::Code::EmptyInput) {
         Log.errorln("unable to read request: %s", jsonErr.c_str());
         return false;
       }
 
-      const char* data = doc["in"] | "Empty";
-      Log.infoln("data for command '%s' by %p: %s", cmd.c_str(), sess.get(), data);
-      doc["uptime"] = gBoardManager.Uptime();
+      DynamicJsonDocument rspDoc(REQ_RSP_CAPACITY);
+      JsonObject rsp = rspDoc.to<JsonObject>();
+      gCommandDispatcher.Handle(sess, cmd, req.as<JsonObjectConst>(), rsp);
 
-      if (serializeJson(doc, w) == 0) {
+      if (serializeJson(rspDoc, w) == 0) {
         Log.errorln("unable to write reponse");
         return false;
       }
