@@ -1,8 +1,8 @@
 #include "ssh_handler.h"
 #include "board_manager.h"
+
 #include <ArduinoLog.h>
 #include <Esp.h>
-#include <String>
 
 namespace
 {
