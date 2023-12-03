@@ -30,6 +30,19 @@ bool TPrefStore::HasKey(const char* key)
   return prefs.isKey(key);
 }
 
+cpp::result<void, TPrefStore::Error> TPrefStore::RemoveKey(const char* key)
+{
+  if (!HasKey(key)) {
+    return {};
+  }
+
+  if (!prefs.remove(key)) {
+    return cpp::fail(TPrefStore::Error::Internal);
+  }
+
+  return {};
+}
+
 cpp::result<BBU::Bytes, TPrefStore::Error> TPrefStore::GetBytes(const char* key)
 {
   if (!HasKey(key)) {

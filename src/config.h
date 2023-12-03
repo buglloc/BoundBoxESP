@@ -32,7 +32,8 @@ public:
   static bool Begin();
   static cpp::result<std::unique_ptr<TConfig>, Error> Load(const String& key) noexcept;
   static cpp::result<std::unique_ptr<TConfig>, Error> LoadOrStore(const String& key) noexcept;
-  cpp::result<void, Error> Store(const String& key) noexcept;
+  static cpp::result<std::unique_ptr<TConfig>, Error> Remove(const String& key) noexcept;
+  cpp::result<void, Error> Store(const String& key) const noexcept;
 
   static cpp::result<std::unique_ptr<TConfig>, Error> FromJson(const JsonObjectConst& obj) noexcept;
   cpp::result<void, Error> ToJson(JsonObject& out) const noexcept;

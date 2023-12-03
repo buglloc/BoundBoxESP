@@ -41,6 +41,41 @@ bool TSecrets::Begin()
   return true;
 }
 
+cpp::result<void, TSecrets::Error> TSecrets::Reset()
+{
+  bool ok = true;
+  if (preferences.HasKey(HOST_KEY_KEY)) {
+    auto err = preferences.RemoveKey(HOST_KEY_KEY);
+    if (err.has_error()) {
+      Log.errorln("unable to remove host key: %d", err.error());
+      ok = false;
+    } else {
+      hostKey.clear();
+    }
+  }
+
+  if (preferences.HasKey(SECRET_KEY_KEY)) {
+    auto err = preferences.RemoveKey(SECRET_KEY_KEY);
+    if (err.has_error()) {
+      Log.errorln("unable to remove secret key: %d", err.error());
+      ok = false;
+    } else {
+      secretKey.clear();
+    }
+  }
+
+  auto err = migrate();
+  if (err.has_error()) {
+    return err;
+  }
+
+  if (ok) {
+    return cpp::fail(TSecrets::Error::ShitHappens);
+  }
+
+  return {};
+}
+
 cpp::result<void, TSecrets::Error> TSecrets::Store()
 {
   auto keyStore = preferences.StoreString(HOST_KEY_KEY, hostKey);

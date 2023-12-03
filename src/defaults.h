@@ -3,7 +3,7 @@
 
 #define DEFAULT_HOSTNAME "BoundBoxESP"
 
-// #define USE_PERSISTENT_CONFIG 1
+#define USE_PERSISTENT_CONFIG 1
 #define PREFERENCES_NAMESPACE "bb_preferences"
 #define CONFIG_KEY "config.json"
 

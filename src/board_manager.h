@@ -11,6 +11,7 @@ public:
   bool Begin();
   void Tick();
   bool ScheduleRestart(int sec);
+  bool ResetConfig();
   bool StoreConfig(std::unique_ptr<TConfig> cfg);
   uint32_t Uptime() const;
   uint32_t FreeHeap() const;
