@@ -3,12 +3,21 @@
 #include "pref_store.h"
 
 #include <xssh.h>
+#include <bytes.h>
 #include <ArduinoLog.h>
 
 #define HOST_KEY_KEY SECRET_KEY_PREFIX "host_key"
+#define SECRET_KEY_KEY SECRET_KEY_PREFIX "secret_key"
 
 namespace {
   static TPrefStore& preferences = TPrefStore::Instance();
+
+  BBU::Bytes genSecretKey()
+  {
+    BBU::Bytes out(DEFAULT_SECRET_KEY_SIZE, '\xff');
+    esp_fill_random(&out[0], DEFAULT_SECRET_KEY_SIZE);
+    return out;
+  }
 }
 
 TSecrets& TSecrets::Instance()
@@ -32,9 +41,70 @@ bool TSecrets::Begin()
   return true;
 }
 
+cpp::result<void, TSecrets::Error> TSecrets::Store()
+{
+  auto keyStore = preferences.StoreString(HOST_KEY_KEY, hostKey);
+  if (keyStore.has_error()) {
+    Log.errorln("unable to store new host key: %d", keyStore.error());
+    return cpp::fail(TSecrets::Error::InvalidHostKey);
+  } else {
+    Log.infoln("host key stored in: " HOST_KEY_KEY);
+  }
+
+  keyStore = preferences.StoreBytes(SECRET_KEY_KEY, secretKey);
+  if (keyStore.has_error()) {
+    Log.errorln("unable to store new secret key: %d", keyStore.error());
+    return cpp::fail(TSecrets::Error::InvalidSecretKey);
+  } else {
+    Log.infoln("host key stored in: " SECRET_KEY_KEY);
+  }
+
+  return {};
+}
+
 const String TSecrets::HostKey() const
 {
   return hostKey;
+}
+
+const BBU::Bytes TSecrets::SecretKey() const
+{
+  return secretKey;
+}
+
+cpp::result<void, TSecrets::Error> TSecrets::SetFromJson(const JsonObjectConst& obj) noexcept
+{
+  if (obj.containsKey("host_key")) {
+    String newHostKey = obj["host_key"].as<String>();
+    if (newHostKey.isEmpty()) {
+      return cpp::fail(TSecrets::Error::InvalidHostKey);
+    }
+
+    hostKey = std::move(newHostKey);
+  }
+
+  if (obj.containsKey("secret_key")) {
+    String newSecretKeyHex = obj["secret_key"].as<String>();
+    if (newSecretKeyHex.isEmpty()) {
+      return cpp::fail(TSecrets::Error::InvalidSecretKey);
+    }
+
+    BBU::Bytes newSecretKey = BBU::BytesFromHex(newSecretKeyHex);
+    if (newSecretKey.empty()) {
+      return cpp::fail(TSecrets::Error::InvalidSecretKey);
+    }
+
+    secretKey = std::move(newSecretKey);
+  }
+
+  return {};
+}
+
+cpp::result<void, TSecrets::Error> TSecrets::ToJson(JsonObject& out) const noexcept
+{
+  out["host_key"] = hostKey;
+  out["secret_key"] = BBU::BytesToHex(secretKey);
+  return {};
 }
 
 cpp::result<void, TSecrets::Error> TSecrets::load()
@@ -47,6 +117,16 @@ cpp::result<void, TSecrets::Error> TSecrets::load()
     }
 
     hostKey = std::move(prefHostKey.value());
+  }
+
+  if (preferences.HasKey(SECRET_KEY_KEY)) {
+    auto prefSecretKey = preferences.GetBytes(SECRET_KEY_KEY);
+    if (prefSecretKey.has_error()) {
+      Log.errorln("unable to load secret key: %d", prefSecretKey.error());
+      return cpp::fail(TSecrets::Error::ShitHappens);
+    }
+
+    secretKey = std::move(prefSecretKey.value());
   }
 
   return migrate();
@@ -73,6 +153,18 @@ cpp::result<void, TSecrets::Error> TSecrets::migrate()
       Log.errorln("unable to store new host key: %d", keyStore.error());
     } else {
       Log.infoln("new host key stored in: " HOST_KEY_KEY);
+    }
+  }
+
+  if (secretKey.empty()) {
+    Log.warningln("no secret_key found: generate new one");
+
+    secretKey = genSecretKey();
+    auto keyStore = preferences.StoreBytes(SECRET_KEY_KEY, secretKey);
+    if (keyStore.has_error()) {
+      Log.errorln("unable to store new secret key: %d", keyStore.error());
+    } else {
+      Log.infoln("new host key stored in: " SECRET_KEY_KEY);
     }
   }
 

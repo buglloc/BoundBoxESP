@@ -3,7 +3,7 @@
 
 #include "board_config.h"
 
-#include <Result.h>
+#include <result.h>
 #include <ArduinoJson.h>
 #include <IPAddress.h>
 #ifdef NET_HAVE_WIFI

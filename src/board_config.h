@@ -11,6 +11,8 @@
 #define SPI_SCK_PIN 12
 #define SPI_MISO_PIN 13
 
+#define BOOT_DELAY 1000
+
 #ifdef LILYGO_TDISPLAY_AMOLED_SERIES
 // Network config
 // #define NET_HAVE_ETHERNET 1

@@ -4,7 +4,7 @@
 #include "types.h"
 #include "stream.h"
 #include <Arduino.h>
-#include <Result.h>
+#include <result.h>
 
 namespace XSSH
 {

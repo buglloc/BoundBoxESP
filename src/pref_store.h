@@ -2,8 +2,9 @@
 #define BB_PREF_STORE_H
 
 #include "defaults.h"
+#include <bytes.h>
 #include <Arduino.h>
-#include <Result.h>
+#include <result.h>
 #include <Preferences.h>
 
 class TPrefStore
@@ -24,8 +25,10 @@ public:
   bool Begin();
 
   bool HasKey(const char* key);
-  cpp::result<char*, Error> GetBytes(const char* key);
-  cpp::result<void, Error> StoreBytes(const char* key, const char* data, size_t size);
+  cpp::result<BBU::Bytes, Error> GetBytes(const char* key);
+  cpp::result<void, Error> StoreBytes(const char* key, const BBU::Bytes& datq);
+  cpp::result<char*, Error> GetStringBytes(const char* key);
+  cpp::result<void, Error> StoreStringBytes(const char* key, const char* data, size_t size);
 
   cpp::result<String, Error> GetString(const char* key);
   cpp::result<void, Error> StoreString(const char* key, const String& data);

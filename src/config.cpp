@@ -3,10 +3,10 @@
 #include "pref_store.h"
 
 #include <xssh.h>
+#include <defer.h>
 #include <Arduino.h>
 #include <ArduinoLog.h>
 #include <ArduinoJson.h>
-#include <Defer.h>
 
 namespace {
   static TPrefStore& preferences = TPrefStore::Instance();
@@ -58,7 +58,7 @@ TConfig::Store(const String& key) noexcept
   }
 
   String data = std::move(result.value());
-  auto res = preferences.StoreBytes(key.c_str(), data.c_str(), data.length());
+  auto res = preferences.StoreStringBytes(key.c_str(), data.c_str(), data.length());
   if (res.has_error()) {
     return cpp::fail(TConfig::Error::PrefError);
   }
@@ -70,7 +70,7 @@ TConfig::Store(const String& key) noexcept
 cpp::result<std::unique_ptr<TConfig>, TConfig::Error>
 TConfig::Load(const String& key) noexcept
 {
-  auto res = preferences.GetBytes(key.c_str());
+  auto res = preferences.GetStringBytes(key.c_str());
   if (res.has_error()) {
     return cpp::fail(TConfig::Error::PrefError);
   }

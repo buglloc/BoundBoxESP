@@ -3,7 +3,7 @@
 
 #include "libssh_esp.h"
 #include <Arduino.h>
-#include <Result.h>
+#include <result.h>
 
 // fwd
 struct ssh_list;
