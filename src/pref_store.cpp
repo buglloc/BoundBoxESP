@@ -102,7 +102,7 @@ cpp::result<char*, TPrefStore::Error> TPrefStore::GetStringBytes(const char* key
 
 cpp::result<void, TPrefStore::Error> TPrefStore::StoreStringBytes(const char* key, const char* data, size_t size)
 {
-  size_t expectedSize = sizeof(uint8_t) * size;
+  size_t expectedSize = sizeof(char) * size;
   size_t actualSize = prefs.putBytes(key, data, expectedSize);
   if (actualSize != expectedSize) {
     return cpp::fail(TPrefStore::Error::PartialWrite);
