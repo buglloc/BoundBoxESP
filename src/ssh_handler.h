@@ -9,7 +9,7 @@ class TCommandDispatcher
 public:
   static TCommandDispatcher &Instance();
   bool Begin();
-  void Handle(const TSshAuthInfoHolder& sess, const String& cmd, const JsonObjectConst& req, JsonObject& rsp);
+  bool Handle(const TSshAuthInfoHolder& sess, const String& cmd, const JsonObjectConst& req, JsonObject& rsp);
 
 private:
    TCommandDispatcher() = default;
