@@ -22,6 +22,7 @@ public:
   static TSecrets &Instance();
   bool Begin();
   cpp::result<void, Error> Store();
+  cpp::result<void, Error> Reset();
 
   cpp::result<void, Error> SetFromJson(const JsonObjectConst& obj) noexcept;
   cpp::result<void, Error> ToJson(JsonObject& out) const noexcept;

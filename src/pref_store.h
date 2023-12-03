@@ -25,8 +25,11 @@ public:
   bool Begin();
 
   bool HasKey(const char* key);
+  cpp::result<void, Error> RemoveKey(const char* key);
+
   cpp::result<BBU::Bytes, Error> GetBytes(const char* key);
   cpp::result<void, Error> StoreBytes(const char* key, const BBU::Bytes& datq);
+
   cpp::result<char*, Error> GetStringBytes(const char* key);
   cpp::result<void, Error> StoreStringBytes(const char* key, const char* data, size_t size);
 

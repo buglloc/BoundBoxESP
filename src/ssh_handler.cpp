@@ -35,6 +35,11 @@ namespace
     return boardManager.StoreConfig(std::move(cfg.value()));
   }
 
+  bool HandleResetConfig(const TSshAuthInfoHolder& sess, const JsonObjectConst& req, JsonObject& rsp)
+  {
+    return boardManager.ResetConfig();
+  }
+
   bool HandleGetSecrets(const TSshAuthInfoHolder& sess, const JsonObjectConst& req, JsonObject& rsp)
   {
     JsonObject secretsObj = rsp.createNestedObject("secrets");
@@ -55,6 +60,17 @@ namespace
     }
 
     err = secrets.Store();
+    if (err.has_error()) {
+      rsp["error_code"] = static_cast<uint8_t>(err.error());
+      return false;
+    }
+
+    return true;
+  }
+
+  bool HandleResetSecrets(const TSshAuthInfoHolder& sess, const JsonObjectConst& req, JsonObject& rsp)
+  {
+    auto err = secrets.Reset();
     if (err.has_error()) {
       rsp["error_code"] = static_cast<uint8_t>(err.error());
       return false;
@@ -100,7 +116,9 @@ bool TCommandDispatcher::Handle(const TSshAuthInfoHolder& sess, const String& cm
     {"/get/status", true, "Returns BoundBoxESP status", HandleGetStatus},
     {"/get/config", true, "Returns runtime config in rsp[\"config\"]", HandleGetConfig},
     {"/set/config", true, "Store runtime config from req[\"config\"]", HandleSetConfig},
+    {"/reset/config", true, "Reset config to default values", HandleResetConfig},
     {"/set/secrets", true, "Store runtime secrets from req[\"secrets\"]", HandleSetSecrets},
+    {"/reset/secrets", true, "Reset secrets to it's default values", HandleResetSecrets},
 #if DANGEROUS_SECRETS
     {"/get/secrets", true, "Returns runtime secrets in rsp[\"secrets\"]", HandleGetSecrets},
 #endif

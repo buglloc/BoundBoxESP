@@ -113,6 +113,18 @@ void TBoardManager::Tick()
   tickRestart();
 }
 
+bool TBoardManager::ResetConfig()
+{
+  auto defaultConfig = TConfig::Remove(CONFIG_KEY);
+  if (defaultConfig.has_error()) {
+    Log.errorln("remove runtime config fail: %d", defaultConfig.error());
+    return false;
+  }
+
+  defaultConfig = std::move(defaultConfig.value());
+  return true;
+}
+
 bool TBoardManager::StoreConfig(std::unique_ptr<TConfig> cfg)
 {
   auto cfgRes = cfg->Store(CONFIG_KEY);

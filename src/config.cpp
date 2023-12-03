@@ -33,8 +33,8 @@ TConfig::LoadOrStore(const String& key) noexcept
       return cpp::fail(result.error());
     }
 
-    TConfig cfg = result.value();
-    auto storeRes = cfg.Store(key);
+    std::unique_ptr<TConfig> cfg = std::move(result.value());
+    auto storeRes = cfg->Store(key);
     if (storeRes.has_error()) {
       return cpp::fail(storeRes.error());
     }
@@ -47,7 +47,7 @@ TConfig::LoadOrStore(const String& key) noexcept
 }
 
 cpp::result<void, TConfig::Error>
-TConfig::Store(const String& key) noexcept
+TConfig::Store(const String& key) const noexcept
 {
 #ifndef USE_PERSISTENT_CONFIG
   return cpp::fail(TConfig::Error::Unsupported);
@@ -79,6 +79,18 @@ TConfig::Load(const String& key) noexcept
   auto out = Unmarshal(blob);
   free(blob);
   return out;
+}
+
+cpp::result<std::unique_ptr<TConfig>, TConfig::Error>
+TConfig::Remove(const String& key) noexcept
+{
+#if USE_PERSISTENT_CONFIG
+  auto res = preferences.RemoveKey(key.c_str());
+  if (res.has_error()) {
+    return cpp::fail(TConfig::Error::PrefError);
+  }
+#endif
+  return TConfig::Default();
 }
 
 cpp::result<std::unique_ptr<TConfig>, TConfig::Error>
