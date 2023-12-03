@@ -30,7 +30,39 @@ bool TPrefStore::HasKey(const char* key)
   return prefs.isKey(key);
 }
 
-cpp::result<char*, TPrefStore::Error> TPrefStore::GetBytes(const char* key)
+cpp::result<BBU::Bytes, TPrefStore::Error> TPrefStore::GetBytes(const char* key)
+{
+  if (!HasKey(key)) {
+    return cpp::fail(TPrefStore::Error::NotExist);
+  }
+
+  size_t size = prefs.getBytesLength(key);
+  if (size == 0) {
+    return cpp::fail(TPrefStore::Error::NotExist);
+  }
+
+  BBU::Bytes out(size, '\xff');
+  size_t actualSize = prefs.getBytes(key, &out[0], size);
+  if (actualSize == 0) {
+    Log.errorln("read pref '%s' failed: sero size", key);
+    return cpp::fail(TPrefStore::Error::Internal);
+  }
+
+  return out;
+}
+
+cpp::result<void, TPrefStore::Error> TPrefStore::StoreBytes(const char* key, const BBU::Bytes& data)
+{
+  size_t expectedSize = sizeof(uint8_t) * data.size();
+  size_t actualSize = prefs.putBytes(key, data.data(), expectedSize);
+  if (actualSize != expectedSize) {
+    return cpp::fail(TPrefStore::Error::PartialWrite);
+  }
+
+  return {};
+}
+
+cpp::result<char*, TPrefStore::Error> TPrefStore::GetStringBytes(const char* key)
 {
   if (!HasKey(key)) {
     return cpp::fail(TPrefStore::Error::NotExist);
@@ -46,19 +78,20 @@ cpp::result<char*, TPrefStore::Error> TPrefStore::GetBytes(const char* key)
     return cpp::fail(TPrefStore::Error::NoMem);
   }
 
-  esp_err_t err = prefs.getBytes(key, blob, size);
-  if (err != ESP_OK) {
-    Log.errorln("read pref '%s' failed: %s", key, esp_err_to_name(err));
+  size_t actualSize = prefs.getBytes(key, blob, size);
+  if (actualSize == 0) {
+    Log.errorln("read pref '%s' failed: sero size", key);
     return cpp::fail(TPrefStore::Error::Internal);
   }
 
   return blob;
 }
 
-cpp::result<void, TPrefStore::Error> TPrefStore::StoreBytes(const char* key, const char* data, size_t size)
+cpp::result<void, TPrefStore::Error> TPrefStore::StoreStringBytes(const char* key, const char* data, size_t size)
 {
-  size_t actualSize = prefs.putBytes(key, data, size);
-  if (actualSize != size) {
+  size_t expectedSize = sizeof(uint8_t) * size;
+  size_t actualSize = prefs.putBytes(key, data, expectedSize);
+  if (actualSize != expectedSize) {
     return cpp::fail(TPrefStore::Error::PartialWrite);
   }
 

@@ -22,6 +22,10 @@ void setup()
 {
   Serial.begin(SERIAL_BAUD);
   Log.begin(LOG_LEVEL_VERBOSE, &Serial);
+#if BOOT_DELAY
+  Log.infoln("wait boot delay: %d");
+  delay(BOOT_DELAY);
+#endif
   Log.infoln("starting up");
 
   if (!gBoardManager.Begin()) {

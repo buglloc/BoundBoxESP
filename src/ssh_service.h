@@ -3,7 +3,7 @@
 
 #include <libssh_esp.h>
 #include <xssh.h>
-#include <Result.h>
+#include <result.h>
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <Printable.h>

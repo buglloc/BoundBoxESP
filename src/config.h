@@ -4,7 +4,7 @@
 #include "net_manager.h"
 #include "ssh_service.h"
 
-#include <Result.h>
+#include <result.h>
 
 class TConfig
 {
