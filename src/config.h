@@ -6,11 +6,10 @@
 
 #include <Result.h>
 
-
 class TConfig
 {
 public:
-  enum Error
+  enum class Error: uint8_t
   {
     None,
     InvalidJson,

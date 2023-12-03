@@ -118,16 +118,16 @@ cpp::result<std::unique_ptr<TNetConfig>, TNetConfig::MarshalErr> TNetConfig::Fro
 cpp::result<void, TNetConfig::MarshalErr> TNetConfig::ToJson(JsonObject& out) const noexcept
 {
   switch (Kind) {
-  case NetKind::WiFi:
-    out["kind"] = "wifi";
-    break;
+    case NetKind::WiFi:
+      out["kind"] = "wifi";
+      break;
 
-  case NetKind::Ethernet:
-    out["kind"] = "ethernet";
-    break;
+    case NetKind::Ethernet:
+      out["kind"] = "ethernet";
+      break;
 
-  default:
-    return {};
+    default:
+      return {};
   }
 
   if (IP != IPAddressNone) {

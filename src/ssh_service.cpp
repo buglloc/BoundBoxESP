@@ -38,7 +38,7 @@ bool TSshService::Begin(const TSshConfig& cfg)
   Log.infoln("setup SSHD service");
   libssh_begin();
 
-  auto parsedHostKey = XSsh::ParsePrivateKey(secrets.HostKey());
+  auto parsedHostKey = XSSH::ParsePrivateKey(secrets.HostKey());
   if (parsedHostKey.has_error()) {
     Log.errorln("unable to parse host key: %d", parsedHostKey.error());
     return false;
@@ -235,7 +235,7 @@ TSshAuthInfoHolder TSshService::authenticate(ssh_session session)
         out->User = ssh_message_auth_user(message);
         out->IsSysop = isSysop;
 
-        auto keyFp = XSsh::KeyFingerprint(auth_key);
+        auto keyFp = XSSH::KeyFingerprint(auth_key);
         if (keyFp.has_error()) {
           out->KeyFingerprint = "N/A";
         } else {
@@ -270,14 +270,14 @@ cpp::result<std::unique_ptr<TSshConfig>, TSshConfig::MarshalErr> TSshConfig::Fro
   std::unique_ptr<TSshConfig> cfg(new TSshConfig());
   cfg->RootUser = obj["root_user"] | DEFAULT_SSH_ROOT_USER;
   if (!obj.containsKey("root_keys")) {
-    auto key = XSsh::ParsePublicKey(DEFAULT_SSH_ROOT_KEY);
+    auto key = XSSH::ParsePublicKey(DEFAULT_SSH_ROOT_KEY);
     if (!key.has_error()) {
       cfg->RootKeys.Add(key.value());
     }
   } else {
     JsonArrayConst keys = obj["root_keys"].as<JsonArrayConst>();
     for(JsonVariantConst rawKey : keys) {
-      auto key = XSsh::ParsePublicKey(rawKey.as<String>());
+      auto key = XSSH::ParsePublicKey(rawKey.as<String>());
       if (key.has_error()) {
         Log.errorln("ignore ivalid key '%s': %d", rawKey.as<String>(), key.error());
         continue;
@@ -295,7 +295,7 @@ cpp::result<void, TSshConfig::MarshalErr> TSshConfig::ToJson(JsonObject& out) co
   out["root_user"] = RootUser;
   JsonArray jsonRootKeys = out.createNestedArray("root_keys");
   RootKeys.Visit([&jsonRootKeys](ssh_key key) -> bool {
-    auto authorizedKey = XSsh::MarshalAuthorizedKey(key);
+    auto authorizedKey = XSSH::MarshalAuthorizedKey(key);
     if (authorizedKey.has_error()) {
       Log.infoln("unable to marshal authorized key: %d", authorizedKey.error());
     } else {

@@ -11,9 +11,9 @@
 struct TSshConfig
 {
   String RootUser;
-  XSsh::Keyring RootKeys;
+  XSSH::Keyring RootKeys;
 
-  enum class MarshalErr
+  enum class MarshalErr: uint8_t
   {
     None,
     ShitHappens
@@ -32,8 +32,8 @@ struct TSshAuthInfo: public Printable
   size_t printTo(Print& p) const override;
 };
 
-using TSshReader = XSsh::ChanStream;
-using TSshWriter = XSsh::ChanPrinter;
+using TSshReader = XSSH::ChanStream;
+using TSshWriter = XSSH::ChanPrinter;
 using TSshAuthInfoHolder = std::unique_ptr<TSshAuthInfo>;
 using TSshActionCallback = std::function<bool(const TSshAuthInfoHolder& sess, const String& cmd, TSshReader& r, TSshWriter& w)>;
 
@@ -49,9 +49,9 @@ private:
   std::unique_ptr<TSshAuthInfo> authenticate(ssh_session session);
 
 private:
-  XSsh::Key hostKey;
+  XSSH::Key hostKey;
   String rootLogin;
-  XSsh::Keyring rootKeys;
+  XSSH::Keyring rootKeys;
 };
 
 #endif

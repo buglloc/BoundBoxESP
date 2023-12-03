@@ -10,7 +10,7 @@
 #include <WiFiManager.h>
 #endif
 
-enum class NetKind
+enum class NetKind: uint8_t
 {
   WiFi,
   Ethernet,
@@ -25,7 +25,7 @@ struct TNetConfig
   IPAddress Gateway;
   uint8_t Mac[6];
 
-  enum class MarshalErr
+  enum class MarshalErr: uint8_t
   {
     None,
     ShitHappens

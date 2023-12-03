@@ -2,7 +2,7 @@
 #include "libssh_esp.h"
 #include <libssh/misc.h>
 
-namespace XSsh
+namespace XSSH
 {
   void keyFree(ssh_key key)
   {

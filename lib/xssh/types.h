@@ -8,22 +8,22 @@
 // fwd
 struct ssh_list;
 
-namespace XSsh
+namespace XSSH
 {
-  enum class Error
+  enum class Error: uint8_t
   {
     None,
     ShitHappens,
   };
 
-  enum class GenError
+  enum class GenError: uint8_t
   {
     None,
     UnsupportedType,
     ShitHappens,
   };
 
-  enum class ParseError
+  enum class ParseError: uint8_t
   {
     None,
     Malformed,
@@ -31,7 +31,7 @@ namespace XSsh
     ShitHappens,
   };
 
-  enum class KeyType
+  enum class KeyType: uint8_t
   {
     None,
     Rsa,

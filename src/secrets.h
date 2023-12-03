@@ -7,7 +7,7 @@
 class TSecrets
 {
 public:
-  enum Error
+  enum class Error: uint8_t
   {
     None,
     ShitHappens
