@@ -139,7 +139,7 @@ void TSshService::Tick(TSshActionCallback actionCallback)
     Log.errorln("sshd: client did not ask for a channel session: %s", ssh_get_error(sshSession));
     return;
   }
-  REF_DEFER(ssh_channel_close(chan));
+  REF_DEFER(ssh_channel_send_eof(chan); ssh_channel_close(chan));
 
   Log.verboseln("sshd: wait for a exec request...");
   while (true) {
@@ -176,6 +176,7 @@ void TSshService::Tick(TSshActionCallback actionCallback)
     }
 
     ssh_message_free(message);
+    ssh_channel_request_send_exit_status(chan, ok ? 0 : 1);
     break;
   }
 }

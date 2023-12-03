@@ -87,7 +87,7 @@ bool TCommandDispatcher::Begin()
   return true;
 }
 
-void TCommandDispatcher::Handle(const TSshAuthInfoHolder& sess, const String& cmd, const JsonObjectConst& req, JsonObject& rsp)
+bool TCommandDispatcher::Handle(const TSshAuthInfoHolder& sess, const String& cmd, const JsonObjectConst& req, JsonObject& rsp)
 {
   // TODO(buglloc): registrator? unordered_map?!
   typedef struct {
@@ -118,7 +118,7 @@ void TCommandDispatcher::Handle(const TSshAuthInfoHolder& sess, const String& cm
     }
 
     rsp["ok"] = true;
-    return;
+    return true;
   }
 
   for (uint8_t i = 0; i < sizeof(handlers)/sizeof(THandler); ++i) {
@@ -129,13 +129,14 @@ void TCommandDispatcher::Handle(const TSshAuthInfoHolder& sess, const String& cm
     if (handlers[i].Restricted && !sess->IsSysop) {
       rsp["ok"] = false;
       rsp["error"] = "The command '" + cmd + "' can only be used by sysops, but you are just a random user";
-      return;
+      return false;
     }
 
     rsp["ok"] = handlers[i].Handler(sess, req, rsp);
-    return;
+    return true;
   }
 
   rsp["ok"] = false;
   rsp["error"] = "command not found: " + cmd;
+  return false;
 }

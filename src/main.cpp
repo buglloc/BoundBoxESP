@@ -88,7 +88,7 @@ void doMainTask(void* params)
 
       DynamicJsonDocument rspDoc(REQ_RSP_CAPACITY);
       JsonObject rsp = rspDoc.to<JsonObject>();
-      gCommandDispatcher.Handle(sess, cmd, req.as<JsonObjectConst>(), rsp);
+      bool ok = gCommandDispatcher.Handle(sess, cmd, req.as<JsonObjectConst>(), rsp);
 
       if (serializeJson(rspDoc, w) == 0) {
         Log.errorln("unable to write reponse");
@@ -96,7 +96,7 @@ void doMainTask(void* params)
       }
 
       w.write('\n');
-      return true;
+      return ok;
     });
   } while (1);
 }
