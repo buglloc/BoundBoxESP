@@ -5,7 +5,7 @@
 
 typedef struct ssh_channel_struct* ssh_channel;
 
-namespace XSsh
+namespace XSSH
 {
   class ChanStream: public Stream
   {

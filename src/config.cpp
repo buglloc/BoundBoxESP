@@ -15,7 +15,7 @@ namespace {
 bool
 TConfig::Begin()
 {
-  XSsh::Begin();
+  XSSH::Begin();
   return true;
 }
 

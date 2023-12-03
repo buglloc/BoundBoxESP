@@ -21,6 +21,11 @@ namespace
   static LilyGo_Class amoled;
 #endif
 
+  void restart()
+  {
+    esp_restart();
+  }
+
   void shutdown()
   {
     for (int d = ESP_PD_DOMAIN_RTC_PERIPH; d < ESP_PD_DOMAIN_MAX; ++d) {
@@ -100,16 +105,35 @@ bool TBoardManager::Begin()
 
 void TBoardManager::Tick()
 {
-  netManager.Tick();
 #ifdef HAVE_IDR
   tickIntruder();
 #endif
+
+  netManager.Tick();
+  tickRestart();
 }
 
-long TBoardManager::Uptime() const
+bool TBoardManager::StoreConfig(std::unique_ptr<TConfig> cfg)
 {
-  unsigned long elapsedTime = millis() - startTime;
+  auto cfgRes = cfg->Store(CONFIG_KEY);
+  if (cfgRes.has_error()) {
+    Log.errorln("store runtime config fail: %d", cfgRes.error());
+    return false;
+  }
+
+  runtimeConfig = std::move(cfg);
+  return true;
+}
+
+uint32_t TBoardManager::Uptime() const
+{
+  uint32_t elapsedTime = millis() - startTime;
   return elapsedTime / 1000;
+}
+
+uint32_t TBoardManager::FreeHeap() const
+{
+  return esp_get_free_heap_size();
 }
 
 const TNetManager& TBoardManager::Net() const
@@ -117,9 +141,29 @@ const TNetManager& TBoardManager::Net() const
   return netManager;
 }
 
+bool TBoardManager::ScheduleRestart(int sec)
+{
+  if (restartAt > 0) {
+    Log.infoln("restart already scheduled");
+    return false;
+  }
+
+  restartAt = Uptime() + sec;
+  Log.infoln("restart scheduled in %ds", sec);
+  return true;
+}
+
 const TConfig& TBoardManager::RuntimeConfig() const
 {
   return *runtimeConfig;
+}
+
+void TBoardManager::tickRestart()
+{
+  if (restartAt > 0 && Uptime() >= restartAt) {
+    Log.warningln("reboot");
+    restart();
+  }
 }
 
 void TBoardManager::tickIntruder()

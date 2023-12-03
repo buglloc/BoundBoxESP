@@ -1,20 +1,13 @@
 #include "ssh_handler.h"
+#include "config.h"
 #include "board_manager.h"
 
 #include <ArduinoLog.h>
-#include <Esp.h>
 
 namespace
 {
   using TCommandHandler = std::function<bool(const TSshAuthInfoHolder& sess, const JsonObjectConst& req, JsonObject& rsp)>;
   static TBoardManager& boardManager = TBoardManager::Instance();
-
-  bool HandleGetStatus(const TSshAuthInfoHolder& sess, const JsonObjectConst& req, JsonObject& rsp)
-  {
-    rsp["uptime"] = boardManager.Uptime();
-    rsp["free_heap"] = ESP.getFreeHeap();
-    return true;
-  }
 
   bool HandleGetConfig(const TSshAuthInfoHolder& sess, const JsonObjectConst& req, JsonObject& rsp)
   {
@@ -24,6 +17,29 @@ namespace
       return false;
     }
 
+    return true;
+  }
+
+  bool HandleSetConfig(const TSshAuthInfoHolder& sess, const JsonObjectConst& req, JsonObject& rsp)
+  {
+    auto cfg = TConfig::FromJson(req["config"].as<JsonObjectConst>());
+    if (cfg.has_error()) {
+      rsp["error_code"] = static_cast<uint8_t>(cfg.error());
+      return false;
+    }
+
+    return boardManager.StoreConfig(std::move(cfg.value()));
+  }
+
+  bool HandleRestart(const TSshAuthInfoHolder& sess, const JsonObjectConst& req, JsonObject& rsp)
+  {
+    return boardManager.ScheduleRestart(req["sec"] | 5);
+  }
+
+  bool HandleGetStatus(const TSshAuthInfoHolder& sess, const JsonObjectConst& req, JsonObject& rsp)
+  {
+    rsp["uptime"] = boardManager.Uptime();
+    rsp["free_heap"] = boardManager.FreeHeap();
     return true;
   }
 }
@@ -48,9 +64,24 @@ void TCommandDispatcher::Handle(const TSshAuthInfoHolder& sess, const String& cm
     TCommandHandler handler;
   } THandler;
   static const THandler handlers[] {
-    {"/get/status", "returns box status", HandleGetStatus},
-    {"/get/config", "returns runtime config", HandleGetConfig},
+    {"/get/status", "Returns BoundBoxESP status", HandleGetStatus},
+    {"/get/config", "Returns runtime config in rsp[\"config\"]", HandleGetConfig},
+    {"/set/config", "Store runtime config from req[\"config\"]", HandleSetConfig},
+    {"/restart", "Restart BoundBoxESP in req[\"sec\"]", HandleRestart},
+    {"/help", "Returns commands info", nullptr},
   };
+
+  if (cmd == "/help") {
+    JsonArray commands = rsp.createNestedArray("commands");
+    for (uint8_t i = 0; i < sizeof(handlers)/sizeof(THandler); ++i) {
+      JsonObject command = commands.createNestedObject();
+      command["command"] = handlers[i].cmd;
+      command["description"] = handlers[i].help;
+    }
+
+    rsp["ok"] = true;
+    return;
+  }
 
   for (uint8_t i = 0; i < sizeof(handlers)/sizeof(THandler); ++i) {
     if (handlers[i].cmd != cmd) {

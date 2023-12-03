@@ -6,7 +6,7 @@
 #include <Arduino.h>
 #include <Result.h>
 
-namespace XSsh
+namespace XSSH
 {
   void Begin();
   cpp::result<Key, GenError> GenKey(KeyType keyType, int bits);

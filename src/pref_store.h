@@ -9,7 +9,7 @@
 class TPrefStore
 {
 public:
-  enum class Error
+  enum class Error: uint8_t
   {
     None,
     NoMem,

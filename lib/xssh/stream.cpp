@@ -1,7 +1,7 @@
 #include "stream.h"
 #include "libssh_esp.h"
 
-namespace XSsh
+namespace XSSH
 {
 
   int ChanStream::available()

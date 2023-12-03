@@ -20,7 +20,7 @@ TSecrets& TSecrets::Instance()
 bool TSecrets::Begin()
 {
   Log.infoln("secrets manager starts");
-  XSsh::Begin();
+  XSSH::Begin();
 
   auto res = load();
   if (res.has_error()) {
@@ -45,7 +45,7 @@ cpp::result<void, TSecrets::Error> TSecrets::load()
       Log.errorln("unable to load host key: %d", prefHostKey.error());
       return cpp::fail(TSecrets::Error::ShitHappens);
     }
-    
+
     hostKey = std::move(prefHostKey.value());
   }
 
@@ -56,13 +56,13 @@ cpp::result<void, TSecrets::Error> TSecrets::migrate()
 {
   if (hostKey.isEmpty()) {
     Log.warningln("no host_key found: generate new one");
-    auto newKey = XSsh::GenKey(DEFAULT_SSH_HOST_KEY_TYPE, DEFAULT_SSH_HOST_KEY_BITS);
+    auto newKey = XSSH::GenKey(DEFAULT_SSH_HOST_KEY_TYPE, DEFAULT_SSH_HOST_KEY_BITS);
     if (newKey.has_error()) {
       Log.errorln("unable to generate new host key: %d", newKey.error());
       return cpp::fail(TSecrets::Error::ShitHappens);
     }
 
-    auto newKeyStr = XSsh::MarshalPrivateKey(newKey.value());
+    auto newKeyStr = XSSH::MarshalPrivateKey(newKey.value());
     if (newKeyStr.has_error()) {
       return cpp::fail(TSecrets::Error::ShitHappens);
     }

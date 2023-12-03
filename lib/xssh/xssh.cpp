@@ -1,24 +1,26 @@
 #include "xssh.h"
 #include "libssh_esp.h"
 
-namespace XSsh
+namespace XSSH
 {
   namespace
   {
     ssh_keytypes_e sshKeyType(KeyType keyType)
     {
       switch (keyType) {
-      case KeyType::Rsa:
-        return SSH_KEYTYPE_RSA;
-    #ifdef HAVE_ECC
-      case KeyType::Ecdsa:
-        return SSH_KEYTYPE_ECDSA;
-    #endif
-      case KeyType::Ed25519:
-        return SSH_KEYTYPE_ED25519;
+        case KeyType::Rsa:
+          return SSH_KEYTYPE_RSA;
 
-      default:
-        return SSH_KEYTYPE_UNKNOWN;
+    #ifdef HAVE_ECC
+        case KeyType::Ecdsa:
+          return SSH_KEYTYPE_ECDSA;
+    #endif
+
+        case KeyType::Ed25519:
+          return SSH_KEYTYPE_ED25519;
+
+        default:
+          return SSH_KEYTYPE_UNKNOWN;
       }
     }
   } // anonymous namespace
