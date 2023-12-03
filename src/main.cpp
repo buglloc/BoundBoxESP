@@ -2,16 +2,18 @@
 #include "board_manager.h"
 #include "ssh_service.h"
 #include "ssh_handler.h"
+#include "authenticator.h"
 
 #include <Arduino.h>
 #include <ArduinoLog.h>
 #include <ArduinoJson.h>
 
-#define LOG_FOREVER(msg) {while(true){Log.errorln(msg);delay(60000);}}
+#define LOG_FOREVER(msg) {while(true){Log.errorln(msg);delay(120000);}}
 
 TBoardManager& gBoardManager = TBoardManager::Instance();
 TSshService& gSshService = TSshService::Instance();
 TCommandDispatcher& gCommandDispatcher = TCommandDispatcher::Instance();
+TAuthenticator& gAuthenticator = TAuthenticator::Instance();
 TaskHandle_t gBgTask;
 TaskHandle_t gMainTask;
 
@@ -30,6 +32,10 @@ void setup()
 
   if (!gBoardManager.Begin()) {
     LOG_FOREVER("Unable to setup board manager, check log for details");
+  }
+
+  if (!gAuthenticator.Begin()) {
+    LOG_FOREVER("Unable to setup authenticator, check log for details");
   }
 
   const TConfig& cfg = gBoardManager.RuntimeConfig();
@@ -69,7 +75,7 @@ void doBgTask(void* params)
 {
   do {
     gBoardManager.Tick();
-    sleep(50);
+    delay(25);
   } while (1);
 }
 

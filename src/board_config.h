@@ -14,6 +14,8 @@
 #define BOOT_DELAY 1000
 
 #ifdef LILYGO_TDISPLAY_AMOLED_SERIES
+
+#define DISPLAY_BRIGHTNESS 100
 // Network config
 // #define NET_HAVE_ETHERNET 1
 #define NET_ETHERNET_SS_PIN 10

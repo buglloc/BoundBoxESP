@@ -3,23 +3,17 @@
 #include "pref_store.h"
 #include "secrets.h"
 #include "net_manager.h"
+#include "ui_manager.h"
 
 #include <Esp.h>
 #include <SPI.h>
 #include <SD.h>
 #include <ArduinoLog.h>
 
-#ifdef LILYGO_TDISPLAY_AMOLED_SERIES
-#include <LilyGo_AMOLED.h>
-#endif
-
 namespace
 {
   static TNetManager& netManager = TNetManager::Instance();
-
-#ifdef LILYGO_TDISPLAY_AMOLED_SERIES
-  static LilyGo_Class amoled;
-#endif
+  static TUIManager& uiManager = TUIManager::Instance();
 
   void restart()
   {
@@ -85,13 +79,11 @@ bool TBoardManager::Begin()
   Log.infoln("setup SPI (SCK: %d, MISO: %d, MOSI: %d)", SPI_SCK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN);
   SPI.begin(SPI_SCK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN);
 
-#ifdef LILYGO_TDISPLAY_AMOLED_SERIES
-  Log.infoln("setup lilygo AMOLED display");
-  if (!amoled.beginAMOLED_191(true)) {
+  Log.infoln("setup UI");
+  if (!uiManager.Begin()) {
     Log.errorln("display start failed");
     return false;
   }
-#endif
 
   Log.infoln("setup network");
   if (!netManager.Begin(runtimeConfig->Hostname, *runtimeConfig->Net)) {
@@ -109,6 +101,7 @@ void TBoardManager::Tick()
   tickIntruder();
 #endif
 
+  uiManager.Tick();
   netManager.Tick();
   tickRestart();
 }
