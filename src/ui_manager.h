@@ -1,6 +1,7 @@
 #ifndef UI_MANAGER_H
 #define UI_MANAGER_H
 
+#include "gui.h"
 #include <result.h>
 
 class TUIManager
@@ -20,6 +21,8 @@ public:
 private:
   TUIManager() = default;
 
+private:
+  TGUI gui;
 };
 
 #endif

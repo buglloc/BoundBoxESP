@@ -30,10 +30,11 @@ bool TUIManager::Begin()
 
   beginLvglHelper(amoled);
 
-  label = lv_label_create(lv_scr_act());
-  lv_label_set_text(label, "Touch test");
-  lv_obj_set_style_text_font(label, &lv_font_montserrat_20, 0);
-  lv_obj_center(label);
+  gui.Begin();
+  // label = lv_label_create(lv_scr_act());
+  // lv_label_set_text(label, "Touch test");
+  // lv_obj_set_style_text_font(label, &lv_font_montserrat_20, 0);
+  // lv_obj_center(label);
 
   amoled.setBrightness(DISPLAY_BRIGHTNESS);
   amoled.setHomeButtonCallback([](void *ptr) {
@@ -57,12 +58,12 @@ bool TUIManager::Begin()
 void TUIManager::Tick()
 {
     static int16_t x, y;
-    bool touched = amoled.getPoint(&x, &y);
-    if ( touched ) {
-        Serial.printf("X:%d Y:%d\n", x, y);
-        lv_label_set_text_fmt(label, "X:%d Y:%d", x, y);
-        lv_obj_center(label);
-    }
+    // bool touched = amoled.getPoint(&x, &y);
+    // if ( touched ) {
+    //     Serial.printf("X:%d Y:%d\n", x, y);
+    //     lv_label_set_text_fmt(label, "X:%d Y:%d", x, y);
+    //     lv_obj_center(label);
+    // }
     lv_task_handler();
 }
 
