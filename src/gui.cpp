@@ -37,15 +37,18 @@ LV_IMG_DECLARE(pad_icon_13);
 LV_IMG_DECLARE(pad_icon_14);
 LV_IMG_DECLARE(pad_icon_15);
 
+LV_IMG_DECLARE(bg_notify);
+
+
 #define TILE_STATUS_ID 0
 #define TILE_PIN_ID 1
 #define TILE_NOTIFY_ID 2
 
-#define PAD_SPACE 12
-#define PINPAD_SPACE 18
+#define PAD_PADDING 12
+#define PAGE_PADDING 18
 
 namespace {
-  static lv_color_t bgColor = lv_color_hex(0xf5f5f5);
+  static lv_color_t bgColor = lv_color_hex(0xd4d4d4);
   static lv_color_t panBgColor = lv_color_hex(0xfafafa);
   static lv_color_t textColor = lv_color_hex(0x030303);
   static lv_color_t pressedColor = lv_color_hex(0x939ea3);
@@ -73,7 +76,7 @@ namespace {
     lv_obj_set_style_text_font(cont, &font_roboto_regular_20, LV_STATE_DEFAULT);
     lv_obj_set_width(cont, 52);
     lv_obj_set_height(cont, 180);
-    lv_obj_align(cont, LV_ALIGN_TOP_RIGHT, -PINPAD_SPACE, PINPAD_SPACE+PAD_SPACE);
+    lv_obj_align(cont, LV_ALIGN_TOP_LEFT, PAGE_PADDING, PAGE_PADDING+PAD_PADDING);
 
     lv_obj_t * label = lv_label_create(cont);
     lv_label_set_text(label, "*\n*\n*\n*\n*\n*\n*");
@@ -119,23 +122,23 @@ void TGUI::initializeStatusTile(lv_obj_t* parent)
 
   // first row
   lv_obj_t *pad00 = createPadButton(cont, &pad_icon_00);
-  lv_obj_align(pad00, LV_ALIGN_TOP_LEFT, PINPAD_SPACE, PINPAD_SPACE);
+  lv_obj_align(pad00, LV_ALIGN_TOP_LEFT, PAGE_PADDING+PAD_PADDING+52, PAGE_PADDING);
   lv_obj_t *pad01 = createPadButton(cont, &pad_icon_01);
-  lv_obj_align_to(pad01, pad00, LV_ALIGN_OUT_RIGHT_MID, PAD_SPACE, 0);
+  lv_obj_align_to(pad01, pad00, LV_ALIGN_OUT_RIGHT_MID, PAD_PADDING, 0);
   lv_obj_t *pad02 = createPadButton(cont, &pad_icon_02);
-  lv_obj_align_to(pad02, pad01, LV_ALIGN_OUT_RIGHT_MID, PAD_SPACE, 0);
+  lv_obj_align_to(pad02, pad01, LV_ALIGN_OUT_RIGHT_MID, PAD_PADDING, 0);
   lv_obj_t *pad03 = createPadButton(cont, &pad_icon_03);
-  lv_obj_align_to(pad03, pad02, LV_ALIGN_OUT_RIGHT_MID, PAD_SPACE, 0);
+  lv_obj_align_to(pad03, pad02, LV_ALIGN_OUT_RIGHT_MID, PAD_PADDING, 0);
 
   // second row
   lv_obj_t *pad04 = createPadButton(cont, &pad_icon_04);
-  lv_obj_align_to(pad04, pad00, LV_ALIGN_OUT_BOTTOM_MID, 0, PAD_SPACE);
+  lv_obj_align_to(pad04, pad00, LV_ALIGN_OUT_BOTTOM_MID, 0, PAD_PADDING);
   lv_obj_t *pad05 = createPadButton(cont, &pad_icon_05);
-  lv_obj_align_to(pad05, pad04, LV_ALIGN_OUT_RIGHT_MID, PAD_SPACE, 0);
+  lv_obj_align_to(pad05, pad04, LV_ALIGN_OUT_RIGHT_MID, PAD_PADDING, 0);
   lv_obj_t *pad06 = createPadButton(cont, &pad_icon_06);
-  lv_obj_align_to(pad06, pad05, LV_ALIGN_OUT_RIGHT_MID, PAD_SPACE, 0);
+  lv_obj_align_to(pad06, pad05, LV_ALIGN_OUT_RIGHT_MID, PAD_PADDING, 0);
   lv_obj_t *pad07 = createPadButton(cont, &pad_icon_07);
-  lv_obj_align_to(pad07, pad06, LV_ALIGN_OUT_RIGHT_MID, PAD_SPACE, 0);
+  lv_obj_align_to(pad07, pad06, LV_ALIGN_OUT_RIGHT_MID, PAD_PADDING, 0);
 
   lv_obj_t* pinProgress = createPinProgress(cont);
 }
