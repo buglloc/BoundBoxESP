@@ -13,13 +13,6 @@ LV_FONT_DECLARE(font_roboto_regular_20);
 LV_FONT_DECLARE(font_roboto_regular_24);
 LV_FONT_DECLARE(font_roboto_regular_8);
 
-LV_FONT_DECLARE(font_ubuntu_regular_12);
-LV_FONT_DECLARE(font_ubuntu_regular_10);
-LV_FONT_DECLARE(font_ubuntu_regular_12);
-LV_FONT_DECLARE(font_ubuntu_regular_14);
-LV_FONT_DECLARE(font_ubuntu_regular_16);
-LV_FONT_DECLARE(font_ubuntu_regular_24);
-
 LV_IMG_DECLARE(pad_icon_00);
 LV_IMG_DECLARE(pad_icon_01);
 LV_IMG_DECLARE(pad_icon_02);

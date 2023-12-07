@@ -31,10 +31,6 @@ bool TUIManager::Begin()
   beginLvglHelper(amoled);
 
   gui.Begin();
-  // label = lv_label_create(lv_scr_act());
-  // lv_label_set_text(label, "Touch test");
-  // lv_obj_set_style_text_font(label, &lv_font_montserrat_20, 0);
-  // lv_obj_center(label);
 
   amoled.setBrightness(DISPLAY_BRIGHTNESS);
   amoled.setHomeButtonCallback([](void *ptr) {
