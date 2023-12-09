@@ -26,6 +26,8 @@ namespace HMAC
     SHA512,
   };
 
+  cpp::result<BBU::Bytes, Error> Sum(const BBU::Bytes& key, const BBU::Bytes& msg, Type type = Type::SHA256);
+
   class HMAC
   {
   public:

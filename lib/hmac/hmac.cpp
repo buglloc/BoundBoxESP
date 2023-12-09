@@ -3,6 +3,17 @@
 
 namespace HMAC
 {
+  cpp::result<BBU::Bytes, Error> Sum(const BBU::Bytes& key, const BBU::Bytes& msg, Type type)
+  {
+    HMAC hmac(key, type);
+    auto writeRes = hmac.Write(msg);
+    if (writeRes.has_error()) {
+      return cpp::fail(writeRes.error());
+    }
+
+    return hmac.Sum();
+  }
+
   HMAC::HMAC(const BBU::Bytes& key, Type type)
   {
     const mbedtls_md_info_t *md_info = nullptr;

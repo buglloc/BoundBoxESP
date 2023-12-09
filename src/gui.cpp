@@ -3,10 +3,15 @@
 #include <functional>
 #include <string>
 #include <algorithm>
+#include <ArduinoLog.h>
 
 LV_FONT_DECLARE(font_roboto_black_14);
 LV_FONT_DECLARE(font_roboto_black_20);
 LV_FONT_DECLARE(font_roboto_black_24);
+
+LV_FONT_DECLARE(font_roboto_mono_20);
+LV_FONT_DECLARE(font_roboto_mono_24);
+LV_FONT_DECLARE(font_roboto_mono_32);
 
 LV_IMG_DECLARE(pad_icon_00);
 LV_IMG_DECLARE(pad_icon_01);
@@ -103,24 +108,27 @@ namespace {
     lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, 0);
 
     static uint8_t cnt;
-    static char buf[16];
     cnt = 0;
-    buf[cnt] = '\0';
-    lv_label_set_text(label, buf);
+    lv_label_set_text(label, "");
     lv_msg_subscribe(GUI_MESSAGE_PIN_PROMPT,
       [](void* s, lv_msg_t* m) -> void {
-        if (cnt > 14) {
+        if (cnt > 8) {
           return;
         }
 
-        if (cnt > 0) {
-          buf[cnt++] = '\n';
-        }
-        buf[cnt++] = '*';
-        buf[cnt] = '\0';
+        cnt++;
+        char* signs = reinterpret_cast<char*>(malloc(sizeof(char) * cnt * 2 + 1));
+        char* p = signs;
 
+        for (uint8_t i = 0; i < cnt; ++i) {
+          *p++ = '*';
+          *p++ = i + 1 == cnt ? '\0' : '\n';
+          Log.infoln("aaaa: %d %d", i, cnt);
+        }
+Log.infoln("aaaa: %s (%d)", signs, strlen(signs));
         lv_obj_t* label = reinterpret_cast<lv_obj_t*>(lv_msg_get_user_data(m));
-        lv_label_set_text(label, buf);
+        lv_label_set_text(label, signs);
+        free(signs);
       },
       label
     );
@@ -161,7 +169,7 @@ void TGUI::Begin()
 {
   lv_style_set_border_width(&mainStyle, 0);
   lv_style_set_bg_color(&mainStyle, bgColor);
-  lv_style_set_text_font(&mainStyle, &font_roboto_black_20);
+  lv_style_set_text_font(&mainStyle, &font_roboto_mono_24);
   lv_style_set_text_color(&mainStyle, textColor);
   lv_style_set_border_width(&mainStyle, 0);
 }
@@ -200,25 +208,10 @@ void TGUI::ShowScreenPinEnter()
 
   lv_obj_t* pad07 = createPadButton(cont, true, 7);
   lv_obj_align_to(pad07, pad06, LV_ALIGN_OUT_RIGHT_MID, padPadding, 0);
-
-  // lv_msg_subscribe(GUI_MESSAGE_PIN_PROMPT,
-  //   [this](void* s, lv_msg_t* m) -> void {
-  //     const int8_t* value = reinterpret_cast<const int8_t*>(lv_msg_get_payload(m));
-  //     TPinHandler* fn = reinterpret_cast<TPinHandler*>(lv_msg_get_user_data(m));
-  //     fn(*value);
-  //   },
-  //   &fn
-  // );
 }
 
-void TGUI::ShowScreenPinCheck(/*std::vector<size_t> values*/)
+void TGUI::ShowScreenPinVerify(const String& verification)
 {
-
-  std::string password = "ASDASD32423ASD123";
-
-
-
-
   const size_t maxPassword = 10;
   const size_t maxIcon = 15;
   const size_t pagePadding = 12;
@@ -226,21 +219,24 @@ void TGUI::ShowScreenPinCheck(/*std::vector<size_t> values*/)
   const size_t iconSize = 96;
 
   lv_obj_t* cont = createPage();
-  if (password.length() % 2 != 0) {
-    password += "X";
-  }
-
   lv_obj_t* topLabel = lv_label_create(cont);
   lv_obj_align(topLabel, LV_ALIGN_TOP_MID, 0, 24);
-  lv_label_set_text(topLabel, "is OK?!");
-  lv_obj_set_style_text_font(topLabel, &font_roboto_black_24, 0);
+  lv_label_set_text_static(topLabel, "is OK?!");
+  lv_obj_set_style_text_font(topLabel, &font_roboto_mono_32, 0);
   lv_obj_set_style_text_align(topLabel, LV_TEXT_ALIGN_CENTER, 0);
+
+  String labelsText = verification;
+  labelsText.toUpperCase();
+  size_t maxPad = labelsText.length() < maxPassword ? labelsText.length() : maxPassword;
+  if (maxPad % 2 != 0) {
+    maxPad++;
+    labelsText.concat('X');
+  }
 
   lv_obj_t* prev = nullptr;
   lv_obj_t* cur = nullptr;
-  size_t maxPad = password.length() < maxPassword ? password.length() : maxPassword;
   for (uint8_t i=0; i < maxPad; i+=2) {
-    cur = createPadButton(cont, false, password[i] % maxIcon);
+    cur = createPadButton(cont, false, verification[i] % maxIcon);
     if (prev == nullptr) {
       lv_obj_align(cur, LV_ALIGN_LEFT_MID, pagePadding, 0);
     } else {
@@ -250,30 +246,34 @@ void TGUI::ShowScreenPinCheck(/*std::vector<size_t> values*/)
     lv_obj_t* padLabel = lv_label_create(cont);
     lv_obj_set_width(padLabel, iconSize);
     lv_obj_align_to(padLabel, cur, LV_ALIGN_OUT_BOTTOM_MID, 0, iconPadding);
-    lv_label_set_text(padLabel, password.substr(i, 2).c_str());
-    lv_obj_set_style_text_font(padLabel, &font_roboto_black_14, 0);
+    lv_label_set_text(padLabel, labelsText.substring(i, i+2).c_str());
+    lv_obj_set_style_text_font(padLabel, &font_roboto_mono_24, 0);
     lv_obj_set_style_text_align(padLabel, LV_TEXT_ALIGN_CENTER, 0);
 
     prev = cur;
   }
 }
 
-void TGUI::ShowScreenNotification()
+void TGUI::ShowScreenNotification(const String& title, const String& msg)
 {
-  std::string text = "ASSERT\n10.0.0.12";
-
-
   lv_obj_t* cont = createPage();
   lv_obj_t* img = lv_img_create(cont);
   lv_img_set_src(img, &bg_notify);
   lv_obj_set_pos(img, 0, 0);
 
-  lv_obj_t* textLabel = lv_label_create(cont);
-  lv_obj_set_width(textLabel, 300);
-  lv_obj_align(textLabel, LV_ALIGN_RIGHT_MID, -24, 0);
-  lv_obj_set_style_text_font(textLabel, &font_roboto_black_24, 0);
-  lv_obj_set_style_text_align(textLabel, LV_TEXT_ALIGN_RIGHT, 0);
-  lv_label_set_text(textLabel, text.c_str());
+  lv_obj_t* titleLabel = lv_label_create(cont);
+  lv_obj_set_width(titleLabel, 300);
+  lv_obj_set_style_text_font(titleLabel, &font_roboto_mono_32, 0);
+  lv_obj_set_style_text_align(titleLabel, LV_TEXT_ALIGN_RIGHT, 0);
+  lv_label_set_text(titleLabel, title.c_str());
+  lv_obj_align(titleLabel, LV_ALIGN_RIGHT_MID, -48, -24);
+
+  lv_obj_t* msgLabel = lv_label_create(cont);
+  lv_obj_set_width(msgLabel, 300);
+  lv_obj_set_style_text_font(msgLabel, &font_roboto_mono_32, 0);
+  lv_obj_set_style_text_align(msgLabel, LV_TEXT_ALIGN_RIGHT, 0);
+  lv_label_set_text(msgLabel, msg.c_str());
+  lv_obj_align_to(msgLabel, titleLabel, LV_ALIGN_OUT_BOTTOM_MID, 0, 8);
 }
 
 lv_obj_t* TGUI::createPage()
@@ -292,15 +292,30 @@ lv_obj_t* TGUI::createPage()
   return cont;
 }
 
+void TGUI::ShowScreenIdle()
+{
+  lv_obj_t* cont = createPage();
+  lv_obj_t* label = lv_label_create(cont);
+  lv_obj_center(label);
+  lv_obj_set_style_text_font(label, &font_roboto_mono_32, 0);
+  lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, 0);
+  lv_label_set_text_static(label, "Wait for connection...");
+}
+
 void TGUI::clearScreen()
 {
-  if (screen) {
-    lv_obj_clean(screen);
-    screen = nullptr;
-  }
+  lv_obj_t * old_scr = lv_scr_act();
+  // if (screen != nullptr) {
+  //   lv_obj_del(screen);
+  //   screen = nullptr;
+  // }
 
   screen = lv_obj_create(nullptr);
   lv_scr_load(screen);
+  if (old_scr != nullptr) {
+      lv_obj_del(old_scr);
+  }
+
 }
 
 TGUI::~TGUI()

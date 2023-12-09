@@ -58,15 +58,15 @@ void setup()
     0           /* pin task to core 0 */
   );
 
-  xTaskCreatePinnedToCore(
-    doMainTask,
-    "MainTask", /* name of task. */
-    50000,      /* Stack size of task */
-    nullptr,    /* parameter of the task */
-    1,          /* priority of the task */
-    &gMainTask,   /* Task handle to keep track of created task */
-    1           /* pin task to core 0 */
-  );
+  // xTaskCreatePinnedToCore(
+  //   doMainTask,
+  //   "MainTask", /* name of task. */
+  //   50000,      /* Stack size of task */
+  //   nullptr,    /* parameter of the task */
+  //   1,          /* priority of the task */
+  //   &gMainTask,   /* Task handle to keep track of created task */
+  //   1           /* pin task to core 0 */
+  // );
 
   Log.infoln("started");
 }

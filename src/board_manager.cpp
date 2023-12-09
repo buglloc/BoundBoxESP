@@ -4,6 +4,7 @@
 #include "secrets.h"
 #include "net_manager.h"
 #include "ui_manager.h"
+#include "authenticator.h"
 
 #include <Esp.h>
 #include <SPI.h>
@@ -14,6 +15,7 @@ namespace
 {
   static TNetManager& netManager = TNetManager::Instance();
   static TUIManager& uiManager = TUIManager::Instance();
+  static TAuthenticator& authenticator = TAuthenticator::Instance();
 
   void restart()
   {
@@ -79,17 +81,28 @@ bool TBoardManager::Begin()
   Log.infoln("setup SPI (SCK: %d, MISO: %d, MOSI: %d)", SPI_SCK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN);
   SPI.begin(SPI_SCK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN);
 
+  Log.infoln("setup authenticator");
+  if (!authenticator.Begin()) {
+    Log.errorln("authenticator start failed");
+    return false;
+  }
+
   Log.infoln("setup UI");
-  if (!uiManager.Begin()) {
+  TUIManager::EventHandlers uiHandlers{
+    .OnPinEnter = std::bind(&TAuthenticator::OnPinChar, authenticator, std::placeholders::_1),
+    .onPinEntered = std::bind(&TAuthenticator::OnPinEntered, authenticator, std::placeholders::_1),
+    .onPinVerified = std::bind(&TAuthenticator::OnPinVerified, authenticator, std::placeholders::_1),
+  };
+  if (!uiManager.Begin(std::move(uiHandlers))) {
     Log.errorln("display start failed");
     return false;
   }
 
-  Log.infoln("setup network");
-  if (!netManager.Begin(runtimeConfig->Hostname, *runtimeConfig->Net)) {
-    Log.errorln("unable to setup network");
-    return false;
-  }
+  // Log.infoln("setup network");
+  // if (!netManager.Begin(runtimeConfig->Hostname, *runtimeConfig->Net)) {
+  //   Log.errorln("unable to setup network");
+  //   return false;
+  // }
 
   Log.infoln("board manager complete");
   return true;
@@ -102,7 +115,7 @@ void TBoardManager::Tick()
 #endif
 
   uiManager.Tick();
-  netManager.Tick();
+  // netManager.Tick();
   tickRestart();
 }
 
