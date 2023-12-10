@@ -6,6 +6,7 @@
 #include <bytes.h>
 #include <ArduinoLog.h>
 
+#define LOG_PREFIX "perf_store: "
 #define HOST_KEY_KEY SECRET_KEY_PREFIX "host_key"
 #define SECRET_KEY_KEY SECRET_KEY_PREFIX "secret_key"
 
@@ -28,16 +29,16 @@ TSecrets& TSecrets::Instance()
 
 bool TSecrets::Begin()
 {
-  Log.infoln("secrets manager starts");
+  Log.infoln(LOG_PREFIX "starts");
   XSSH::Begin();
 
   auto res = load();
   if (res.has_error()) {
-    Log.errorln("load failed");
+    Log.errorln(LOG_PREFIX "load failed");
     return false;
   }
 
-  Log.infoln("secrets manager complete");
+  Log.infoln(LOG_PREFIX "setup complete");
   return true;
 }
 
@@ -47,7 +48,7 @@ cpp::result<void, TSecrets::Error> TSecrets::Reset()
   if (preferences.HasKey(HOST_KEY_KEY)) {
     auto err = preferences.RemoveKey(HOST_KEY_KEY);
     if (err.has_error()) {
-      Log.errorln("unable to remove host key: %d", err.error());
+      Log.errorln(LOG_PREFIX "unable to remove host key: %d", err.error());
       ok = false;
     } else {
       hostKey.clear();
@@ -57,7 +58,7 @@ cpp::result<void, TSecrets::Error> TSecrets::Reset()
   if (preferences.HasKey(SECRET_KEY_KEY)) {
     auto err = preferences.RemoveKey(SECRET_KEY_KEY);
     if (err.has_error()) {
-      Log.errorln("unable to remove secret key: %d", err.error());
+      Log.errorln(LOG_PREFIX "unable to remove secret key: %d", err.error());
       ok = false;
     } else {
       secretKey.clear();
@@ -80,18 +81,18 @@ cpp::result<void, TSecrets::Error> TSecrets::Store()
 {
   auto keyStore = preferences.StoreString(HOST_KEY_KEY, hostKey);
   if (keyStore.has_error()) {
-    Log.errorln("unable to store new host key: %d", keyStore.error());
+    Log.errorln(LOG_PREFIX "unable to store new host key: %d", keyStore.error());
     return cpp::fail(TSecrets::Error::InvalidHostKey);
   } else {
-    Log.infoln("host key stored in: " HOST_KEY_KEY);
+    Log.infoln(LOG_PREFIX "host key stored in: " HOST_KEY_KEY);
   }
 
   keyStore = preferences.StoreBytes(SECRET_KEY_KEY, secretKey);
   if (keyStore.has_error()) {
-    Log.errorln("unable to store new secret key: %d", keyStore.error());
+    Log.errorln(LOG_PREFIX "unable to store new secret key: %d", keyStore.error());
     return cpp::fail(TSecrets::Error::InvalidSecretKey);
   } else {
-    Log.infoln("host key stored in: " SECRET_KEY_KEY);
+    Log.infoln(LOG_PREFIX "host key stored in: " SECRET_KEY_KEY);
   }
 
   return {};
@@ -147,7 +148,7 @@ cpp::result<void, TSecrets::Error> TSecrets::load()
   if (preferences.HasKey(HOST_KEY_KEY)) {
     auto prefHostKey = preferences.GetString(HOST_KEY_KEY);
     if (prefHostKey.has_error()) {
-      Log.errorln("unable to load host key: %d", prefHostKey.error());
+      Log.errorln(LOG_PREFIX "unable to load host key: %d", prefHostKey.error());
       return cpp::fail(TSecrets::Error::ShitHappens);
     }
 
@@ -157,7 +158,7 @@ cpp::result<void, TSecrets::Error> TSecrets::load()
   if (preferences.HasKey(SECRET_KEY_KEY)) {
     auto prefSecretKey = preferences.GetBytes(SECRET_KEY_KEY);
     if (prefSecretKey.has_error()) {
-      Log.errorln("unable to load secret key: %d", prefSecretKey.error());
+      Log.errorln(LOG_PREFIX "unable to load secret key: %d", prefSecretKey.error());
       return cpp::fail(TSecrets::Error::ShitHappens);
     }
 
@@ -170,10 +171,10 @@ cpp::result<void, TSecrets::Error> TSecrets::load()
 cpp::result<void, TSecrets::Error> TSecrets::migrate()
 {
   if (hostKey.isEmpty()) {
-    Log.warningln("no host_key found: generate new one");
+    Log.warningln(LOG_PREFIX "no host_key found: generate new one");
     auto newKey = XSSH::GenKey(DEFAULT_SSH_HOST_KEY_TYPE, DEFAULT_SSH_HOST_KEY_BITS);
     if (newKey.has_error()) {
-      Log.errorln("unable to generate new host key: %d", newKey.error());
+      Log.errorln(LOG_PREFIX "unable to generate new host key: %d", newKey.error());
       return cpp::fail(TSecrets::Error::ShitHappens);
     }
 
@@ -185,21 +186,21 @@ cpp::result<void, TSecrets::Error> TSecrets::migrate()
     hostKey = newKeyStr.value();
     auto keyStore = preferences.StoreString(HOST_KEY_KEY, hostKey);
     if (keyStore.has_error()) {
-      Log.errorln("unable to store new host key: %d", keyStore.error());
+      Log.errorln(LOG_PREFIX "unable to store new host key: %d", keyStore.error());
     } else {
-      Log.infoln("new host key stored in: " HOST_KEY_KEY);
+      Log.infoln(LOG_PREFIX "new host key stored in: " HOST_KEY_KEY);
     }
   }
 
   if (secretKey.empty()) {
-    Log.warningln("no secret_key found: generate new one");
+    Log.warningln(LOG_PREFIX "no secret_key found: generate new one");
 
     secretKey = genSecretKey();
     auto keyStore = preferences.StoreBytes(SECRET_KEY_KEY, secretKey);
     if (keyStore.has_error()) {
-      Log.errorln("unable to store new secret key: %d", keyStore.error());
+      Log.errorln(LOG_PREFIX "unable to store new secret key: %d", keyStore.error());
     } else {
-      Log.infoln("new host key stored in: " SECRET_KEY_KEY);
+      Log.infoln(LOG_PREFIX "new host key stored in: " SECRET_KEY_KEY);
     }
   }
 

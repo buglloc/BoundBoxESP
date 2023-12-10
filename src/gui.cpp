@@ -3,7 +3,6 @@
 #include <functional>
 #include <string>
 #include <algorithm>
-#include <ArduinoLog.h>
 
 LV_FONT_DECLARE(font_roboto_black_14);
 LV_FONT_DECLARE(font_roboto_black_20);
@@ -162,6 +161,35 @@ namespace {
 
     return btn;
   }
+
+  void setBoardStateLabel(lv_obj_t* label, TBoardManager::BoardState state)
+  {
+    switch (state) {
+      case TBoardManager::BoardState::Boot:
+        lv_label_set_text_static(label, "Booting...");
+        break;
+
+      case TBoardManager::BoardState::WaitNet:
+        lv_label_set_text_static(label, "Waiting for network...");
+        break;
+
+      case TBoardManager::BoardState::WaitCredential:
+        lv_label_set_text_static(label, "Waiting for credential...");
+        break;
+
+      case TBoardManager::BoardState::Process:
+        lv_label_set_text_static(label, "Process incofmig request...");
+        break;
+
+      case TBoardManager::BoardState::Idle:
+        lv_label_set_text_static(label, "Wait for connection...");
+        break;
+
+      default:
+        lv_label_set_text_fmt(label, "Unknown[%d]", state);
+        break;
+    }
+  }
 }
 
 void TGUI::Begin()
@@ -275,16 +303,48 @@ void TGUI::ShowScreenNotification(const String& title, const String& msg)
   lv_obj_align_to(msgLabel, titleLabel, LV_ALIGN_OUT_BOTTOM_MID, 0, 8);
 }
 
-void TGUI::ShowScreenIdle()
+void TGUI::ShowScreenIdle(TBoardManager::BoardInfo boardInfo)
 {
   lv_obj_t* cont = createPage();
-  lv_obj_t* label = lv_label_create(cont);
-  lv_obj_center(label);
-  lv_obj_set_style_text_font(label, &font_roboto_mono_32, 0);
-  lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, 0);
-  lv_label_set_text_static(label, "Wait for connection...");
-}
 
+  lv_obj_t* stateLabel = lv_label_create(cont);
+  lv_obj_center(stateLabel);
+  lv_obj_set_style_text_font(stateLabel, &font_roboto_mono_32, 0);
+  lv_obj_set_style_text_align(stateLabel, LV_TEXT_ALIGN_CENTER, 0);
+  setBoardStateLabel(stateLabel, boardInfo.State);
+
+  lv_obj_add_event_cb(stateLabel,
+    [](lv_event_t* e) -> void {
+      lv_msg_t* m = lv_event_get_msg(e);
+      lv_obj_t* label = lv_event_get_target(e);
+
+      auto info = reinterpret_cast<const TBoardManager::BoardInfo*>(lv_msg_get_payload(m));
+      setBoardStateLabel(label, info->State);
+    },
+    LV_EVENT_MSG_RECEIVED,
+    nullptr
+  );
+  lv_msg_subsribe_obj(GUI_MESSAGE_UPDATE_BOARD_INFO, stateLabel, nullptr);
+
+  lv_obj_t* ipLabel = lv_label_create(cont);
+  lv_obj_align(ipLabel, LV_ALIGN_BOTTOM_LEFT, 24, -24);
+  lv_obj_set_style_text_font(ipLabel, &font_roboto_mono_20, 0);
+  lv_obj_set_style_text_align(ipLabel, LV_TEXT_ALIGN_CENTER, 0);
+  lv_label_set_text_fmt(ipLabel, "IP: %s", boardInfo.LocalIP.toString());
+
+  lv_obj_add_event_cb(ipLabel,
+    [](lv_event_t* e) -> void {
+      lv_msg_t* m = lv_event_get_msg(e);
+      lv_obj_t* label = lv_event_get_target(e);
+
+      auto info = reinterpret_cast<const TBoardManager::BoardInfo*>(lv_msg_get_payload(m));
+      lv_label_set_text_fmt(label, "IP: %s", info->LocalIP.toString());
+    },
+    LV_EVENT_MSG_RECEIVED,
+    nullptr
+  );
+  lv_msg_subsribe_obj(GUI_MESSAGE_UPDATE_BOARD_INFO, ipLabel, nullptr);
+}
 
 lv_obj_t* TGUI::createPage()
 {

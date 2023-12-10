@@ -5,6 +5,7 @@
 #include <esp_err.h>
 #include <ArduinoLog.h>
 
+#define LOG_PREFIX "perf_store: "
 
 TPrefStore& TPrefStore::Instance()
 {
@@ -14,14 +15,14 @@ TPrefStore& TPrefStore::Instance()
 
 bool TPrefStore::Begin()
 {
-  Log.infoln("preferences manager starts");
+  Log.infoln(LOG_PREFIX "starts");
   bool ok = prefs.begin(PREFERENCES_NAMESPACE, false);
   if (!ok) {
-    Log.errorln("unable to open preferences");
+    Log.errorln(LOG_PREFIX "unable to open preferences");
     return false;
   }
 
-  Log.infoln("preferences manager setup complete");
+  Log.infoln(LOG_PREFIX "setup complete");
   return true;
 }
 
@@ -57,7 +58,7 @@ cpp::result<BBU::Bytes, TPrefStore::Error> TPrefStore::GetBytes(const char* key)
   BBU::Bytes out(size, '\xff');
   size_t actualSize = prefs.getBytes(key, &out[0], size);
   if (actualSize == 0) {
-    Log.errorln("read pref '%s' failed: sero size", key);
+    Log.errorln(LOG_PREFIX "read pref '%s' failed: sero size", key);
     return cpp::fail(TPrefStore::Error::Internal);
   }
 
@@ -93,7 +94,7 @@ cpp::result<char*, TPrefStore::Error> TPrefStore::GetStringBytes(const char* key
 
   size_t actualSize = prefs.getBytes(key, blob, size);
   if (actualSize == 0) {
-    Log.errorln("read pref '%s' failed: sero size", key);
+    Log.errorln(LOG_PREFIX "read pref '%s' failed: sero size", key);
     return cpp::fail(TPrefStore::Error::Internal);
   }
 

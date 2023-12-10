@@ -6,6 +6,8 @@
 
 #include <ArduinoLog.h>
 
+#define LOG_PREFIX "ssh_handler: "
+
 namespace
 {
   static TBoardManager& boardManager = TBoardManager::Instance();
@@ -100,6 +102,7 @@ TCommandDispatcher& TCommandDispatcher::Instance()
 
 bool TCommandDispatcher::Begin()
 {
+  Log.infoln(LOG_PREFIX "setup complete");
   return true;
 }
 

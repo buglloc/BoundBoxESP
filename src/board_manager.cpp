@@ -11,6 +11,8 @@
 #include <SD.h>
 #include <ArduinoLog.h>
 
+#define LOG_PREFIX "board_manager: "
+
 namespace
 {
   static TNetManager& netManager = TNetManager::Instance();
@@ -42,69 +44,70 @@ TBoardManager& TBoardManager::Instance()
 
 bool TBoardManager::Begin()
 {
-  Log.infoln("board manager starts");
+  Log.infoln(LOG_PREFIX "starts");
   startTime = millis();
+  ToState(TBoardManager::BoardState::Boot);
 
 #ifdef HAVE_IDR
-  Log.infoln("setup IDR (PIN: %d)", IDR_CASE_OPENED_PIN);
+  Log.infoln(LOG_PREFIX "setup IDR (PIN: %d)", IDR_CASE_OPENED_PIN);
   pinMode(IDR_CASE_OPENED_PIN, IDR_CASE_OPENED_MODE);
   tickIntruder();
 #else
-  Log.infoln("IDR not available");
+  Log.infoln(LOG_PREFIX "IDR not available");
 #endif
 
-  Log.infoln("setup preferences");
+  Log.infoln(LOG_PREFIX "setup preferences");
   if (!TPrefStore::Instance().Begin()) {
-    Log.errorln("unable to open preferences");
+    Log.errorln(LOG_PREFIX "unable to open preferences");
     return false;
   }
 
-  Log.infoln("setup secrets manager");
+  Log.infoln(LOG_PREFIX "setup secrets manager");
   if (!TSecrets::Instance().Begin()) {
-    Log.errorln("unable to initialize secrets manager");
+    Log.errorln(LOG_PREFIX "unable to initialize secrets manager");
     return false;
   }
 
-  Log.infoln("setup runtime config");
+  Log.infoln(LOG_PREFIX "setup runtime config");
   if (!TConfig::Begin()) {
-    Log.errorln("begin runtime config fail");
+    Log.errorln(LOG_PREFIX "begin runtime config fail");
     return false;
   }
 
   auto cfgRes = TConfig::LoadOrStore(CONFIG_KEY);
   if (cfgRes.has_error()) {
-    Log.errorln("load runtime config fail: %d", cfgRes.error());
+    Log.errorln(LOG_PREFIX "load runtime config fail: %d", cfgRes.error());
     return false;
   }
   runtimeConfig = std::move(cfgRes.value());
 
-  Log.infoln("setup SPI (SCK: %d, MISO: %d, MOSI: %d)", SPI_SCK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN);
+  Log.infoln(LOG_PREFIX "setup SPI (SCK: %d, MISO: %d, MOSI: %d)", SPI_SCK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN);
   SPI.begin(SPI_SCK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN);
 
-  Log.infoln("setup authenticator");
+  Log.infoln(LOG_PREFIX "setup authenticator");
   if (!authenticator.Begin()) {
-    Log.errorln("authenticator start failed");
+    Log.errorln(LOG_PREFIX "authenticator start failed");
     return false;
   }
 
-  Log.infoln("setup UI");
+  Log.infoln(LOG_PREFIX "setup UI");
   TUIManager::EventHandlers uiHandlers{
-    .OnPinEnter = std::bind(&TAuthenticator::OnPinChar, authenticator, std::placeholders::_1),
-    .onPinEntered = std::bind(&TAuthenticator::OnPinEntered, authenticator, std::placeholders::_1),
-    .onPinVerified = std::bind(&TAuthenticator::OnPinVerified, authenticator, std::placeholders::_1),
+    .OnPinEnter = std::bind(&TAuthenticator::OnPinChar, &authenticator, std::placeholders::_1),
+    .OnPinEntered = std::bind(&TAuthenticator::OnPinEntered, &authenticator, std::placeholders::_1),
+    .OnPinVerified = std::bind(&TAuthenticator::OnPinVerified, &authenticator, std::placeholders::_1),
   };
   if (!uiManager.Begin(std::move(uiHandlers))) {
-    Log.errorln("display start failed");
+    Log.errorln(LOG_PREFIX "display start failed");
     return false;
   }
 
-  Log.infoln("setup network");
-  if (!netManager.Begin(runtimeConfig->Hostname, *runtimeConfig->Net)) {
-    Log.errorln("unable to setup network");
+  Log.infoln(LOG_PREFIX "setup network");
+  if (!netManager.Begin(runtimeConfig->Net->Kind)) {
+    Log.errorln(LOG_PREFIX "unable to setup network");
     return false;
   }
 
-  Log.infoln("board manager complete");
+  Log.infoln(LOG_PREFIX "startup complete");
   return true;
 }
 
@@ -114,16 +117,17 @@ void TBoardManager::Tick()
   tickIntruder();
 #endif
 
-  uiManager.Tick();
-  netManager.Tick();
+  uptime = (millis() - startTime) / 1000;
   tickRestart();
+  tickBoardInfo();
+  uiManager.Tick(boardInfo);
 }
 
 bool TBoardManager::ResetConfig()
 {
   auto defaultConfig = TConfig::Remove(CONFIG_KEY);
   if (defaultConfig.has_error()) {
-    Log.errorln("remove runtime config fail: %d", defaultConfig.error());
+    Log.errorln(LOG_PREFIX "remove runtime config fail: %d", defaultConfig.error());
     return false;
   }
 
@@ -135,7 +139,7 @@ bool TBoardManager::StoreConfig(std::unique_ptr<TConfig> cfg)
 {
   auto cfgRes = cfg->Store(CONFIG_KEY);
   if (cfgRes.has_error()) {
-    Log.errorln("store runtime config fail: %d", cfgRes.error());
+    Log.errorln(LOG_PREFIX "store runtime config fail: %d", cfgRes.error());
     return false;
   }
 
@@ -143,31 +147,25 @@ bool TBoardManager::StoreConfig(std::unique_ptr<TConfig> cfg)
   return true;
 }
 
-uint32_t TBoardManager::Uptime() const
-{
-  uint32_t elapsedTime = millis() - startTime;
-  return elapsedTime / 1000;
-}
-
-uint32_t TBoardManager::FreeHeap() const
-{
-  return esp_get_free_heap_size();
-}
-
-const TNetManager& TBoardManager::Net() const
+TNetManager& TBoardManager::Net() const
 {
   return netManager;
+}
+
+void TBoardManager::ToState(BoardState targetState)
+{
+  boardInfo.State = targetState;
 }
 
 bool TBoardManager::ScheduleRestart(int sec)
 {
   if (restartAt > 0) {
-    Log.infoln("restart already scheduled");
+    Log.infoln(LOG_PREFIX "restart already scheduled");
     return false;
   }
 
   restartAt = Uptime() + sec;
-  Log.infoln("restart scheduled in %ds", sec);
+  Log.infoln(LOG_PREFIX "restart scheduled in %ds", sec);
   return true;
 }
 
@@ -176,10 +174,20 @@ const TConfig& TBoardManager::RuntimeConfig() const
   return *runtimeConfig;
 }
 
+uint32_t TBoardManager::Uptime() const
+{
+  return uptime;
+}
+
+uint32_t TBoardManager::FreeHeap() const
+{
+  return esp_get_free_heap_size();
+}
+
 void TBoardManager::tickRestart()
 {
   if (restartAt > 0 && Uptime() >= restartAt) {
-    Log.warningln("reboot");
+    Log.warningln(LOG_PREFIX "reboot");
     restart();
   }
 }
@@ -187,7 +195,17 @@ void TBoardManager::tickRestart()
 void TBoardManager::tickIntruder()
 {
   if (digitalRead(IDR_CASE_OPENED_PIN)) {
-    Log.warningln("case opened: will shutdown");
+    Log.warningln(LOG_PREFIX "case opened: will shutdown");
     shutdown();
   }
+}
+
+void TBoardManager::tickBoardInfo()
+{
+  if (Uptime() - infoUpdatedAt < 2) {
+    return;
+  }
+
+  infoUpdatedAt = Uptime();
+  boardInfo.LocalIP = netManager.LocalIP();
 }

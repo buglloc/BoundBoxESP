@@ -8,6 +8,7 @@
 #include <libssh/server.h>
 
 #define IMPATIENCE 10
+#define LOG_PREFIX "sshd: "
 
 namespace
 {
@@ -35,12 +36,12 @@ TSshService& TSshService::Instance()
 
 bool TSshService::Begin(const TSshConfig& cfg)
 {
-  Log.infoln("setup SSHD service");
+  Log.infoln(LOG_PREFIX "starts");
   libssh_begin();
 
   auto parsedHostKey = XSSH::ParsePrivateKey(secrets.HostKey());
   if (parsedHostKey.has_error()) {
-    Log.errorln("unable to parse host key: %d", parsedHostKey.error());
+    Log.errorln(LOG_PREFIX "unable to parse host key: %d", parsedHostKey.error());
     return false;
   }
 
@@ -51,72 +52,72 @@ bool TSshService::Begin(const TSshConfig& cfg)
     return true;
   });
 
-  Log.infoln("SSHD setup complete");
+  Log.infoln(LOG_PREFIX "setup complete");
   return true;
 }
 
-void TSshService::Tick(TSshActionCallback actionCallback)
+void TSshService::AcceptConnection(TSshActionCallback actionCallback)
 {
-  Log.verboseln("sshd: bind ssh");
+  Log.verboseln(LOG_PREFIX "bind ssh");
   ssh_bind sshBind = ssh_bind_new();
   if (!sshBind) {
-    Log.errorln("sshd: unable to allocate ssh bind");
+    Log.errorln(LOG_PREFIX "unable to allocate ssh bind");
     return;
   }
   REF_DEFER(ssh_bind_free(sshBind));
 
   int rc = ssh_bind_options_set(sshBind, SSH_BIND_OPTIONS_IMPORT_KEY, ssh_key_dup(hostKey.get()));
   if (rc != SSH_OK) {
-    Log.errorln("sshd: bind key failed: %s", ssh_get_error(sshBind));
+    Log.errorln(LOG_PREFIX "bind key failed: %s", ssh_get_error(sshBind));
     return;
   }
 
   rc = ssh_bind_listen(sshBind);
   if (rc != SSH_OK) {
-    Log.errorln("sshd: bind listen failed: %s", ssh_get_error(sshBind));
+    Log.errorln(LOG_PREFIX "bind listen failed: %s", ssh_get_error(sshBind));
     return;
   }
 
-  Log.verboseln("sshd: starts new session");
+  Log.verboseln(LOG_PREFIX "starts new session");
   ssh_session sshSession = ssh_new();
   if (!sshSession) {
-    Log.errorln("sshd: unable to allocate ssh session");
+    Log.errorln(LOG_PREFIX "unable to allocate ssh session");
     return;
   }
   REF_DEFER(ssh_disconnect(sshSession); ssh_free(sshSession));
 
-  Log.verboseln("sshd: wait for connection...");
+  Log.verboseln(LOG_PREFIX "wait for connection...");
   rc = ssh_bind_accept(sshBind, sshSession);
   if (rc != SSH_OK) {
-    Log.errorln("sshd: unable to accept connection: %s", ssh_get_error(sshBind));
+    Log.errorln(LOG_PREFIX "unable to accept connection: %s", ssh_get_error(sshBind));
     return;
   }
 
-  Log.infoln("sshd: new connection");
-  Log.verboseln("sshd: starts key exchange...");
+  Log.infoln(LOG_PREFIX "new connection");
+  Log.verboseln(LOG_PREFIX "starts key exchange...");
   rc = ssh_handle_key_exchange(sshSession);
   if (rc != SSH_OK) {
-    Log.errorln("sshd: key exchange failed: %s", ssh_get_error(sshSession));
+    Log.errorln(LOG_PREFIX "key exchange failed: %s", ssh_get_error(sshSession));
     return;
   }
 
-  Log.verboseln("sshd: auth client...");
+  Log.verboseln(LOG_PREFIX "auth client...");
   auto authInfo = authenticate(sshSession);
   if (!authInfo) {
-    Log.errorln("sshd: auth failed, abort");
+    Log.errorln(LOG_PREFIX "auth failed, abort");
     return;
   }
 
-  Log.verboseln("sshd: wait for a channel session...");
+  Log.verboseln(LOG_PREFIX "wait for a channel session...");
   ssh_message message = nullptr;
   ssh_channel chan = nullptr;
   do {
     message = ssh_message_get(sshSession);
     if (!message) {
-      Log.errorln("sshd: no message received: %s", ssh_get_error(sshSession));
+      Log.errorln(LOG_PREFIX "no message received: %s", ssh_get_error(sshSession));
       return;
     }
-    Log.verboseln("requested channel %d:%d", ssh_message_type(message), ssh_message_subtype(message));
+    Log.verboseln(LOG_PREFIX "requested channel %d:%d", ssh_message_type(message), ssh_message_subtype(message));
 
     if (ssh_message_type(message) != SSH_REQUEST_CHANNEL_OPEN) {
       ssh_message_reply_default(message);
@@ -136,19 +137,19 @@ void TSshService::Tick(TSshActionCallback actionCallback)
   } while(!chan);
 
   if (!chan) {
-    Log.errorln("sshd: client did not ask for a channel session: %s", ssh_get_error(sshSession));
+    Log.errorln(LOG_PREFIX "client did not ask for a channel session: %s", ssh_get_error(sshSession));
     return;
   }
   REF_DEFER(ssh_channel_send_eof(chan); ssh_channel_close(chan));
 
-  Log.verboseln("sshd: wait for a exec request...");
+  Log.verboseln(LOG_PREFIX "wait for a exec request...");
   while (true) {
     message = ssh_message_get(sshSession);
     if (!message) {
-      Log.errorln("sshd: no message received: %s", ssh_get_error(sshSession));
+      Log.errorln(LOG_PREFIX "no message received: %s", ssh_get_error(sshSession));
       return;
     }
-    Log.verboseln("requested channel %d:%d", ssh_message_type(message), ssh_message_subtype(message));
+    Log.verboseln(LOG_PREFIX "requested channel %d:%d", ssh_message_type(message), ssh_message_subtype(message));
 
     if (ssh_message_type(message) != SSH_REQUEST_CHANNEL) {
       ssh_message_reply_default(message);
@@ -172,7 +173,7 @@ void TSshService::Tick(TSshActionCallback actionCallback)
 
     bool ok = actionCallback(authInfo, cmd, readStream, writeStream);
     if (!ok) {
-      Log.warningln("failed to execute action: %s", cmd.c_str());
+      Log.warningln(LOG_PREFIX "failed to execute action: %s", cmd.c_str());
     }
 
     ssh_message_free(message);
@@ -197,11 +198,11 @@ TSshAuthInfoHolder TSshService::authenticate(ssh_session session)
   for (int patience = 0; patience < IMPATIENCE; ++patience) {
     message = ssh_message_get(session);
     if (!message) {
-      Log.errorln("sshd: no auth message");
+      Log.errorln(LOG_PREFIX "no auth message");
       return nullptr;
     }
 
-    Log.verboseln("sshd: [%d] trying %d:%d...", patience, ssh_message_type(message), ssh_message_subtype(message));
+    Log.verboseln(LOG_PREFIX "[%d] trying %d:%d...", patience, ssh_message_type(message), ssh_message_subtype(message));
     // only pubkey auth support
     if (ssh_message_type(message) != SSH_REQUEST_AUTH) {
       ssh_message_reply_default(message);
@@ -257,7 +258,7 @@ TSshAuthInfoHolder TSshService::authenticate(ssh_session session)
     REPLY_AGAIN(message);
   }
 
-  Log.warningln("too much auth failures, aborting");
+  Log.warningln(LOG_PREFIX "too much auth failures, aborting");
   return nullptr;
 }
 
@@ -280,7 +281,7 @@ cpp::result<std::unique_ptr<TSshConfig>, TSshConfig::MarshalErr> TSshConfig::Fro
     for(JsonVariantConst rawKey : keys) {
       auto key = XSSH::ParsePublicKey(rawKey.as<String>());
       if (key.has_error()) {
-        Log.errorln("ignore ivalid key '%s': %d", rawKey.as<String>(), key.error());
+        Log.errorln(LOG_PREFIX "ignore ivalid key '%s': %d", rawKey.as<String>(), key.error());
         continue;
       }
 
@@ -298,7 +299,7 @@ cpp::result<void, TSshConfig::MarshalErr> TSshConfig::ToJson(JsonObject& out) co
   RootKeys.Visit([&jsonRootKeys](ssh_key key) -> bool {
     auto authorizedKey = XSSH::MarshalAuthorizedKey(key);
     if (authorizedKey.has_error()) {
-      Log.infoln("unable to marshal authorized key: %d", authorizedKey.error());
+      Log.infoln(LOG_PREFIX "unable to marshal authorized key: %d", authorizedKey.error());
     } else {
       jsonRootKeys.add(authorizedKey.value());
     }
