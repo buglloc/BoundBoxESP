@@ -16,13 +16,11 @@ public:
   void ShowScreenNotification(const String& title, const String& msg);
   void ShowScreenIdle();
 
-  ~TGUI();
 private:
   lv_obj_t* createPage();
-  void clearScreen();
+  lv_obj_t* switchScreen();
 
 private:
-  lv_obj_t* screen = nullptr;
   lv_style_t mainStyle;
 };
 

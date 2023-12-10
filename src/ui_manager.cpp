@@ -11,8 +11,47 @@
 namespace
 {
   static LilyGo_Class amoled;
-  static lv_obj_t *label;
-  static uint32_t homeButtonPressedAt;
+  enum class PressState {
+    None, Short, Long
+  };
+
+  PressState calcPressState(bool homePressed)
+  {
+    const uint32_t longPressMs = 500;
+    static uint32_t pressedTime = 0;
+    static bool seenPress, alreadyFired = false;
+
+    if (homePressed) {
+      if (!seenPress) {
+        // new press
+        pressedTime = millis();
+        seenPress = true;
+        return PressState::None;
+      }
+
+      if (!alreadyFired && millis() - pressedTime > longPressMs) {
+        // fire event by long tap
+        alreadyFired = true;
+        return PressState::Long;
+      }
+
+      return PressState::None;
+    }
+
+    if (seenPress) {
+      // release home button
+      seenPress = false;
+
+      if (!alreadyFired) {
+        return millis() - pressedTime < longPressMs ? PressState::Short : PressState::Long;
+      }
+
+      alreadyFired = false;
+      return PressState::None;
+    }
+
+    return PressState::None;
+  }
 }
 
 TUIManager& TUIManager::Instance()
@@ -44,7 +83,7 @@ bool TUIManager::Begin(EventHandlers handlers)
   }
 
   gui.Begin();
-  gui.ShowScreenIdle();
+  ShowRequestPin();
   amoled.setBrightness(DISPLAY_BRIGHTNESS);
   Log.infoln("UI manager setup complete");
   return true;
@@ -52,9 +91,9 @@ bool TUIManager::Begin(EventHandlers handlers)
 
 void TUIManager::Tick()
 {
+  lv_task_handler();
   tickHomeButton();
   tickStateTransition();
-  lv_task_handler();
 }
 
 void TUIManager::ShowRequestPin()
@@ -92,43 +131,24 @@ void TUIManager::tickHomeButton()
   const int16_t homeButtonX = 600;
   const int16_t homeButtonY = 120;
 
-  const uint32_t longPressMs = 500;
-  enum class PressState {
-    None, Short, Long
-  };
-
   static int16_t x, y = 0;
-  static uint32_t pressedTime = 0;
-  static bool seenPress = false;
 
-  bool wasPressed = amoled.getPoint(&x, &y) && x == homeButtonX && y == homeButtonY;
-  if (wasPressed == seenPress) {
-    return;
-  }
-
-  PressState press = PressState::None;
-  if (wasPressed && !seenPress) {
-    pressedTime = millis();
-  } else if (!wasPressed && seenPress) {
-    press = millis() - pressedTime < longPressMs ? PressState::Short : PressState::Long;
-  }
-
-  seenPress = wasPressed;
-  if (press == PressState::None) {
+  bool homePressed = amoled.getPoint(&x, &y) && x == homeButtonX && y == homeButtonY;
+  PressState pressState = calcPressState(homePressed);
+  if (pressState == PressState::None) {
     return;
   }
 
   switch (curState) {
     case State::PinRequest: {
       if (callbacks.onPinEntered != nullptr) {
-        Log.infoln("aaaa: %d", press == PressState::Short);
-        callbacks.onPinEntered(press == PressState::Short);
+        callbacks.onPinEntered(pressState == PressState::Short);
       }
       break;
     }
     case State::PinVerify: {
       if (callbacks.onPinVerified != nullptr) {
-        callbacks.onPinVerified(press == PressState::Short);
+        callbacks.onPinVerified(pressState == PressState::Short);
       }
       break;
     }
@@ -161,13 +181,20 @@ void TUIManager::tickStateTransition()
   curState = targetState;
   switch (curState) {
     case State::PinRequest:
+      Log.verboseln("ui: switch to pin request screen");
       gui.ShowScreenPinEnter();
       break;
     case State::PinVerify:
+      Log.verboseln("ui: switch to pin verify screen");
       gui.ShowScreenPinVerify(pinVerification);
       break;
-    case State::Idle:
+    case State::Notify:
+      Log.verboseln("ui: switch to notify screen");
       gui.ShowScreenNotification(notifyTitle, notifyMsg);
+      break;
+    case State::Idle:
+      Log.verboseln("ui: switch to idle");
+      gui.ShowScreenIdle();
       break;
     default:
       Log.infoln("ui: unexpected state: %d", curState);

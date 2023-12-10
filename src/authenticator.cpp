@@ -49,18 +49,14 @@ void TAuthenticator::OnPinChar(uint8_t ch)
     Log.errorln("authenticator: unexpected OnPinChar calling");
     return;
   }
-Log.infoln("authenticator: request pin11");
+
   BBU::Bytes salt(&ch, 1);
-  Log.infoln("authenticator: request pin11222");
   auto attestRes = attest(salt);
-  Log.infoln("authenticator: request pin11333");
   if (attestRes.has_error()) {
     return;
   }
 
-Log.infoln("authenticator: request pin14441");
   credential = attestRes.value();
-  Log.infoln("authenticator: request pin1145555");
 }
 
 void TAuthenticator::OnPinEntered(bool ok)

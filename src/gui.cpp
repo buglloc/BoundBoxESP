@@ -60,10 +60,10 @@ namespace {
 }
 
 namespace {
-  static lv_color_t bgColor = lv_color_hex(0xd4d4d4);
-  static lv_color_t panBgColor = lv_color_hex(0xfafafa);
-  static lv_color_t textColor = lv_color_hex(0x030303);
-  static lv_color_t pressedColor = lv_color_hex(0x939ea3);
+  static const lv_color_t bgColor = lv_color_hex(0xd4d4d4);
+  static const lv_color_t panBgColor = lv_color_hex(0xfafafa);
+  static const lv_color_t textColor = lv_color_hex(0x030303);
+  static const lv_color_t pressedColor = lv_color_hex(0x939ea3);
 
   lv_obj_t* createPadButton(lv_obj_t* parent, bool clickable, size_t idx)
   {
@@ -107,31 +107,30 @@ namespace {
     lv_obj_center(label);
     lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, 0);
 
-    static uint8_t cnt;
-    cnt = 0;
-    lv_label_set_text(label, "");
-    lv_msg_subscribe(GUI_MESSAGE_PIN_PROMPT,
-      [](void* s, lv_msg_t* m) -> void {
-        if (cnt > 8) {
+    static uint8_t pinBufIdx;
+    static char pinBuf[16];
+    pinBufIdx = 0;
+    pinBuf[pinBufIdx] = '\0';
+
+    lv_label_set_text_static(label, "");
+    lv_obj_add_event_cb(label,
+      [](lv_event_t* e) -> void {
+        if (pinBufIdx > 14) {
           return;
         }
 
-        cnt++;
-        char* signs = reinterpret_cast<char*>(malloc(sizeof(char) * cnt * 2 + 1));
-        char* p = signs;
-
-        for (uint8_t i = 0; i < cnt; ++i) {
-          *p++ = '*';
-          *p++ = i + 1 == cnt ? '\0' : '\n';
-          Log.infoln("aaaa: %d %d", i, cnt);
+        if (pinBufIdx > 0) {
+          pinBuf[pinBufIdx++] = '\n';
         }
-Log.infoln("aaaa: %s (%d)", signs, strlen(signs));
-        lv_obj_t* label = reinterpret_cast<lv_obj_t*>(lv_msg_get_user_data(m));
-        lv_label_set_text(label, signs);
-        free(signs);
+        pinBuf[pinBufIdx++] = '*';
+        pinBuf[pinBufIdx] = '\0';
+        lv_obj_t* label = lv_event_get_target(e);
+        lv_label_set_text_static(label, pinBuf);
       },
-      label
+      LV_EVENT_MSG_RECEIVED,
+      nullptr
     );
+    lv_msg_subsribe_obj(GUI_MESSAGE_PIN_PROMPT, label, nullptr);
 
     return cont;
   }
@@ -276,11 +275,20 @@ void TGUI::ShowScreenNotification(const String& title, const String& msg)
   lv_obj_align_to(msgLabel, titleLabel, LV_ALIGN_OUT_BOTTOM_MID, 0, 8);
 }
 
+void TGUI::ShowScreenIdle()
+{
+  lv_obj_t* cont = createPage();
+  lv_obj_t* label = lv_label_create(cont);
+  lv_obj_center(label);
+  lv_obj_set_style_text_font(label, &font_roboto_mono_32, 0);
+  lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, 0);
+  lv_label_set_text_static(label, "Wait for connection...");
+}
+
+
 lv_obj_t* TGUI::createPage()
 {
-  clearScreen();
-
-  lv_obj_t *cont = lv_obj_create(lv_scr_act());
+  lv_obj_t *cont = lv_obj_create(switchScreen());
   lv_obj_set_size(cont, lv_disp_get_physical_hor_res(nullptr), lv_disp_get_ver_res(nullptr));
   lv_obj_add_style(cont, &mainStyle, LV_PART_MAIN);
   lv_obj_remove_style(cont, 0, LV_PART_SCROLLBAR);
@@ -292,36 +300,16 @@ lv_obj_t* TGUI::createPage()
   return cont;
 }
 
-void TGUI::ShowScreenIdle()
+lv_obj_t* TGUI::switchScreen()
 {
-  lv_obj_t* cont = createPage();
-  lv_obj_t* label = lv_label_create(cont);
-  lv_obj_center(label);
-  lv_obj_set_style_text_font(label, &font_roboto_mono_32, 0);
-  lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, 0);
-  lv_label_set_text_static(label, "Wait for connection...");
-}
-
-void TGUI::clearScreen()
-{
-  lv_obj_t * old_scr = lv_scr_act();
-  // if (screen != nullptr) {
-  //   lv_obj_del(screen);
-  //   screen = nullptr;
-  // }
-
-  screen = lv_obj_create(nullptr);
-  lv_scr_load(screen);
-  if (old_scr != nullptr) {
-      lv_obj_del(old_scr);
+  lv_obj_t* prevScr = lv_scr_act();
+  lv_obj_t* newScr = lv_obj_create(nullptr);
+  if (prevScr != nullptr) {
+    lv_obj_clean(prevScr);
+    lv_scr_load_anim(newScr, LV_SCR_LOAD_ANIM_FADE_OUT, 150, 50, false);
+  } else {
+    lv_scr_load_anim(newScr, LV_SCR_LOAD_ANIM_NONE, 0, 0, false);
   }
 
-}
-
-TGUI::~TGUI()
-{
-  if (screen) {
-    lv_obj_clean(screen);
-    screen = nullptr;
-  }
+  return newScr;
 }

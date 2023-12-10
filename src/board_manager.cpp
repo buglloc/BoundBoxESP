@@ -98,11 +98,11 @@ bool TBoardManager::Begin()
     return false;
   }
 
-  // Log.infoln("setup network");
-  // if (!netManager.Begin(runtimeConfig->Hostname, *runtimeConfig->Net)) {
-  //   Log.errorln("unable to setup network");
-  //   return false;
-  // }
+  Log.infoln("setup network");
+  if (!netManager.Begin(runtimeConfig->Hostname, *runtimeConfig->Net)) {
+    Log.errorln("unable to setup network");
+    return false;
+  }
 
   Log.infoln("board manager complete");
   return true;
@@ -115,7 +115,7 @@ void TBoardManager::Tick()
 #endif
 
   uiManager.Tick();
-  // netManager.Tick();
+  netManager.Tick();
   tickRestart();
 }
 
