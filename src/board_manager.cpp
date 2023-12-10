@@ -3,23 +3,19 @@
 #include "pref_store.h"
 #include "secrets.h"
 #include "net_manager.h"
+#include "ui_manager.h"
+#include "authenticator.h"
 
 #include <Esp.h>
 #include <SPI.h>
 #include <SD.h>
 #include <ArduinoLog.h>
 
-#ifdef LILYGO_TDISPLAY_AMOLED_SERIES
-#include <LilyGo_AMOLED.h>
-#endif
-
 namespace
 {
   static TNetManager& netManager = TNetManager::Instance();
-
-#ifdef LILYGO_TDISPLAY_AMOLED_SERIES
-  static LilyGo_Class amoled;
-#endif
+  static TUIManager& uiManager = TUIManager::Instance();
+  static TAuthenticator& authenticator = TAuthenticator::Instance();
 
   void restart()
   {
@@ -85,13 +81,22 @@ bool TBoardManager::Begin()
   Log.infoln("setup SPI (SCK: %d, MISO: %d, MOSI: %d)", SPI_SCK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN);
   SPI.begin(SPI_SCK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN);
 
-#ifdef LILYGO_TDISPLAY_AMOLED_SERIES
-  Log.infoln("setup lilygo AMOLED display");
-  if (!amoled.beginAMOLED_191(true)) {
+  Log.infoln("setup authenticator");
+  if (!authenticator.Begin()) {
+    Log.errorln("authenticator start failed");
+    return false;
+  }
+
+  Log.infoln("setup UI");
+  TUIManager::EventHandlers uiHandlers{
+    .OnPinEnter = std::bind(&TAuthenticator::OnPinChar, authenticator, std::placeholders::_1),
+    .onPinEntered = std::bind(&TAuthenticator::OnPinEntered, authenticator, std::placeholders::_1),
+    .onPinVerified = std::bind(&TAuthenticator::OnPinVerified, authenticator, std::placeholders::_1),
+  };
+  if (!uiManager.Begin(std::move(uiHandlers))) {
     Log.errorln("display start failed");
     return false;
   }
-#endif
 
   Log.infoln("setup network");
   if (!netManager.Begin(runtimeConfig->Hostname, *runtimeConfig->Net)) {
@@ -109,6 +114,7 @@ void TBoardManager::Tick()
   tickIntruder();
 #endif
 
+  uiManager.Tick();
   netManager.Tick();
   tickRestart();
 }
