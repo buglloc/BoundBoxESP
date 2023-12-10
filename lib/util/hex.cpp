@@ -1,8 +1,8 @@
-#include "bytes.h"
+#include "hex.h"
 
 namespace
 {
-  int hex_value(unsigned char hex_digit)
+  int hex_value(uint8_t hex_digit)
   {
     static const signed char hex_values[256] = {
       -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
@@ -28,7 +28,7 @@ namespace
 
 namespace BBU
 {
-  String BytesToHex(const Bytes& bytes)
+  String HexEncode(const Bytes& bytes)
   {
     static const char hex_digits[] = "0123456789ABCDEF";
 
@@ -42,7 +42,7 @@ namespace BBU
     return out;
   }
 
-  Bytes BytesFromHex(const String& hex)
+  Bytes HexDecode(const String& hex)
   {
     Bytes out;
     const auto len = hex.length();

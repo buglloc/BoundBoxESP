@@ -5,6 +5,7 @@
 #include "secrets.h"
 
 #include <hmac.h>
+#include <hex.h>
 #include <ArduinoLog.h>
 
 #define LOG_PREFIX "authenticator: "
@@ -41,14 +42,14 @@ bool TAuthenticator::HasCredential()
   return !credBuilding;
 }
 
-cpp::result<BBU::Bytes, TAuthenticator::Error> TAuthenticator::Attest(const BBU::Bytes& salt, const String& client)
+cpp::result<BBU::Bytes, TAuthenticator::Error> TAuthenticator::MakeAssertion(const BBU::Bytes& salt, const String& client)
 {
   if (credBuilding) {
-    Log.errorln(LOG_PREFIX "unable to attest w/o final credential");
+    Log.errorln(LOG_PREFIX "unable to get makeAssertion w/o final credential");
     return cpp::fail(TAuthenticator::Error::NoCredential);
   }
 
-  auto out = attest(salt);
+  auto out = makeAssertion(salt);
   if (!out.has_error()) {
     ui.ShowNotify(R"(\(o_o)/)", client);
   }
@@ -64,12 +65,12 @@ void TAuthenticator::OnPinChar(uint8_t ch)
   }
 
   BBU::Bytes salt(&ch, 1);
-  auto attestRes = attest(salt);
-  if (attestRes.has_error()) {
+  auto result = makeAssertion(salt);
+  if (result.has_error()) {
     return;
   }
 
-  credential = attestRes.value();
+  credential = result.value();
 }
 
 void TAuthenticator::OnPinEntered(bool ok)
@@ -80,9 +81,9 @@ void TAuthenticator::OnPinEntered(bool ok)
   }
 
   if (ok) {
-    auto attestRes = attest(verificationSalt);
-    if (!attestRes.has_error()) {
-      String verification = BBU::BytesToHex(attestRes.value());
+    auto result = makeAssertion(verificationSalt);
+    if (!result.has_error()) {
+      String verification = BBU::HexEncode(result.value());
       ui.ShowVerifyPin(verification);
       return;
     }
@@ -107,7 +108,7 @@ void TAuthenticator::OnPinVerified(bool ok)
   BuildCredential();
 }
 
-cpp::result<BBU::Bytes, TAuthenticator::Error> TAuthenticator::attest(const BBU::Bytes& salt)
+cpp::result<BBU::Bytes, TAuthenticator::Error> TAuthenticator::makeAssertion(const BBU::Bytes& salt)
 {
   auto hmacRes = HMAC::Sum(credential, salt, HMAC::Type::SHA256);
   if (hmacRes.has_error()) {

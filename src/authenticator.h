@@ -21,14 +21,14 @@ public:
   void BuildCredential();
   bool HasCredential();
 
-  cpp::result<BBU::Bytes, Error> Attest(const BBU::Bytes& salt, const String& client);
+  cpp::result<BBU::Bytes, Error> MakeAssertion(const BBU::Bytes& salt, const String& client);
   void OnPinChar(uint8_t ch);
   void OnPinEntered(bool ok);
   void OnPinVerified(bool ok);
 
 private:
   TAuthenticator() = default;
-  cpp::result<BBU::Bytes, Error> attest(const BBU::Bytes& salt);
+  cpp::result<BBU::Bytes, Error> makeAssertion(const BBU::Bytes& salt);
 
 private:
   BBU::Bytes credential;

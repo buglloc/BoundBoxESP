@@ -3,7 +3,10 @@
 #include "config.h"
 #include "board_manager.h"
 #include "secrets.h"
+#include "authenticator.h"
 
+#include <hmac.h>
+#include <base64.h>
 #include <ArduinoLog.h>
 
 #define LOG_PREFIX "ssh_handler: "
@@ -11,15 +14,40 @@
 namespace
 {
   static TBoardManager& boardManager = TBoardManager::Instance();
+  static TAuthenticator& authenticator = TAuthenticator::Instance();
   static TSecrets& secrets = TSecrets::Instance();
 
   using TCommandHandler = std::function<bool(const TSshAuthInfoHolder& sess, const JsonObjectConst& req, JsonObject& rsp)>;
+
+  bool HandleMakeAssertion(const TSshAuthInfoHolder& sess, const JsonObjectConst& req, JsonObject& rsp)
+  {
+    BBU::Bytes salt = BBU::Base64Decode(req["salt"].as<String>());
+    auto bindedSalt = HMAC::Sum(
+      reinterpret_cast<const unsigned char*>(sess->KeyFingerprint.c_str()),
+      salt,
+      HMAC::Type::SHA1
+    );
+    if (bindedSalt.has_error()) {
+      rsp["error_code"] = static_cast<uint8_t>(bindedSalt.error());
+      return false;
+    }
+
+    auto assert = authenticator.MakeAssertion(bindedSalt.value(), sess->ClientIP.toString());
+    if (assert.has_error()) {
+      rsp["error_code"] = static_cast<uint8_t>(assert.error());
+      return false;
+    }
+
+    rsp["assertion"] = BBU::Base64Encode(assert.value());
+    return true;
+  }
 
   bool HandleGetConfig(const TSshAuthInfoHolder& sess, const JsonObjectConst& req, JsonObject& rsp)
   {
     JsonObject runtimeObj = rsp.createNestedObject("config");
     auto err = boardManager.RuntimeConfig().ToJson(runtimeObj);
     if (err.has_error()) {
+      rsp["error_code"] = static_cast<uint8_t>(err.error());
       return false;
     }
 
@@ -116,6 +144,7 @@ bool TCommandDispatcher::Handle(const TSshAuthInfoHolder& sess, const String& cm
     TCommandHandler Handler;
   } THandler;
   static const THandler handlers[] {
+    {"/make/assertation", true, "Generate assertion for req[\"salt\"] into rsp[\"assertion\"]", HandleMakeAssertion},
     {"/get/status", true, "Returns BoundBoxESP status", HandleGetStatus},
     {"/get/config", true, "Returns runtime config in rsp[\"config\"]", HandleGetConfig},
     {"/set/config", true, "Store runtime config from req[\"config\"]", HandleSetConfig},

@@ -134,34 +134,6 @@ namespace {
     return cont;
   }
 
-  lv_obj_t* createPadButton(lv_obj_t* parent, size_t idx)
-  {
-    lv_obj_t *btn = lv_obj_create(parent);
-    lv_obj_set_size(btn, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-    lv_obj_set_style_pad_all(btn, 0, 0);
-    lv_obj_set_style_border_width(btn, 0, 0);
-    lv_obj_set_style_bg_color(btn, pressedColor, LV_STATE_PRESSED);
-    lv_obj_set_style_bg_color(btn, panBgColor, LV_STATE_DEFAULT);
-    lv_obj_remove_style(btn, 0, LV_PART_SCROLLBAR);
-    lv_obj_set_style_border_width(btn, 0, 0);
-
-    lv_obj_t* img = lv_img_create(btn);
-    lv_img_set_src(img, pinPads[idx].ImgSrc);
-
-    lv_obj_add_flag(btn, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_set_user_data(btn, &pinPads[idx].Value);
-    lv_obj_add_event_cb(btn,
-      [](lv_event_t* event) -> void {
-        lv_obj_t* padButton = lv_event_get_target(event);
-        int8_t* value = reinterpret_cast<int8_t*>(lv_obj_get_user_data(padButton));
-        lv_msg_send(GUI_MESSAGE_PIN_PROMPT, value);
-      },
-      LV_EVENT_CLICKED, nullptr
-    );
-
-    return btn;
-  }
-
   void setBoardStateLabel(lv_obj_t* label, TBoardManager::BoardState state)
   {
     switch (state) {
@@ -178,11 +150,11 @@ namespace {
         break;
 
       case TBoardManager::BoardState::Process:
-        lv_label_set_text_static(label, "Process incofmig request...");
+        lv_label_set_text_static(label, "Process incoming request...");
         break;
 
       case TBoardManager::BoardState::Idle:
-        lv_label_set_text_static(label, "Wait for connection...");
+        lv_label_set_text_static(label, "Waiting for connection...");
         break;
 
       default:

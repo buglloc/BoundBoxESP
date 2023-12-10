@@ -5,6 +5,7 @@
 #include <xssh.h>
 #include <result.h>
 #include <Arduino.h>
+#include <IPAddress.h>
 #include <ArduinoJson.h>
 #include <Printable.h>
 
@@ -27,6 +28,7 @@ struct TSshAuthInfo: public Printable
 {
   String User;
   String KeyFingerprint;
+  IPAddress ClientIP;
   bool IsSysop;
 
   size_t printTo(Print& p) const override;
