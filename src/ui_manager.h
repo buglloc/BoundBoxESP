@@ -2,6 +2,7 @@
 #define UI_MANAGER_H
 
 #include "gui.h"
+#include "board_manager.h"
 #include <Arduino.h>
 #include <result.h>
 #include <functional>
@@ -31,14 +32,14 @@ public:
   struct EventHandlers
   {
     OnPinCharCb OnPinEnter;
-    OnPinEnteredCb onPinEntered;
-    OnPinVerifiedCb onPinVerified;
+    OnPinEnteredCb OnPinEntered;
+    OnPinVerifiedCb OnPinVerified;
   };
 
 public:
   static TUIManager &Instance();
   bool Begin(EventHandlers handlers);
-  void Tick();
+  void Tick(const TBoardManager::BoardInfo& boardInfo);
   void ShowRequestPin();
   void ShowVerifyPin(const String& verification);
   void ShowNotify(const String& title, const String& msg);
@@ -48,12 +49,14 @@ private:
   TUIManager() = default;
   void tickHomeButton();
   void tickStateTransition();
+  void tickBoardInfo(const TBoardManager::BoardInfo& boardInfo);
   void toState(State state);
 
 private:
   TGUI gui;
   State curState;
   State targetState;
+  TBoardManager::BoardInfo lastBoardInfo;
 
   EventHandlers callbacks;
   String notifyTitle;

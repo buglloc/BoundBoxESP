@@ -8,6 +8,8 @@
 #include <ArduinoLog.h>
 #include <ArduinoJson.h>
 
+#define LOG_PREFIX "runtime_config: "
+
 namespace {
   static TPrefStore& preferences = TPrefStore::Instance();
 }
@@ -23,14 +25,14 @@ cpp::result<std::unique_ptr<TConfig>, TConfig::Error>
 TConfig::LoadOrStore(const String& key) noexcept
 {
 #ifndef USE_PERSISTENT_CONFIG
-  Log.infoln("config persistence disabled: use default one");
+  Log.infoln(LOG_PREFIX "config persistence disabled: use default one");
   return TConfig::Default();
 #else
   if (preferences.HasKey(key.c_str())) {
     return Load(key);
   }
 
-  Log.infoln("no stored runtime config '%s' exists: load default", key);
+  Log.infoln(LOG_PREFIX "no stored runtime config '%s' exists: load default", key);
   auto result = TConfig::Default();
   if (result.has_error()) {
     return cpp::fail(result.error());
@@ -122,14 +124,14 @@ TConfig::ToJson(JsonObject& out) const noexcept
   JsonObject netCfg = out.createNestedObject("net");
   auto netError = Net->ToJson(netCfg);
   if (netError.has_error()) {
-    Log.errorln("runtime config: unable to serialize net config: %d", netError.error());
+    Log.errorln(LOG_PREFIX "unable to serialize net config: %d", netError.error());
     return cpp::fail(TConfig::Error::ShitHappens);
   }
 
   JsonObject sshCfg = out.createNestedObject("ssh");
   auto sshError = Ssh->ToJson(sshCfg);
   if (sshError.has_error()) {
-    Log.errorln("runtime config: unable to serialize ssh config: %d", sshError.error());
+    Log.errorln(LOG_PREFIX  "unable to serialize ssh config: %d", sshError.error());
     return cpp::fail(TConfig::Error::ShitHappens);
   }
 
@@ -143,13 +145,13 @@ TConfig::Marshal() const noexcept
   JsonObject obj = doc.to<JsonObject>();
   auto jsonErr = ToJson(obj);
   if (jsonErr.has_error()) {
-    Log.errorln("runtime config: unable to jsonify");
+    Log.errorln(LOG_PREFIX  "unable to jsonify");
     return cpp::fail(TConfig::Error::ShitHappens);
   }
 
   String out;
   if (serializeJson(doc, out) == 0) {
-    Log.errorln("runtime config: unable to serialize json");
+    Log.errorln(LOG_PREFIX  "unable to serialize json");
     return cpp::fail(TConfig::Error::ShitHappens);
   }
 
@@ -162,7 +164,7 @@ TConfig::Unmarshal(char* buf) noexcept
   DynamicJsonDocument doc(16384);
   DeserializationError jsonErr = deserializeJson(doc, buf);
   if (jsonErr) {
-    Log.errorln("runtime config: trying to load invalid json: %s", jsonErr.c_str());
+    Log.errorln(LOG_PREFIX "trying to load invalid json: %s", jsonErr.c_str());
     return cpp::fail(TConfig::Error::InvalidJson);
   }
 

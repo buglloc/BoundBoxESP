@@ -7,6 +7,8 @@
 #include <hmac.h>
 #include <ArduinoLog.h>
 
+#define LOG_PREFIX "authenticator: "
+
 namespace
 {
   static TUIManager& ui = TUIManager::Instance();
@@ -22,16 +24,27 @@ TAuthenticator& TAuthenticator::Instance()
 
 bool TAuthenticator::Begin()
 {
-  Log.infoln("authenticator starts");
-  requestPin();
-  Log.infoln("authenticator setup complete");
+  Log.infoln(LOG_PREFIX "setup complete");
   return true;
+}
+
+void TAuthenticator::BuildCredential()
+{
+  Log.infoln(LOG_PREFIX "request pin");
+  credBuilding = true;
+  credential = secrets.SecretKey();
+  ui.ShowRequestPin();
+}
+
+bool TAuthenticator::HasCredential()
+{
+  return !credBuilding;
 }
 
 cpp::result<BBU::Bytes, TAuthenticator::Error> TAuthenticator::Attest(const BBU::Bytes& salt, const String& client)
 {
   if (credBuilding) {
-    Log.errorln("authenticator: unable to attest w/o final credential");
+    Log.errorln(LOG_PREFIX "unable to attest w/o final credential");
     return cpp::fail(TAuthenticator::Error::NoCredential);
   }
 
@@ -46,7 +59,7 @@ cpp::result<BBU::Bytes, TAuthenticator::Error> TAuthenticator::Attest(const BBU:
 void TAuthenticator::OnPinChar(uint8_t ch)
 {
   if (!credBuilding) {
-    Log.errorln("authenticator: unexpected OnPinChar calling");
+    Log.errorln(LOG_PREFIX "unexpected OnPinChar calling");
     return;
   }
 
@@ -62,7 +75,7 @@ void TAuthenticator::OnPinChar(uint8_t ch)
 void TAuthenticator::OnPinEntered(bool ok)
 {
   if (!credBuilding) {
-    Log.errorln("authenticator: unexpected OnPinEntered calling");
+    Log.errorln(LOG_PREFIX "unexpected OnPinEntered calling");
     return;
   }
 
@@ -75,13 +88,13 @@ void TAuthenticator::OnPinEntered(bool ok)
     }
   }
 
-  requestPin();
+  BuildCredential();
 }
 
 void TAuthenticator::OnPinVerified(bool ok)
 {
   if (!credBuilding) {
-    Log.errorln("authenticator: unexpected OnPinVerified calling");
+    Log.errorln(LOG_PREFIX "unexpected OnPinVerified calling");
     return;
   }
 
@@ -91,24 +104,16 @@ void TAuthenticator::OnPinVerified(bool ok)
     return;
   }
 
-  requestPin();
+  BuildCredential();
 }
 
 cpp::result<BBU::Bytes, TAuthenticator::Error> TAuthenticator::attest(const BBU::Bytes& salt)
 {
   auto hmacRes = HMAC::Sum(credential, salt, HMAC::Type::SHA256);
   if (hmacRes.has_error()) {
-    Log.infoln("authenticator: hmac fail: %d", hmacRes.error());
+    Log.infoln(LOG_PREFIX "hmac fail: %d", hmacRes.error());
     return cpp::fail(Error::Internal);
   }
 
   return std::move(hmacRes.value());
-}
-
-void TAuthenticator::requestPin()
-{
-  Log.infoln("authenticator: request pin");
-  credBuilding = true;
-  credential = secrets.SecretKey();
-  ui.ShowRequestPin();
 }

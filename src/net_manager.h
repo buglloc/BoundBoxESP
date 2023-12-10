@@ -38,8 +38,7 @@ struct TNetConfig
 class INetImpl
 {
 public:
-  virtual bool Begin(const String& hostname, const TNetConfig& cfg) = 0;
-  virtual void Tick() = 0;
+  virtual bool Connect(const String& hostname, const TNetConfig& cfg) = 0;
   virtual IPAddress LocalIP() = 0;
 };
 
@@ -47,12 +46,11 @@ class TNetManager
 {
 public:
   static TNetManager &Instance();
+  bool Begin(NetKind kind);
 
-  bool Begin(const String& hostname, const TNetConfig& cfg);
-
-  void Tick()
+  bool Connect(const String& hostname, const TNetConfig& cfg)
   {
-    impl->Tick();
+    return impl->Connect(hostname, cfg);
   }
 
   IPAddress LocalIP()
@@ -77,8 +75,7 @@ class TEthernetNetManager final: public INetImpl
 {
 public:
   TEthernetNetManager() = default;
-  bool Begin(const String& hostname, const TNetConfig& cfg) override;
-  void Tick() override;
+  bool Connect(const String& hostname, const TNetConfig& cfg) override;
   IPAddress LocalIP() override;
 };
 #endif
@@ -88,8 +85,7 @@ class TWiFiNetManager final: public INetImpl
 {
 public:
   TWiFiNetManager() = default;
-  bool Begin(const String& hostname, const TNetConfig& cfg) override;
-  void Tick() override;
+  bool Connect(const String& hostname, const TNetConfig& cfg) override;
   IPAddress LocalIP() override;
 private:
   WiFiManager wifiManager;

@@ -7,6 +7,8 @@
 #include <Ethernet.h>
 #endif
 
+#define LOG_PREFIX "net_manager: "
+
 namespace
 {
   static IPAddress IPAddressNone(0, 0, 0, 0);
@@ -34,31 +36,28 @@ TNetManager& TNetManager::Instance()
   return instance;
 }
 
-bool TNetManager::Begin(const String& hostname, const TNetConfig& cfg)
+bool TNetManager::Begin(NetKind kind)
 {
-  Log.infoln("network manager starts");
+  Log.infoln(LOG_PREFIX "starts");
 
-  bool ok = false;
-  switch (cfg.Kind) {
+  switch (kind) {
 #ifdef NET_HAVE_ETHERNET
     case NetKind::Ethernet:
       impl = new TEthernetNetManager();
-      ok = impl->Begin(hostname, cfg);
       break;
 #endif
 #ifdef NET_HAVE_WIFI
     case NetKind::WiFi:
       impl = new TWiFiNetManager();
-      ok = impl->Begin(hostname, cfg);
       break;
 #endif
     default:
-      Log.errorln("no net configured - nothing to do");
+      Log.errorln(LOG_PREFIX "no net configured - nothing to do");
       return false;
   }
 
-  Log.infoln("network setup complete");
-  return ok;
+  Log.infoln(LOG_PREFIX "setup complete");
+  return true;
 }
 
 cpp::result<std::unique_ptr<TNetConfig>, TNetConfig::MarshalErr> TNetConfig::FromJson(const JsonObjectConst& obj) noexcept
@@ -78,27 +77,27 @@ cpp::result<std::unique_ptr<TNetConfig>, TNetConfig::MarshalErr> TNetConfig::Fro
     return cfg;
 
   } else {
-    Log.errorln("net config: unexpected net kind: %s", kind);
+    Log.errorln(LOG_PREFIX "unexpected net kind: %s", kind);
     return cpp::fail(TNetConfig::MarshalErr::ShitHappens);
   }
 
   if (fillAddress(obj["ip"].as<String>(), &cfg->IP)) {
-    Log.errorln("net config: invalid ip: %s", obj["ip"]);
+    Log.errorln(LOG_PREFIX "invalid ip: %s", obj["ip"]);
     return cpp::fail(TNetConfig::MarshalErr::ShitHappens);
   }
 
   if (fillAddress(obj["subnet"].as<String>(), &cfg->Subnet)) {
-    Log.errorln("net config: invalid subnet: %s", obj["subnet"]);
+    Log.errorln(LOG_PREFIX "invalid subnet: %s", obj["subnet"]);
     return cpp::fail(TNetConfig::MarshalErr::ShitHappens);
   }
 
   if (fillAddress(obj["dns"].as<String>(), &cfg->DNS)) {
-    Log.errorln("net config: invalid dns: %s", obj["dns"]);
+    Log.errorln(LOG_PREFIX "invalid dns: %s", obj["dns"]);
     return cpp::fail(TNetConfig::MarshalErr::ShitHappens);
   }
 
   if (fillAddress(obj["gateway"].as<String>(), &cfg->Gateway)) {
-    Log.errorln("net config: invalid gateway: %s", obj["gateway"]);
+    Log.errorln(LOG_PREFIX "invalid gateway: %s", obj["gateway"]);
     return cpp::fail(TNetConfig::MarshalErr::ShitHappens);
   }
 
@@ -108,7 +107,7 @@ cpp::result<std::unique_ptr<TNetConfig>, TNetConfig::MarshalErr> TNetConfig::Fro
     &cfg->Mac[0], &cfg->Mac[1], &cfg->Mac[2], &cfg->Mac[3], &cfg->Mac[4], &cfg->Mac[5]
   );
   if (macFields != 6) {
-    Log.errorln("net config: invalid mac: %s", obj["mac"]);
+    Log.errorln(LOG_PREFIX "invalid mac: %s", obj["mac"]);
     return cpp::fail(TNetConfig::MarshalErr::ShitHappens);
   }
 
@@ -159,10 +158,10 @@ cpp::result<void, TNetConfig::MarshalErr> TNetConfig::ToJson(JsonObject& out) co
 }
 
 #ifdef NET_HAVE_ETHERNET
-bool TEthernetNetManager::Begin(const String& hostname, const TNetConfig& cfg)
+bool TEthernetNetManager::Connect(const String& hostname, const TNetConfig& cfg)
 {
   Log.infoln(
-    "setup ethernet network (SS: %d, SCK: %d, MISO: %d, MOSI: %d)",
+    LOG_PREFIX "setup ethernet network (SS: %d, SCK: %d, MISO: %d, MOSI: %d)",
     NET_ETHERNET_SS_PIN, SCK, MISO, MOSI
   );
 
@@ -175,21 +174,17 @@ bool TEthernetNetManager::Begin(const String& hostname, const TNetConfig& cfg)
   }
 
   if (Ethernet.hardwareStatus() == EthernetNoHardware) {
-    Log.errorln("ethernet phy was not found.  Sorry, can't run without hardware. :(");
+    Log.errorln(LOG_PREFIX "ethernet phy was not found.  Sorry, can't run without hardware. :(");
     return false;
   }
 
   while (Ethernet.linkStatus() != LinkON) {
-    Log.infoln("ethernet cable is not connected. waiting...");
+    Log.infoln(LOG_PREFIX "ethernet cable is not connected. waiting...");
     delay(100); // do nothing, no point running without Ethernet hardware
   }
 
-  Log.infoln("ethernet network initialized (Local IP: %p)", Ethernet.localIP());
+  Log.infoln(LOG_PREFIX "ethernet network initialized (Local IP: %p)", Ethernet.localIP());
   return true;
-}
-
-void TEthernetNetManager::Tick()
-{
 }
 
 IPAddress TEthernetNetManager::LocalIP()
@@ -199,9 +194,9 @@ IPAddress TEthernetNetManager::LocalIP()
 #endif
 
 #ifdef NET_HAVE_WIFI
-bool TWiFiNetManager::Begin(const String& hostname, const TNetConfig& cfg)
+bool TWiFiNetManager::Connect(const String& hostname, const TNetConfig& cfg)
 {
-  Log.infoln("setup wifi manager");
+  Log.infoln(LOG_PREFIX "setup wifi manager");
   if (cfg.IP != INADDR_NONE) {
     wifiManager.setSTAStaticIPConfig(cfg.IP, cfg.Gateway, cfg.Subnet);
   }
@@ -211,20 +206,16 @@ bool TWiFiNetManager::Begin(const String& hostname, const TNetConfig& cfg)
   wifiManager.setDebugOutput(true);
   wifiManager.setConnectTimeout(NET_WIFI_CONNECT_TIMEOUT);
   wifiManager.setAPCallback([&hostname](WiFiManager *myWiFiManager) {
-    Log.infoln("entered config mode. SSID: %s", hostname);
+    Log.infoln(LOG_PREFIX "entered config mode. SSID: %s", hostname);
   });
 
   if (!wifiManager.autoConnect(hostname.c_str(), nullptr)) {
-    Log.errorln("unable to setup wifi");
+    Log.errorln(LOG_PREFIX "unable to setup wifi");
     return false;
   }
 
-  Log.infoln("ethernet network initialized (Local IP: %p)", WiFi.localIP());
+  Log.infoln(LOG_PREFIX "wifi network initialized (Local IP: %p)", WiFi.localIP());
   return true;
-}
-
-void TWiFiNetManager::Tick()
-{
 }
 
 IPAddress TWiFiNetManager::LocalIP()

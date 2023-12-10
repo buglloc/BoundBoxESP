@@ -3,14 +3,15 @@
 #include "defaults.h"
 
 #include <ArduinoLog.h>
-
-#ifdef LILYGO_TDISPLAY_AMOLED_SERIES
 #include <LilyGo_AMOLED.h>
 #include <LV_Helper.h>
+
+#define LOG_PREFIX "ui_manager: "
 
 namespace
 {
   static LilyGo_Class amoled;
+
   enum class PressState {
     None, Short, Long
   };
@@ -64,11 +65,12 @@ bool TUIManager::Begin(EventHandlers handlers)
 {
   callbacks = std::move(handlers);
 
-  Log.infoln("UI manager starts");
+  Log.infoln(LOG_PREFIX "starts");
   if (!amoled.beginAMOLED_191()) {
-    Log.infoln("unable to start amoled display");
+    Log.infoln(LOG_PREFIX "unable to start amoled display");
     return false;
   }
+
   beginLvglHelper(amoled);
 
   if (callbacks.OnPinEnter != nullptr) {
@@ -83,17 +85,18 @@ bool TUIManager::Begin(EventHandlers handlers)
   }
 
   gui.Begin();
-  ShowRequestPin();
+  ShowIdle();
   amoled.setBrightness(DISPLAY_BRIGHTNESS);
-  Log.infoln("UI manager setup complete");
+  Log.infoln(LOG_PREFIX "setup complete");
   return true;
 }
 
-void TUIManager::Tick()
+void TUIManager::Tick(const TBoardManager::BoardInfo& boardInfo)
 {
-  lv_task_handler();
   tickHomeButton();
+  tickBoardInfo(boardInfo);
   tickStateTransition();
+  lv_task_handler();
 }
 
 void TUIManager::ShowRequestPin()
@@ -141,14 +144,14 @@ void TUIManager::tickHomeButton()
 
   switch (curState) {
     case State::PinRequest: {
-      if (callbacks.onPinEntered != nullptr) {
-        callbacks.onPinEntered(pressState == PressState::Short);
+      if (callbacks.OnPinEntered != nullptr) {
+        callbacks.OnPinEntered(pressState == PressState::Short);
       }
       break;
     }
     case State::PinVerify: {
-      if (callbacks.onPinVerified != nullptr) {
-        callbacks.onPinVerified(pressState == PressState::Short);
+      if (callbacks.OnPinVerified != nullptr) {
+        callbacks.OnPinVerified(pressState == PressState::Short);
       }
       break;
     }
@@ -167,7 +170,7 @@ void TUIManager::tickHomeButton()
       break;
     }
     default:
-      Log.infoln("ui: unexpected state: %d", curState);
+      Log.infoln(LOG_PREFIX "unexpected state: %d", curState);
       return;
   }
 }
@@ -181,50 +184,33 @@ void TUIManager::tickStateTransition()
   curState = targetState;
   switch (curState) {
     case State::PinRequest:
-      Log.verboseln("ui: switch to pin request screen");
+      Log.verboseln(LOG_PREFIX "switch to pin request screen");
       gui.ShowScreenPinEnter();
       break;
     case State::PinVerify:
-      Log.verboseln("ui: switch to pin verify screen");
+      Log.verboseln(LOG_PREFIX "switch to pin verify screen");
       gui.ShowScreenPinVerify(pinVerification);
       break;
     case State::Notify:
-      Log.verboseln("ui: switch to notify screen");
+      Log.verboseln(LOG_PREFIX "switch to notify screen");
       gui.ShowScreenNotification(notifyTitle, notifyMsg);
       break;
     case State::Idle:
-      Log.verboseln("ui: switch to idle");
-      gui.ShowScreenIdle();
+      Log.verboseln(LOG_PREFIX "switch to idle");
+      gui.ShowScreenIdle(lastBoardInfo);
       break;
     default:
-      Log.infoln("ui: unexpected state: %d", curState);
+      Log.infoln(LOG_PREFIX "unexpected state: %d", curState);
       return;
   }
 }
 
-#else
-
-TUIManager& TUIManager::Instance()
+void TUIManager::tickBoardInfo(const TBoardManager::BoardInfo& boardInfo)
 {
-  static TUIManager instance;
-  return instance;
+  if (lastBoardInfo == boardInfo) {
+    return;
+  }
+
+  lastBoardInfo = boardInfo;
+  lv_msg_send(GUI_MESSAGE_UPDATE_BOARD_INFO, &lastBoardInfo);
 }
-
-bool TUIManager::Begin()
-{
-  Log.infoln("no UI used");
-  return true;
-}
-
-void TUIManager::Tick()
-{}
-
-void TUIManager::RequestPin()
-{
-  pinDoneCb(false);
-}
-
-void TUIManager::Notify(const String& title, const String& msg)
-{}
-
-#endif

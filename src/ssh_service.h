@@ -42,7 +42,7 @@ class TSshService
 public:
   static TSshService &Instance();
   bool Begin(const TSshConfig& cfg);
-  void Tick(TSshActionCallback actionCallback);
+  void AcceptConnection(TSshActionCallback actionCallback);
 
 private:
   TSshService() = default;

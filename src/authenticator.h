@@ -18,6 +18,8 @@ public:
 public:
   static TAuthenticator &Instance();
   bool Begin();
+  void BuildCredential();
+  bool HasCredential();
 
   cpp::result<BBU::Bytes, Error> Attest(const BBU::Bytes& salt, const String& client);
   void OnPinChar(uint8_t ch);
@@ -27,7 +29,6 @@ public:
 private:
   TAuthenticator() = default;
   cpp::result<BBU::Bytes, Error> attest(const BBU::Bytes& salt);
-  void requestPin();
 
 private:
   BBU::Bytes credential;
