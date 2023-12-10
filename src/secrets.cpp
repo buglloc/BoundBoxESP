@@ -4,6 +4,7 @@
 
 #include <xssh.h>
 #include <bytes.h>
+#include <base64.h>
 #include <ArduinoLog.h>
 
 #define LOG_PREFIX "perf_store: "
@@ -120,12 +121,12 @@ cpp::result<void, TSecrets::Error> TSecrets::SetFromJson(const JsonObjectConst& 
   }
 
   if (obj.containsKey("secret_key")) {
-    String newSecretKeyHex = obj["secret_key"].as<String>();
-    if (newSecretKeyHex.isEmpty()) {
+    String newSecretKeyBase64 = obj["secret_key"].as<String>();
+    if (newSecretKeyBase64.isEmpty()) {
       return cpp::fail(TSecrets::Error::InvalidSecretKey);
     }
 
-    BBU::Bytes newSecretKey = BBU::BytesFromHex(newSecretKeyHex);
+    BBU::Bytes newSecretKey = BBU::Base64Decode(newSecretKeyBase64);
     if (newSecretKey.empty()) {
       return cpp::fail(TSecrets::Error::InvalidSecretKey);
     }
@@ -139,7 +140,7 @@ cpp::result<void, TSecrets::Error> TSecrets::SetFromJson(const JsonObjectConst& 
 cpp::result<void, TSecrets::Error> TSecrets::ToJson(JsonObject& out) const noexcept
 {
   out["host_key"] = hostKey;
-  out["secret_key"] = BBU::BytesToHex(secretKey);
+  out["secret_key"] = BBU::Base64Encode(secretKey);
   return {};
 }
 

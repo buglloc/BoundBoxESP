@@ -26,6 +26,18 @@ namespace
         return -1;
     }
   }
+
+  IPAddress getClientIp(ssh_session session)
+  {
+    struct sockaddr_storage tmp;
+    struct sockaddr_in *sock;
+    size_t len = 100;
+
+    getpeername(ssh_get_fd(session), (struct sockaddr*)&tmp, &len);
+    struct sockaddr_in *s = (struct sockaddr_in *)&tmp;
+    return IPAddress((uint32_t)(s->sin_addr.s_addr));
+  }
+
 } // anonymous namespace
 
 TSshService& TSshService::Instance()
@@ -235,6 +247,7 @@ TSshAuthInfoHolder TSshService::authenticate(ssh_session session)
       case 0: {
         TSshAuthInfoHolder out(new TSshAuthInfo());
         out->User = ssh_message_auth_user(message);
+        out->ClientIP = getClientIp(session);
         out->IsSysop = isSysop;
 
         auto keyFp = XSSH::KeyFingerprint(auth_key);
@@ -244,7 +257,10 @@ TSshAuthInfoHolder TSshService::authenticate(ssh_session session)
           out->KeyFingerprint = keyFp.value();
         }
 
-        Log.infoln("user '%s' was authenticated by key '%s'", out->User.c_str(), out->KeyFingerprint.c_str());
+        Log.infoln(
+          "user '%s' was authenticated by key '%s' from %p",
+          out->User.c_str(), out->KeyFingerprint.c_str(), out->ClientIP
+        );
         ssh_message_free(message);
         return out;
       }
