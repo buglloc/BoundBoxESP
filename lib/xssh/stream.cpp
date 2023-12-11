@@ -3,33 +3,21 @@
 
 namespace XSSH
 {
-
-  int ChanStream::available()
+  int ChanReader::read()
   {
-    return 0;
-  }
-
-  int ChanStream::peek()
-  {
-    if (peekBuf != 0) {
-      return peekBuf;
+    if (ssh_channel_is_eof(chan)) {
+      return 0;
     }
 
-    if (readBytes(&peekBuf, 1) == 1) {
-      return peekBuf;
+    char buf;
+    if (readBytes(&buf, 1) == 1) {
+      return buf;
     }
 
     return -1;
   }
 
-  int ChanStream::read()
-  {
-    int out = peek();
-    peekBuf = 0;
-    return out;
-  }
-
-  size_t ChanStream::readBytes(char* buffer, size_t length)
+  size_t ChanReader::readBytes(char* buffer, size_t length)
   {
     if (ssh_channel_is_eof(chan)) {
       return 0;
@@ -47,21 +35,50 @@ namespace XSSH
     return rc < 0 ? 0 : rc;
   }
 
-  size_t ChanPrinter::write(uint8_t b)
+  size_t ChanWriter::write(uint8_t b)
   {
-    return write(&b, 1);
+    if (size + 1 >= BUF_SIZE && !flush()) {
+      return 0;
+    }
+
+    buffer[size++] = b;
+    return 1;
   }
 
-  size_t ChanPrinter::write(const uint8_t *buffer, size_t length)
+  size_t ChanWriter::write(const uint8_t* bytes, size_t length)
   {
     if (!ssh_channel_is_open(chan)) {
       return 0;
     }
 
+    for (size_t i = 0; i < length; i++) {
+      if (write(bytes[i]) != 1) {
+        return i;
+      }
+    }
+
+    return length;
+  }
+
+  bool ChanWriter::flush() {
+    if (size == 0) {
+      return true;
+    }
+
+    if (!ssh_channel_is_open(chan)) {
+      return false;
+    }
+
     int rc = 0;
     do {
-      rc = ssh_channel_write(chan, buffer, length);
+      rc = ssh_channel_write(chan, buffer, size);
     } while (rc == SSH_AGAIN);
-    return rc < 0 ? 0 : rc;
+
+    if (rc > 0) {
+      size = 0;
+      return true;
+    }
+
+    return false;
   }
 }

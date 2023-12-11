@@ -3,14 +3,17 @@
 
 #include <Arduino.h>
 
+// fwd
 typedef struct ssh_channel_struct* ssh_channel;
+
+#define BUF_SIZE 512
 
 namespace XSSH
 {
-  class ChanStream: public Stream
+  class ChanReader
   {
   public:
-    explicit ChanStream(ssh_channel chan) : chan(chan) {};
+    explicit ChanReader(ssh_channel chan) : chan(chan) {};
 
     void setTimeouts(int pollMs, int readMs)
     {
@@ -18,33 +21,36 @@ namespace XSSH
       readTimeout = readMs;
     };
 
-    virtual int available() override;
-    virtual int read() override;
-    virtual int peek() override;
-    virtual size_t readBytes(char* buffer, size_t length) override;
-    virtual size_t write(uint8_t b) override
-    {
-      return 0;
-    }
+    int read();
+    size_t readBytes(char* s, size_t length);
 
   private:
     ssh_channel chan;
-    char peekBuf;
     int pollTimeout = 100;
     int readTimeout = 5000;
   };
 
-  class ChanPrinter: public Print
+  class ChanWriter
   {
   public:
-    explicit ChanPrinter(ssh_channel chan) : chan(chan) {};
+    explicit ChanWriter(ssh_channel chan) : chan(chan)
+    {
+      size = 0;
+    };
 
-    virtual size_t write(uint8_t b) override;
-    virtual size_t write(const uint8_t *buffer, size_t length) override;
+    size_t write(uint8_t b);
+    size_t write(const uint8_t* bytes, size_t length);
+    bool flush();
 
-    using Print::write; // pull in write(str) and write(buf, size) from Print
+    ~ChanWriter()
+    {
+      flush();
+    }
+
   private:
     ssh_channel chan;
+    uint8_t buffer[BUF_SIZE];
+    size_t size;
   };
 }
 

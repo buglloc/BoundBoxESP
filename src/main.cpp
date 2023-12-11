@@ -120,7 +120,7 @@ void doMainTask(void* params)
       }
 
       w.write('\n');
-      return ok;
+      return w.flush();
     });
   } while (1);
 }
