@@ -42,7 +42,7 @@ public:
   void Tick(const TBoardManager::BoardInfo& boardInfo);
   void ShowRequestPin();
   void ShowVerifyPin(const String& verification);
-  void ShowNotify(const String& title, const String& msg);
+  void ShowNotify(const String& msg);
   void ShowIdle();
 
 private:
@@ -59,7 +59,6 @@ private:
   TBoardManager::BoardInfo lastBoardInfo;
 
   EventHandlers callbacks;
-  String notifyTitle;
   String notifyMsg;
   String pinVerification;
 };
