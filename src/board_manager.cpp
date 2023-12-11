@@ -154,6 +154,7 @@ TNetManager& TBoardManager::Net() const
 
 void TBoardManager::ToState(BoardState targetState)
 {
+  // racy
   boardInfo.State = targetState;
 }
 

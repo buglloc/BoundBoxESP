@@ -7,7 +7,7 @@
 #include <functional>
 
 #define GUI_MESSAGE_PIN_PROMPT 100
-#define GUI_MESSAGE_UPDATE_BOARD_INFO 100
+#define GUI_MESSAGE_UPDATE_BOARD_INFO 101
 
 class TGUI
 {
