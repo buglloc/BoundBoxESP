@@ -178,7 +178,8 @@ void TGUI::ShowScreenPinEnter()
   const size_t padPadding = 12;
   const size_t pagePadding = 18;
 
-  lv_obj_t* cont = createPage();
+  lv_obj_t* screen = switchScreen(nullptr);
+  lv_obj_t* cont = createPage(screen);
   lv_obj_t* pinProgressLabel = createPinProgressLabel(cont);
   lv_obj_align(pinProgressLabel, LV_ALIGN_TOP_LEFT, pagePadding, pagePadding+padPadding);
 
@@ -217,7 +218,8 @@ void TGUI::ShowScreenPinVerify(const String& verification)
   const size_t iconPadding = 8;
   const size_t iconSize = 96;
 
-  lv_obj_t* cont = createPage();
+  lv_obj_t* screen = switchScreen(nullptr);
+  lv_obj_t* cont = createPage(screen);
   lv_obj_t* topLabel = lv_label_create(cont);
   lv_obj_align(topLabel, LV_ALIGN_TOP_MID, 0, 24);
   lv_label_set_text_static(topLabel, "is OK?!");
@@ -253,9 +255,16 @@ void TGUI::ShowScreenPinVerify(const String& verification)
   }
 }
 
-void TGUI::ShowScreenNotification(const String& title, const String& msg)
+void TGUI::ShowScreenNotification(const String& msg)
 {
-  lv_obj_t* cont = createPage();
+  if (notifyScreen != nullptr) {
+    lv_msg_send(GUI_MESSAGE_NOTIFY, msg.c_str());
+    switchScreen(notifyScreen);
+    return;
+  }
+
+  notifyScreen = switchScreen(nullptr);
+  lv_obj_t* cont = createPage(notifyScreen);
   lv_obj_t* img = lv_img_create(cont);
   lv_img_set_src(img, &bg_notify);
   lv_obj_set_pos(img, 0, 0);
@@ -264,7 +273,7 @@ void TGUI::ShowScreenNotification(const String& title, const String& msg)
   lv_obj_set_width(titleLabel, 300);
   lv_obj_set_style_text_font(titleLabel, &font_roboto_mono_32, 0);
   lv_obj_set_style_text_align(titleLabel, LV_TEXT_ALIGN_RIGHT, 0);
-  lv_label_set_text(titleLabel, title.c_str());
+  lv_label_set_text_static(titleLabel, R"(\(o_o)/)");
   lv_obj_align(titleLabel, LV_ALIGN_RIGHT_MID, -48, -24);
 
   lv_obj_t* msgLabel = lv_label_create(cont);
@@ -273,11 +282,30 @@ void TGUI::ShowScreenNotification(const String& title, const String& msg)
   lv_obj_set_style_text_align(msgLabel, LV_TEXT_ALIGN_RIGHT, 0);
   lv_label_set_text(msgLabel, msg.c_str());
   lv_obj_align_to(msgLabel, titleLabel, LV_ALIGN_OUT_BOTTOM_MID, 0, 8);
+
+  lv_obj_add_event_cb(msgLabel,
+    [](lv_event_t* e) -> void {
+      lv_msg_t* m = lv_event_get_msg(e);
+      lv_obj_t* label = lv_event_get_target(e);
+
+      auto msg = reinterpret_cast<const char*>(lv_msg_get_payload(m));
+      lv_label_set_text(label, msg);
+    },
+    LV_EVENT_MSG_RECEIVED,
+    nullptr
+  );
+  lv_msg_subsribe_obj(GUI_MESSAGE_NOTIFY, msgLabel, nullptr);
 }
 
 void TGUI::ShowScreenIdle(TBoardManager::BoardInfo boardInfo)
 {
-  lv_obj_t* cont = createPage();
+  if (idleScreen != nullptr) {
+    switchScreen(idleScreen);
+    return;
+  }
+
+  idleScreen = switchScreen(nullptr);
+  lv_obj_t* cont = createPage(idleScreen);
 
   lv_obj_t* stateLabel = lv_label_create(cont);
   lv_obj_center(stateLabel);
@@ -318,9 +346,22 @@ void TGUI::ShowScreenIdle(TBoardManager::BoardInfo boardInfo)
   lv_msg_subsribe_obj(GUI_MESSAGE_UPDATE_BOARD_INFO, ipLabel, nullptr);
 }
 
-lv_obj_t* TGUI::createPage()
+TGUI::~TGUI()
 {
-  lv_obj_t *cont = lv_obj_create(switchScreen());
+  if (notifyScreen != nullptr) {
+    lv_obj_clean(notifyScreen);
+    lv_obj_del(notifyScreen);
+  }
+
+  if (idleScreen != nullptr) {
+    lv_obj_clean(idleScreen);
+    lv_obj_del(idleScreen);
+  }
+}
+
+lv_obj_t* TGUI::createPage(lv_obj_t *screen)
+{
+  lv_obj_t *cont = lv_obj_create(screen);
   lv_obj_set_size(cont, lv_disp_get_physical_hor_res(nullptr), lv_disp_get_ver_res(nullptr));
   lv_obj_add_style(cont, &mainStyle, LV_PART_MAIN);
   lv_obj_remove_style(cont, 0, LV_PART_SCROLLBAR);
@@ -332,16 +373,33 @@ lv_obj_t* TGUI::createPage()
   return cont;
 }
 
-lv_obj_t* TGUI::switchScreen()
+lv_obj_t* TGUI::switchScreen(lv_obj_t *targetScreen)
 {
   lv_obj_t* prevScr = lv_scr_act();
-  lv_obj_t* newScr = lv_obj_create(nullptr);
-  if (prevScr != nullptr) {
-    lv_obj_clean(prevScr);
-    lv_scr_load_anim(newScr, LV_SCR_LOAD_ANIM_FADE_OUT, 150, 50, false);
-  } else {
-    lv_scr_load_anim(newScr, LV_SCR_LOAD_ANIM_NONE, 0, 0, false);
+  if (targetScreen == nullptr) {
+    targetScreen = lv_obj_create(nullptr);
   }
 
-  return newScr;
+  if (prevScr == targetScreen) {
+    return targetScreen;
+  }
+
+  if (isPersistentScreen(prevScr)) {
+    lv_scr_load_anim(targetScreen, LV_SCR_LOAD_ANIM_FADE_OUT, 150, 50, false);
+    return targetScreen;
+  }
+
+  if (prevScr != nullptr) {
+    lv_obj_clean(prevScr);
+    lv_scr_load_anim(targetScreen, LV_SCR_LOAD_ANIM_FADE_OUT, 150, 50, true);
+    return targetScreen;
+  }
+
+  lv_scr_load_anim(targetScreen, LV_SCR_LOAD_ANIM_NONE, 0, 0, false);
+  return targetScreen;
+}
+
+bool TGUI::isPersistentScreen(lv_obj_t* scr)
+{
+  return scr == notifyScreen || scr == idleScreen;
 }

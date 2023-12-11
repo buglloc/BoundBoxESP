@@ -51,7 +51,7 @@ cpp::result<BBU::Bytes, TAuthenticator::Error> TAuthenticator::MakeAssertion(con
 
   auto out = makeAssertion(salt);
   if (!out.has_error()) {
-    ui.ShowNotify(R"(\(o_o)/)", client);
+    ui.ShowNotify(client);
   }
 
   return std::move(out);

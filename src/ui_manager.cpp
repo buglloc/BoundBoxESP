@@ -110,9 +110,8 @@ void TUIManager::ShowVerifyPin(const String& toVerify)
   toState(State::PinVerify);
 }
 
-void TUIManager::ShowNotify(const String& title, const String& msg)
+void TUIManager::ShowNotify(const String& msg)
 {
-  notifyTitle = title;
   notifyMsg = msg;
   toState(State::Notify);
 }
@@ -193,7 +192,7 @@ void TUIManager::tickStateTransition()
       break;
     case State::Notify:
       Log.verboseln(LOG_PREFIX "switch to notify screen");
-      gui.ShowScreenNotification(notifyTitle, notifyMsg);
+      gui.ShowScreenNotification(notifyMsg);
       break;
     case State::Idle:
       Log.verboseln(LOG_PREFIX "switch to idle");
