@@ -154,15 +154,17 @@ void TUIManager::tickHomeButton()
       }
       break;
     }
+    case State::Notify: {
+      toState(State::Idle);
+      break;
+    }
     case State::Idle: {
       static uint32_t checkMs = 0;
-      static uint8_t lastBri = 0;
       if (millis() > checkMs) {
         if (amoled.getBrightness()) {
-            lastBri = amoled.getBrightness();
-            amoled.setBrightness(0);
+          amoled.setBrightness(0);
         } else {
-            amoled.setBrightness(lastBri);
+          amoled.setBrightness(DISPLAY_BRIGHTNESS);
         }
       }
       checkMs = millis() + 200;
@@ -176,10 +178,30 @@ void TUIManager::tickHomeButton()
 
 void TUIManager::tickStateTransition()
 {
+  const uint32_t stateTTL = 10000;
+
+  if (curState == targetState && millis() - lastStateChange > stateTTL) {
+    switch (curState) {
+      case State::Notify:
+        Log.verboseln(LOG_PREFIX "switch to idle screen by TTL");
+        toState(State::Idle);
+        break;
+      // TODO(buglloc): fix me
+      // case State::Idle:
+      //   stateChange = millis();
+      //   if (amoled.getBrightness()) {
+      //     Log.verboseln(LOG_PREFIX "turn off screen by TTL");
+      //     amoled.setBrightness(0);
+      //   }
+      //   break;
+    }
+  }
+
   if (curState == targetState) {
     return;
   }
 
+  lastStateChange = millis();
   curState = targetState;
   switch (curState) {
     case State::PinRequest:
