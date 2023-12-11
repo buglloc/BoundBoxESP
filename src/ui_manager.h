@@ -56,6 +56,7 @@ private:
   TGUI gui;
   State curState;
   State targetState;
+  uint32_t lastStateChange;
   TBoardManager::BoardInfo lastBoardInfo;
 
   EventHandlers callbacks;
