@@ -34,8 +34,8 @@ struct TSshAuthInfo: public Printable
   size_t printTo(Print& p) const override;
 };
 
-using TSshReader = XSSH::ChanStream;
-using TSshWriter = XSSH::ChanPrinter;
+using TSshReader = XSSH::ChanReader;
+using TSshWriter = XSSH::ChanWriter;
 using TSshAuthInfoHolder = std::unique_ptr<TSshAuthInfo>;
 using TSshActionCallback = std::function<bool(const TSshAuthInfoHolder& sess, const String& cmd, TSshReader& r, TSshWriter& w)>;
 
