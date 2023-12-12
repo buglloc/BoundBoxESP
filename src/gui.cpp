@@ -329,7 +329,7 @@ void TGUI::ShowScreenIdle(TBoardManager::BoardInfo boardInfo)
   lv_obj_t* ipLabel = lv_label_create(cont);
   lv_obj_align(ipLabel, LV_ALIGN_BOTTOM_LEFT, 24, -24);
   lv_obj_set_style_text_font(ipLabel, &font_roboto_mono_20, 0);
-  lv_obj_set_style_text_align(ipLabel, LV_TEXT_ALIGN_CENTER, 0);
+  lv_obj_set_style_text_align(ipLabel, LV_TEXT_ALIGN_LEFT, 0);
   lv_label_set_text_fmt(ipLabel, "IP: %s", boardInfo.LocalIP.toString());
 
   lv_obj_add_event_cb(ipLabel,
@@ -344,6 +344,48 @@ void TGUI::ShowScreenIdle(TBoardManager::BoardInfo boardInfo)
     nullptr
   );
   lv_msg_subsribe_obj(GUI_MESSAGE_UPDATE_BOARD_INFO, ipLabel, nullptr);
+
+#if HAVE_TEMP_SENSOR
+  lv_obj_t* tempLabel = lv_label_create(cont);
+  lv_obj_align(tempLabel, LV_ALIGN_BOTTOM_MID, 0, -24);
+  lv_obj_set_style_text_font(tempLabel, &font_roboto_mono_20, 0);
+  lv_obj_set_style_text_align(tempLabel, LV_TEXT_ALIGN_CENTER, 0);
+  lv_label_set_text_fmt(tempLabel, "Core: %.2f°C", boardInfo.CoreTemp);
+
+  lv_obj_add_event_cb(tempLabel,
+    [](lv_event_t* e) -> void {
+      lv_msg_t* m = lv_event_get_msg(e);
+      lv_obj_t* label = lv_event_get_target(e);
+
+      auto info = reinterpret_cast<const TBoardManager::BoardInfo*>(lv_msg_get_payload(m));
+      lv_label_set_text_fmt(label, "BATT: %.2f°C", info->CoreTemp);
+    },
+    LV_EVENT_MSG_RECEIVED,
+    nullptr
+  );
+  lv_msg_subsribe_obj(GUI_MESSAGE_UPDATE_BOARD_INFO, tempLabel, nullptr);
+#endif
+
+#if HAVE_BATTERY
+  lv_obj_t* battLabel = lv_label_create(cont);
+  lv_obj_align(battLabel, LV_ALIGN_BOTTOM_RIGHT, -24, -24);
+  lv_obj_set_style_text_font(battLabel, &font_roboto_mono_20, 0);
+  lv_obj_set_style_text_align(battLabel, LV_TEXT_ALIGN_RIGHT, 0);
+  lv_label_set_text_fmt(battLabel, "BATT: %.2fV", boardInfo.BattVoltage/1000.0f);
+
+  lv_obj_add_event_cb(battLabel,
+    [](lv_event_t* e) -> void {
+      lv_msg_t* m = lv_event_get_msg(e);
+      lv_obj_t* label = lv_event_get_target(e);
+
+      auto info = reinterpret_cast<const TBoardManager::BoardInfo*>(lv_msg_get_payload(m));
+      lv_label_set_text_fmt(label, "BATT: %.2fV", info->BattVoltage/1000.0f);
+    },
+    LV_EVENT_MSG_RECEIVED,
+    nullptr
+  );
+  lv_msg_subsribe_obj(GUI_MESSAGE_UPDATE_BOARD_INFO, battLabel, nullptr);
+#endif
 }
 
 TGUI::~TGUI()

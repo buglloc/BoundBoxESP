@@ -3,6 +3,7 @@
 
 #include "config.h"
 #include "net_manager.h"
+// #include <math.h>
 
 class TBoardManager
 {
@@ -21,10 +22,17 @@ public:
   {
     BoardState State;
     IPAddress LocalIP;
+    uint32_t BattVoltage;
+    float CoreTemp;
 
     bool operator==(const BoardInfo& info) const
     {
-      return State == info.State && LocalIP == info.LocalIP;
+      return (
+        State == info.State &&
+        LocalIP == info.LocalIP &&
+        abs((int)BattVoltage - (int)info.BattVoltage) < 50 &&
+        fabs(CoreTemp - info.CoreTemp) < 0.1
+      );
     }
   };
 
@@ -40,6 +48,8 @@ public:
   const TConfig& RuntimeConfig() const;
   uint32_t Uptime() const;
   uint32_t FreeHeap() const;
+  uint32_t BattVoltage() const;
+  float CoreTemp() const;
 
 private:
   TBoardManager() = default;

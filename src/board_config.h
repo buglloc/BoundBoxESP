@@ -31,6 +31,16 @@
 #define IDR_CASE_OPENED_MODE INPUT_PULLUP
 // End of intruder config
 
+// Batt config
+#define HAVE_BATTERY 1
+#define ADC_PIN 4
+// End of batt config
+
+// Temp sensor
+// Broken for ESP32S3 so far: https://github.com/espressif/esp-idf/issues/8088
+// #define HAVE_TEMP_SENSOR 1
+// End of core temp sensor
+
 // Log store config
 // #define HAVE_SD_CARD 1
 #define SD_CARD_SS_PIN 14

@@ -1,6 +1,7 @@
 #ifndef GUI_H
 #define GUI_H
 
+#include "board_config.h"
 #include "board_manager.h"
 #include <Arduino.h>
 #include <lvgl.h>

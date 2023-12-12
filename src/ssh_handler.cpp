@@ -1,6 +1,7 @@
 #include "ssh_handler.h"
 #include "defaults.h"
 #include "config.h"
+#include "board_config.h"
 #include "board_manager.h"
 #include "secrets.h"
 #include "authenticator.h"
@@ -118,6 +119,13 @@ namespace
   {
     rsp["uptime"] = boardManager.Uptime();
     rsp["free_heap"] = boardManager.FreeHeap();
+  #if HAVE_BATTERY
+    rsp["batt_voltage"] = boardManager.BattVoltage();
+  #endif
+  #if HAVE_TEMP_SENSOR
+    rsp["core_temp"] = boardManager.CoreTemp();
+  #endif
+
     return true;
   }
 }

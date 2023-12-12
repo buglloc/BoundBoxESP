@@ -10,6 +10,14 @@
 #include <SPI.h>
 #include <SD.h>
 #include <ArduinoLog.h>
+#if HAVE_BATTERY
+#include <esp_adc_cal.h>
+#endif
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5,0,0)
+#include <driver/temp_sensor.h>
+#else
+#include <driver/temperature_sensor.h>
+#endif
 
 #define LOG_PREFIX "board_manager: "
 
@@ -18,6 +26,10 @@ namespace
   static TNetManager& netManager = TNetManager::Instance();
   static TUIManager& uiManager = TUIManager::Instance();
   static TAuthenticator& authenticator = TAuthenticator::Instance();
+
+#if HAVE_TEMP_SENSOR && ESP_IDF_VERSION > ESP_IDF_VERSION_VAL(5,0,0)
+  temperature_sensor_handle_t temp_sensor;
+#endif
 
   void restart()
   {
@@ -34,6 +46,55 @@ namespace
     esp_deep_sleep_start();
   }
 
+  uint32_t adcBattVoltage()
+  {
+  #if !HAVE_BATTERY || !ADC_PIN
+    return 0;
+  #endif
+    esp_adc_cal_characteristics_t adc_chars;
+    esp_adc_cal_characterize(ADC_UNIT_1, ADC_ATTEN_DB_11, ADC_WIDTH_BIT_12, 1100, &adc_chars);
+    uint32_t v1 = 0,  raw = 0;
+    raw = analogRead(ADC_PIN);
+    v1 = esp_adc_cal_raw_to_voltage(raw, &adc_chars) * 2;
+    return v1;
+  }
+
+  void initEsp32TempSensor()
+  {
+  #if !HAVE_TEMP_SENSOR
+    return;
+  #endif
+
+    // https://docs.espressif.com/projects/esp-idf/zh_CN/v4.4.4/esp32s3/api-reference/peripherals/temp_sensor.html
+  #if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5,0,0)
+    temp_sensor_config_t temp_sensor = TSENS_CONFIG_DEFAULT();
+    temp_sensor_set_config(temp_sensor);
+    temp_sensor_start();
+  #else
+    // https://docs.espressif.com/projects/esp-idf/zh_CN/v5.0.1/esp32s3/api-reference/peripherals/temp_sensor.html
+    static temperature_sensor_config_t temp_sensor_config = TEMPERATURE_SENSOR_CONFIG_DEFAULT(10, 50);
+    temperature_sensor_install(&temp_sensor_config, &temp_sensor);
+    temperature_sensor_enable(temp_sensor);
+  #endif
+  }
+
+  float esp32CoreTemp()
+  {
+  #if !HAVE_TEMP_SENSOR
+    return 0.0f;
+  #endif
+
+    float tsens_value;
+    // https://docs.espressif.com/projects/esp-idf/zh_CN/v4.4.4/esp32s3/api-reference/peripherals/temp_sensor.html
+  #if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5,0,0)
+    temp_sensor_read_celsius(&tsens_value);
+  #else
+    // https://docs.espressif.com/projects/esp-idf/zh_CN/v5.0.1/esp32s3/api-reference/peripherals/temp_sensor.html
+    temperature_sensor_get_celsius(temp_sensor, &tsens_value);
+  #endif
+
+    return tsens_value;
+  }
 }
 
 TBoardManager& TBoardManager::Instance()
@@ -55,6 +116,9 @@ bool TBoardManager::Begin()
 #else
   Log.infoln(LOG_PREFIX "IDR not available");
 #endif
+
+  Log.infoln(LOG_PREFIX "setup temp sensor");
+  initEsp32TempSensor();
 
   Log.infoln(LOG_PREFIX "setup preferences");
   if (!TPrefStore::Instance().Begin()) {
@@ -185,6 +249,16 @@ uint32_t TBoardManager::FreeHeap() const
   return esp_get_free_heap_size();
 }
 
+uint32_t TBoardManager::BattVoltage() const
+{
+  return adcBattVoltage();
+}
+
+float TBoardManager::CoreTemp() const
+{
+  return esp32CoreTemp();
+}
+
 void TBoardManager::tickRestart()
 {
   if (restartAt > 0 && Uptime() >= restartAt) {
@@ -209,4 +283,6 @@ void TBoardManager::tickBoardInfo()
 
   infoUpdatedAt = Uptime();
   boardInfo.LocalIP = netManager.LocalIP();
+  boardInfo.CoreTemp = CoreTemp();
+  boardInfo.BattVoltage = BattVoltage();
 }
