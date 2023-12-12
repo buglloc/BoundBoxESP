@@ -2,8 +2,8 @@
 #define BB_BOARD_MANAGER_H
 
 #include "config.h"
+#include "board_config.h"
 #include "net_manager.h"
-// #include <math.h>
 
 class TBoardManager
 {
@@ -30,8 +30,13 @@ public:
       return (
         State == info.State &&
         LocalIP == info.LocalIP &&
+      #if HAVE_BATTERY
         abs((int)BattVoltage - (int)info.BattVoltage) < 50 &&
-        fabs(CoreTemp - info.CoreTemp) < 0.1
+      #endif
+      #if HAVE_TEMP_SENSOR
+        fabs(CoreTemp - info.CoreTemp) < 0.1 &&
+      #endif
+        true
       );
     }
   };

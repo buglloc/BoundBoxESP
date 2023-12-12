@@ -10,13 +10,17 @@
 #include <SPI.h>
 #include <SD.h>
 #include <ArduinoLog.h>
+
 #if HAVE_BATTERY
 #include <esp_adc_cal.h>
 #endif
+
+#if HAVE_TEMP_SENSOR
 #if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5,0,0)
 #include <driver/temp_sensor.h>
 #else
 #include <driver/temperature_sensor.h>
+#endif
 #endif
 
 #define LOG_PREFIX "board_manager: "
@@ -50,20 +54,21 @@ namespace
   {
   #if !HAVE_BATTERY || !ADC_PIN
     return 0;
-  #endif
+  #else
     esp_adc_cal_characteristics_t adc_chars;
     esp_adc_cal_characterize(ADC_UNIT_1, ADC_ATTEN_DB_11, ADC_WIDTH_BIT_12, 1100, &adc_chars);
     uint32_t v1 = 0,  raw = 0;
     raw = analogRead(ADC_PIN);
     v1 = esp_adc_cal_raw_to_voltage(raw, &adc_chars) * 2;
     return v1;
+  #endif
   }
 
   void initEsp32TempSensor()
   {
   #if !HAVE_TEMP_SENSOR
     return;
-  #endif
+  #else
 
     // https://docs.espressif.com/projects/esp-idf/zh_CN/v4.4.4/esp32s3/api-reference/peripherals/temp_sensor.html
   #if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5,0,0)
@@ -76,13 +81,14 @@ namespace
     temperature_sensor_install(&temp_sensor_config, &temp_sensor);
     temperature_sensor_enable(temp_sensor);
   #endif
+  #endif
   }
 
   float esp32CoreTemp()
   {
   #if !HAVE_TEMP_SENSOR
     return 0.0f;
-  #endif
+  #else
 
     float tsens_value;
     // https://docs.espressif.com/projects/esp-idf/zh_CN/v4.4.4/esp32s3/api-reference/peripherals/temp_sensor.html
@@ -94,6 +100,7 @@ namespace
   #endif
 
     return tsens_value;
+  #endif
   }
 }
 
