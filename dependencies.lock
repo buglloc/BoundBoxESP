@@ -1,0 +1,33 @@
+dependencies:
+  bblanchon/arduinojson:
+    component_hash: 3e140c209c598a37cd5c58defe05f6dbf2cc1a8b6e85d33885ecc8c2817d2e1f
+    source:
+      service_url: https://api.components.espressif.com/
+      type: service
+    version: 6.21.4
+  espressif/esp_lcd_touch:
+    component_hash: d4d8f2dc33205797169a97a02e0d89a8982f59fe0509129b54422052b8522f59
+    source:
+      service_url: https://api.components.espressif.com/
+      type: service
+    version: 1.1.1
+  espressif/esp_lcd_touch_cst816s:
+    component_hash: 270bd7df3a2a5cffa3a626c4709fc03237d83fd9daa6fb70c833a2f1875f0f68
+    source:
+      service_url: https://api.components.espressif.com/
+      type: service
+    version: 1.0.3
+  idf:
+    component_hash: null
+    source:
+      type: idf
+    version: 5.1.2
+  lvgl/lvgl:
+    component_hash: 948bff879a345149b83065535bbc4a026ce9f47498a22881e432a264b9098015
+    source:
+      service_url: https://api.components.espressif.com/
+      type: service
+    version: 8.3.11
+manifest_hash: 42a20f111d166a2b4337f43086e6b0541106c0a486e6e3bf126356a57390e638
+target: esp32s3
+version: 1.0.0
