@@ -13,12 +13,12 @@ namespace Amoled
     esp_err_t Initialize();
     esp_err_t InitializeLVGL();
 
-    Display& GetDisplay()
+    Amoled::Display& Display()
     {
       return display;
     }
 
-    TouchSensor& GetTouchSensor()
+    Amoled::TouchSensor& TouchSensor()
     {
       return ts;
     }

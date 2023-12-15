@@ -58,8 +58,8 @@ esp_err_t Board::Initialize()
     return ESP_OK;
   }
 
-  ESP_RETURN_ON_ERROR(display.Initialize(), "amoled_board", "could't initialize display");
-  ESP_RETURN_ON_ERROR(ts.Initialize(), "amoled_board", "could't initialize touch sensor");
+  ESP_RETURN_ON_ERROR(display.Initialize(), TAG, "could't initialize display");
+  ESP_RETURN_ON_ERROR(ts.Initialize(), TAG, "could't initialize touch sensor");
   initialized = true;
   return ESP_OK;
 }
@@ -99,7 +99,7 @@ esp_err_t Board::InitializeLVGL()
   dispDrv.flush_cb = [](lv_disp_drv_t* dispDrv, const lv_area_t* area, lv_color_t* colorP) -> void {
     uint32_t w = ( area->x2 - area->x1 + 1 );
     uint32_t h = ( area->y2 - area->y1 + 1 );
-    static_cast<Display *>(dispDrv->user_data)->PushColors(area->x1, area->y1, w, h, reinterpret_cast<uint16_t *>(colorP));
+    static_cast<Amoled::Display *>(dispDrv->user_data)->PushColors(area->x1, area->y1, w, h, reinterpret_cast<uint16_t *>(colorP));
     lv_disp_flush_ready(dispDrv);
   };
 
@@ -130,7 +130,7 @@ esp_err_t Board::InitializeLVGL()
   inDevDrv.user_data = &ts;
   inDevDrv.read_cb = [](lv_indev_drv_t *drv, lv_indev_data_t *data) -> void {
     uint16_t x, y = 0;
-    bool pressed = static_cast<TouchSensor *>(drv->user_data)->GetPoint(x, y);
+    bool pressed = static_cast<Amoled::TouchSensor *>(drv->user_data)->GetPoint(x, y);
 
     data->point.x = x;
     data->point.y = y;
