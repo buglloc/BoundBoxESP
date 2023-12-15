@@ -55,11 +55,16 @@ namespace
 esp_err_t Board::Initialize()
 {
   if (initialized) {
+    ESP_LOGW(TAG, "already initialized");
     return ESP_OK;
   }
 
+  ESP_LOGI(TAG, "setup display");
   ESP_RETURN_ON_ERROR(display.Initialize(), TAG, "could't initialize display");
+
+  ESP_LOGI(TAG, "setup touch sensor");
   ESP_RETURN_ON_ERROR(ts.Initialize(), TAG, "could't initialize touch sensor");
+
   initialized = true;
   return ESP_OK;
 }

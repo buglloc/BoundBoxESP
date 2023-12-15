@@ -129,19 +129,7 @@ static WC_INLINE int wSelect(int nfds,
                              WFD_SET_TYPE *errfds,
                              struct timeval* timeout)
 {
-#ifdef WOLFSSL_NUCLEUS
-    int ret = NU_Select(nfds,
-        recvfds,
-        writefds,
-        errfds,
-        (UNSIGNED)timeout->tv_sec);
-    if (ret == NU_SUCCESS) {
-        return 1;
-    }
-    return 0;
-#else
     return select(nfds, recvfds, writefds, errfds, timeout);
-#endif
 }
 
 /*
@@ -244,27 +232,6 @@ static THREAD_RETURN WOLFSSH_THREAD server_worker(void* vArgs)
      */
     thread_ctx_t* threadCtx = (thread_ctx_t*)vArgs;
 
-#if defined(WOLFSSH_SCP) && defined(NO_FILESYSTEM)
-    ScpBuffer scpBufferRecv, scpBufferSend;
-    byte fileBuffer[49000];
-    byte fileTmp[] = "wolfSSH SCP buffer file";
-
-    WMEMSET(&scpBufferRecv, 0, sizeof(ScpBuffer));
-    scpBufferRecv.buffer   = fileBuffer;
-    scpBufferRecv.bufferSz = sizeof(fileBuffer);
-    wolfSSH_SetScpRecvCtx(threadCtx->ssh, (void*)&scpBufferRecv);
-
-    /* make buffer file to send if asked */
-    WMEMSET(&scpBufferSend, 0, sizeof(ScpBuffer));
-    WMEMCPY(scpBufferSend.name, "test.txt", sizeof("test.txt"));
-    scpBufferSend.nameSz   = WSTRLEN("test.txt");
-    scpBufferSend.buffer   = fileTmp;
-    scpBufferSend.bufferSz = sizeof(fileBuffer);
-    scpBufferSend.fileSz   = sizeof(fileTmp);
-    scpBufferSend.mode     = 0x1A4;
-    wolfSSH_SetScpSendCtx(threadCtx->ssh, (void*)&scpBufferSend);
-#endif
-
     if (!threadCtx->nonBlock)
         ret = wolfSSH_accept(threadCtx->ssh);
     else
@@ -326,11 +293,6 @@ static THREAD_RETURN WOLFSSH_THREAD server_worker(void* vArgs)
                     }
 
                     taskYIELD();
-#ifdef DEBUG_WDT
-        /* if we get panic faults, perhaps the watchdog needs attention? */
-        esp_task_wdt_reset();
-#endif
-
                 } while ((WOLFSSL_NONBLOCK == 0) /* we'll wait only when not using non-blocking socket */
                          &&
                          (rxSz == WS_WANT_READ || rxSz == WS_WANT_WRITE));
@@ -476,28 +438,6 @@ static THREAD_RETURN WOLFSSH_THREAD server_worker(void* vArgs)
 #endif
         } while (!stop);
     } /* if (ret == WS_SUCCESS) */
-
-    else if (ret == WS_SCP_COMPLETE) {
-        ESP_LOGE(TAG,"scp file transfer completed\n");
-#if defined(WOLFSSH_SCP) && defined(NO_FILESYSTEM)
-        ESP_LOGE(TAG,"scp");
-        if (scpBufferRecv.fileSz > 0) {
-            word32 z;
-
-            printf("file name : %s\n", scpBufferRecv.name);
-            printf("     size : %d\n", scpBufferRecv.fileSz);
-            printf("     mode : %o\n", scpBufferRecv.mode);
-            printf("    mTime : %lu\n", scpBufferRecv.mTime);
-            printf("\n");
-
-            for (z = 0; z < scpBufferRecv.fileSz; z++)
-                printf("%c", scpBufferRecv.buffer[z]);
-            printf("\n");
-        }
-#endif
-    } /* else if (ret == WS_SCP_COMPLETE) */
-    else if (ret == WS_SFTP_COMPLETE) {
-        ESP_LOGE(TAG,"Use example/echoserver/echoserver for SFTP\n");
     }
 
     wolfSSH_stream_exit(threadCtx->ssh, 0);
@@ -1018,91 +958,9 @@ void server_test(void *arg)
     servAddr.sin_family      = AF_INET; /* using IPv4      */
     servAddr.sin_port        = htons(DEFAULT_PORT); /* on DEFAULT_PORT */
     servAddr.sin_addr.s_addr = INADDR_ANY; /* from anywhere   */
-ESP_LOGI(TAG, "init: %d", DEFAULT_PORT);
-    /*
-    ***************************************************************************
-    * Create a socket that uses an internet IPv4 address,
-    * Sets the socket to be stream based (TCP),
-    * 0 means choose the default protocol.
-    *
-    *  #include <sys/socket.h>
-    *
-    *  int socket(int domain, int type, int protocol);
-    *
-    *  The socket() function shall create an unbound socket in a communications
-    *  domain, and return a file descriptor that can be used in later function
-    *  calls that operate on sockets.
-    *
-    *  The socket() function takes the following arguments:
-    *    domain     Specifies the communications domain in which a
-    *                 socket is to be created.
-    *    type       Specifies the type of socket to be created.
-    *    protocol   Specifies a particular protocol to be used with the socket.
-    *               Specifying a protocol of 0 causes socket() to use an
-    *               unspecified default protocol appropriate for the
-    *               requested socket type.
-    *
-    *    The domain argument specifies the address family used in the
-    *    communications domain. The address families supported by the system
-    *    are implementation-defined.
-    *
-    *    Symbolic constants that can be used for the domain argument are
-    *    defined in the <sys/socket.h> header.
-    *
-    *  The type argument specifies the socket type, which determines the semantics
-    *  of communication over the socket. The following socket types are defined;
-    *  implementations may specify additional socket types:
-    *
-    *    SOCK_STREAM    Provides sequenced, reliable, bidirectional,
-    *                   connection-mode byte streams, and may provide a
-    *                   transmission mechanism for out-of-band data.
-    *    SOCK_DGRAM     Provides datagrams, which are connectionless-mode,
-    *                   unreliable messages of fixed maximum length.
-    *    SOCK_SEQPACKET Provides sequenced, reliable, bidirectional,
-    *                   connection-mode transmission paths for records.
-    *                   A record can be sent using one or more output
-    *                   operations and received using one or more input
-    *                   operations, but a single operation never transfers
-    *                   part of more than one record. Record boundaries
-    *                   are visible to the receiver via the MSG_EOR flag.
-    *
-    *                   If the protocol argument is non-zero, it shall
-    *                   specify a protocol that is supported by the address
-    *                   family. If the protocol argument is zero, the default
-    *                   protocol for this address family and type shall be
-    *                   used. The protocols supported by the system are
-    *                   implementation-defined.
-    *
-    *    The process may need to have appropriate privileges to use the
-    *    socket() function or to create some sockets.
-    *
-    *  Return Value
-    *    Upon successful completion, socket() shall return a non-negative
-    *    integer, the socket file descriptor. Otherwise, a value of -1 shall
-    *    be returned and errno set to indicate the error.
-    *
-    *  Errors; The socket() function shall fail if:
-    *
-    *    EAFNOSUPPORT    The implementation does not support the specified
-    *                    address family.
-    *    EMFILE          No more file descriptors are available for
-    *                    this process.
-    *    ENFILE          No more file descriptors are available for
-    *                    the system.
-    *    EPROTONOSUPPORT The protocol is not supported by the address family,
-    *                    or the protocol is not supported by the implementation.
-    *    EPROTOTYPE      The socket type is not supported by the protocol.
-    *
-    *  The socket() function may fail if:
-    *
-    *    EACCES  The process does not have appropriate privileges.
-    *    ENOBUFS Insufficient resources were available in the system to
-    *            perform the operation.
-    *    ENOMEM  Insufficient memory was available to fulfill the request.
-    *
-    *  see: https://linux.die.net/man/3/socket
-    ***************************************************************************
-    */
+    ESP_LOGI(TAG, "init: %d", DEFAULT_PORT);
+
+
     if (ret == WOLFSSL_SUCCESS) {
         /* Upon successful completion, socket() shall return
          * a non-negative integer, the socket file descriptor.
@@ -1122,53 +980,6 @@ ESP_LOGI(TAG, "init: %d", DEFAULT_PORT);
     }
 
 
-    /*
-    ***************************************************************************
-    * set SO_REUSEADDR on socket
-    *
-    *  #include <sys/types.h>
-    *  # include <sys / socket.h>
-    *  int getsockopt(int sockfd,
-    *    int level,
-    *    int optname,
-    *    void *optval,
-    *    socklen_t *optlen); int setsockopt(int sockfd,
-    *    int level,
-    *    int optname,
-    *    const void *optval,
-    *    socklen_t optlen);
-    *
-    *  setsockopt() manipulates options for the socket referred to by the file
-    *  descriptor sockfd. Options may exist at multiple protocol levels; they
-    *  are always present at the uppermost socket level.
-    *
-    *  When manipulating socket options, the level at which the option resides
-    *  and the name of the option must be specified. To manipulate options at
-    *  the sockets API level, level is specified as SOL_SOCKET. To manipulate
-    *  options at any other level the protocol number of the appropriate
-    *  protocol controlling the option is supplied. For example, to indicate
-    *  that an option is to be interpreted by the TCP protocol, level should
-    *  be set to the protocol number of TCP
-    *
-    *  Return Value
-    *    On success, zero is returned. On error, -1 is returned, and errno is
-    *    set appropriately.
-    *
-    *  Errors
-    *    EBADF       The argument sockfd is not a valid descriptor.
-    *    EFAULT      The address pointed to by optval is not in a valid part
-    *                of the process address space. For getsockopt(), this error
-    *                may also be returned if optlen is not in a valid part of
-    *                the process address space.
-    *    EINVAL      optlen invalid in setsockopt(). In some cases this error
-    *                can also occur for an invalid value in optval
-    *                (e.g. for IP_ADD_MEMBERSHIP option described in ip(7)).
-    *    ENOPROTOOPT The option is unknown at the level indicated.
-    *    ENOTSOCK    The argument sockfd is a file, not a socket.
-    *
-    *  see: https://linux.die.net/man/2/setsockopt
-    ***************************************************************************
-    */
     if (ret == WOLFSSL_SUCCESS) {
         /* make sure server is setup for reuse addr/port */
         int soc_ret;
@@ -1194,68 +1005,6 @@ ESP_LOGI(TAG, "init: %d", DEFAULT_PORT);
         ESP_LOGE(TAG,"Skipping setsockopt addr\n");
     }
 
-// #ifdef SO_REUSEPORT
-//     /* see above for details on getsockopt  */
-//     if (ret == WOLFSSL_SUCCESS) {
-//         int soc_ret = setsockopt(sockfd,
-//             SOL_SOCKET,
-//             SO_REUSEPORT,
-//             (char*)&on,
-//             (socklen_t)sizeof(on));
-
-//         if (soc_ret == 0) {
-//             ESP_LOGI(TAG,"setsockopt re-use port successful\n");
-//         }
-//         else {
-//             ESP_LOGE(TAG,"\r\nERROR: failed to setsockopt port on socket." 
-//                          "  >> IGNORED << \n");
-//         }
-//     }
-//     else {
-//         ESP_LOGE(TAG,"Skipping setsockopt port\n");
-//     }
-// #else
-//     ESP_LOGI(TAG,"SO_REUSEPORT not configured for setsockopt to re-use port\n");
-// #endif
-
-    /*
-    ***************************************************************************
-    *  #include <sys/types.h>
-    *  #include <sys/socket.h>
-    *
-    *  int bind(int sockfd,
-    *      const struct sockaddr *addr,
-    *      socklen_t addrlen);
-    *
-    *  Description
-    *
-    *  When a socket is created with socket(2), it exists in a name
-    *  space(address family) but has no address assigned to it.
-    *
-    *  bind() assigns the address specified by addr to the socket referred to
-    *  by the file descriptor sockfd.addrlen specifies the size, in bytes, of
-    *  the address structure pointed to by addr.Traditionally, this operation
-    *  is called "assigning a name to a socket".
-    *
-    *   It is normally necessary to assign a local address using bind() before
-    *   a SOCK_STREAM socket may receive connections.
-    *
-    *  Return Value
-    *    On success, zero is returned.
-    *    On error, -1 is returned, and errno is set appropriately.
-    *
-    *  Errors
-    *    EACCES     The address is protected, and the user is not the superuser.
-    *    EADDRINUSE The given address is already in use.
-    *    EBADF      sockfd is not a valid descriptor.
-    *    EINVAL     The socket is already bound to an address.
-    *    ENOTSOCK   sockfd is a descriptor for a file, not a socket.
-    *
-    *   see: https://linux.die.net/man/2/bind
-    *
-    *       https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/lwip.html
-    ***************************************************************************
-    */
     if (ret == WOLFSSL_SUCCESS) {
         /* Bind the server socket to our port */
         int soc_ret = bind(sockfd,
@@ -1272,43 +1021,6 @@ ESP_LOGI(TAG, "init: %d", DEFAULT_PORT);
         }
     }
 
-    /*
-    ***************************************************************************
-    *  Listen for a new connection, allow 5 pending connections
-    *
-    *  #include <sys/types.h>
-    *  #include <sys/socket.h>
-    *  int listen(int sockfd, int backlog);
-    *
-    *  Description
-    *
-    *  listen() marks the socket referred to by sockfd as a passive socket,
-    *  that is, as a socket that will be used to accept incoming connection
-    *  requests using accept.
-    *
-    *  The sockfd argument is a file descriptor that refers to a socket of
-    *  type SOCK_STREAM or SOCK_SEQPACKET.
-    *
-    *  The backlog argument defines the maximum length to which the queue of
-    *  pending connections for sockfd may grow.If a connection request arrives
-    *  when the queue is full, the client may receive an error with an indication
-    *  of ECONNREFUSED or, if the underlying protocol supports retransmission,
-    *  the request may be ignored so that a later reattempt at connection
-    *  succeeds.
-    *
-    *   Return Value
-    *     On success, zero is returned.
-    *     On Error, -1 is returned, and errno is set appropriately.
-    *   Errors
-    *     EADDRINUSE   Another socket is already listening on the same port.
-    *     EBADF        The argument sockfd is not a valid descriptor.
-    *     ENOTSOCK     The argument sockfd is not a socket.
-    *     EOPNOTSUPP   The socket is not of a type that supports
-    *                  the listen() operation.
-    *
-    *  see: https://linux.die.net/man/2/listen
-    */
-
     if (ret == WOLFSSL_SUCCESS) {
         int backlog = 5;
         int soc_ret = listen(sockfd, backlog);
@@ -1320,12 +1032,6 @@ ESP_LOGI(TAG, "init: %d", DEFAULT_PORT);
            ESP_LOGE(TAG,"\r\nERROR: failed to listen to socket.\n");
         }
     }
-
-#ifdef NO_RSA
-    /* If wolfCrypt isn't built with RSA, force ECC on. */
-    useEcc = 1;
-    ESP_LOGI(TAG,"Found NO_RSA, setting useEcc = 1");
-#endif
 
     if (wolfSSH_Init() != WS_SUCCESS) {
         ESP_LOGE(TAG,"Couldn't initialize wolfSSH.\n");

@@ -84,9 +84,6 @@
 
 #ifdef NO_FILESYSTEM
     #include <wolfssh/certs_test.h>
-    #ifdef WOLFSSH_SCP
-        #include <wolfssh/wolfscp.h>
-    #endif
 #endif
 
 

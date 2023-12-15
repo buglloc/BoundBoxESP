@@ -213,33 +213,15 @@ esp_err_t Display::WriteCommand(const LCDCommand& cmd)
   return ret;
 }
 
-// void lcd_address_set(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2)
-// {
-//     lcd_cmd_t t[3] = {
-//         {0x2a, {(uint8_t)(x1 >> 8), (uint8_t)x1, (uint8_t)(x2 >> 8), (uint8_t)x2}, 0x04},
-//         {0x2b, {(uint8_t)(y1 >> 8), (uint8_t)y1, (uint8_t)(y2 >> 8), (uint8_t)y2}, 0x04},
-//         {0x2c, {0x00}, 0x00},
-//     };
-
-//     for (uint32_t i = 0; i < 3; i++) {
-//         lcd_send_cmd(t[i].cmd, t[i].data, t[i].len);
-//     }
-// }
-
-
 esp_err_t Display::SetAddrWindow(uint16_t xs, uint16_t ys, uint16_t xe, uint16_t ye)
 {
   esp_err_t ret;
   ret = WriteCommand({
     0x2A, {
-      (uint8_t)(xs >> 8),
-      (uint8_t)xs,
-      (uint8_t)(xe >> 8),
-      (uint8_t)xe
-      // (uint8_t)((xs >> 8) & 0xFF),
-      // (uint8_t)(xs & 0xFF),
-      // (uint8_t)((xe >> 8) & 0xFF),
-      // (uint8_t)(xe & 0xFF)
+      (uint8_t)((xs >> 8) & 0xFF),
+      (uint8_t)(xs & 0xFF),
+      (uint8_t)((xe >> 8) & 0xFF),
+      (uint8_t)(xe & 0xFF)
     },
     0x04
   });
