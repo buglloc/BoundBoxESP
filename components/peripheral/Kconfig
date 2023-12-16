@@ -1,0 +1,56 @@
+menu "BoundBox Peripheral"
+
+  config BBP_SPI_MOSI_GPIO
+    int "Peripheral MOSI gpio"
+    range 0 46
+    default 11
+
+  config BBP_SPI_MISO_GPIO
+    int "Peripheral MISO gpio"
+    range 0 46
+    default 13
+
+  config BBP_SPI_SCLK_GPIO
+    int "Peripheral MOSI gpio"
+    range 0 46
+    default 12
+
+  config BBP_ETH_CS_GPIO
+    int "Ethernet CS gpio"
+    range 0 46
+    default 10
+
+  config BBP_ETH_INT_GPIO
+    int "Ethernet INT gpio"
+    range 0 46
+    default 15
+
+  config BBP_ETH_RST_GPIO
+    int "Ethernet RST gpio"
+    range 0 46
+    default 16
+
+  config BBP_HAS_ETHERNET
+    bool "Has ethernet"
+    default y
+
+  config BBP_ETH_PHY_ADDR
+    int "Ethernet phy addr"
+    range 0 46
+    default 1
+    depends on BBP_HAS_ETHERNET
+
+  config BBP_ETH_SPI_CLOCK_MHZ
+    int "Ethernet spi click (mhz)"
+    default 20
+    depends on BBP_HAS_ETHERNET
+
+  config BBP_HAS_WIFI
+    bool "Has WiFi"
+    default y
+
+  config BBP_DEFAULT_HOSTNAME
+    string "Default hostname"
+    default "BoundBoxESP"
+
+endmenu

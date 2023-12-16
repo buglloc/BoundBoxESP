@@ -1,7 +1,6 @@
 #pragma once
 
 #include "peripheral/net.h"
-#include "net_common.h"
 
 #include <string.h>
 
@@ -18,7 +17,6 @@ namespace Peripheral
     virtual esp_err_t Initialize() override;
     virtual esp_netif_config_t NetifConfig() const override;
     virtual esp_err_t Attach(esp_netif_t* netif, const NetConfig& netCfg) override;
-    // virtual std::string LocalIP() override;
 
     ~NetEth()
     {

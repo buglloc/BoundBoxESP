@@ -12,20 +12,20 @@ namespace XSSH
 {
   enum class Error: uint8_t
   {
-    None,
+    None = 0,
     ShitHappens,
   };
 
   enum class GenError: uint8_t
   {
-    None,
+    None = 0,
     UnsupportedType,
     ShitHappens,
   };
 
   enum class ParseError: uint8_t
   {
-    None,
+    None = 0,
     Malformed,
     UnsupportedType,
     ShitHappens,
@@ -33,7 +33,7 @@ namespace XSSH
 
   enum class KeyType: uint8_t
   {
-    None,
+    None = 0,
     Rsa,
     Ecdsa,
     Ed25519,

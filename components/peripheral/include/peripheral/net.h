@@ -10,9 +10,6 @@
 
 namespace Peripheral
 {
-  // fwd
-  class NetImpl;
-
   class IP4Address
   {
   public:
@@ -56,7 +53,7 @@ namespace Peripheral
 
   enum class NetKind: uint8_t
   {
-    WiFiSta,
+    WiFiSta = 0,
     Ethernet,
   };
 
@@ -70,6 +67,14 @@ namespace Peripheral
     IP4Address Gateway;
   };
 
+  class NetImpl
+  {
+  public:
+    virtual esp_err_t Initialize() = 0;
+    virtual esp_netif_config_t NetifConfig() const = 0;
+    virtual esp_err_t Attach(esp_netif_t* netif, const NetConfig& netCfg) = 0;
+  };
+
   class Net
   {
   public:
@@ -77,7 +82,6 @@ namespace Peripheral
     esp_err_t Initialize(const NetConfig& cfg);
     esp_err_t Attach();
     bool IsConnected();
-    // std::string LocalIP();
 
   private:
     std::unique_ptr<NetImpl> impl;

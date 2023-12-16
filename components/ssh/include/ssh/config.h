@@ -19,7 +19,3 @@
 #ifndef SSH_HIGHWATER_MARK
     #define SSH_HIGHWATER_MARK 0x3FFF8000 /* 1GB - 32kB */
 #endif
-#ifndef SSH_BUFFER_SZ
-    #define SSH_BUFFER_SZ 4096
-#endif
-#define SCRATCH_BUFFER_SZ 1200

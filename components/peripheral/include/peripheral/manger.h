@@ -4,7 +4,6 @@
 
 #include <t_amoled/board.h>
 
-#include "spi.h"
 #include "net.h"
 
 namespace Peripheral
@@ -23,7 +22,6 @@ namespace Peripheral
   private:
     bool initialized;
     Amoled::Board board;
-    Spi spi;
     Net net;
   };
 }

@@ -10,7 +10,7 @@ class TAuthenticator
 public:
   enum class Error: uint8_t
   {
-    None,
+    None = 0,
     Internal,
     NoCredential
   };

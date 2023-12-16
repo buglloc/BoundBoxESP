@@ -1,12 +1,14 @@
-#include "auth.h"
+#include "ssh/auth_provider.h"
+#include "ssh/server.h"
+#include "ssh/common.h"
 
-#include <esp_log.h>
+#include <algorithm>
 
 #include <wolfssl/wolfcrypt/types.h>
 #include <wolfssl/wolfcrypt/sha256.h>
 #include <wolfssl/wolfcrypt/coding.h>
 
-#include "common.h"
+#include <esp_log.h>
 
 
 using namespace SSH;
@@ -28,16 +30,16 @@ namespace
     return std::find(allowedTypes.cbegin(), allowedTypes.cend(), keyType) != allowedTypes.cend();
   }
 
-  cpp::result<std::string, Error> AuhotizedKeyFingerprint(const std::string_view in)
+  std::expected<std::string, Error> AuhotizedKeyFingerprint(const std::string_view in)
   {
     size_t typePos = in.find(' ');
     if (typePos == std::string::npos) {
-      return cpp::fail(Error::MalformedKey);
+      return std::unexpected<Error>{Error::MalformedKey};
     }
 
     std::string_view keyType = in.substr(0, typePos);
     if (!isAllowedType(keyType)) {
-      return cpp::fail(Error::Unsupported);
+      return std::unexpected<Error>{Error::Unsupported};
     }
 
     typePos++;
@@ -54,10 +56,10 @@ namespace
       reinterpret_cast<const byte *>(keyBae64.cbegin()),
       keyBae64.size(),
       keyMaterial.data(),
-      &keyMaterialLen,
+      &keyMaterialLen
     );
     if (ret!= 0) {
-      return cpp::fail(Error::MalformedKey);
+      return std::unexpected<Error>{Error::MalformedKey};
     }
 
     keyMaterial.resize(keyMaterialLen);
@@ -65,46 +67,41 @@ namespace
   }
 }
 
-cpp::result<void, Error> Auth::Initialize(const ServerConfig& cfg)
+std::expected<void, Error> AuthProvider::Initialize(const ServerConfig& cfg)
 {
   rootUser = cfg.RootUser;
   rootFingerprints.reserve(cfg.RootKeys.size());
   for (const auto& key : cfg.RootKeys) {
-    auto keyFp = AuhotizedKeyFingerprint(key);
-    if (keyFp.has_error()) {
-      ESP_LOGW(TAG, "skip invalid key (%d): %s", keyFp.error(), key.c_str());
+    std::expected<std::string, Error> keyFp = AuhotizedKeyFingerprint(key);
+    if (!keyFp) {
+      ESP_LOGW(TAG, "skip invalid key (%d): %s", (int)keyFp.error(), key.c_str());
       continue;
     }
-    
+
     rootFingerprints.push_back(std::move(keyFp.value()));
   }
 
   return {};
 }
 
-bool Auth::Authenticate(const std::string& user, const Bytes& key, AuthInfo& out)
+bool AuthProvider::Authenticate(const std::string& user, const Bytes& key) const
 {
-  auto fpRes = KeyFingerprint(key);
-  if (fpRes.has_error()) {
-    ESP_LOGW(TAG, "unable to create user key fingeprint: %d", fpRes.error());
+  if (user != rootUser) {
+    return key.size() > 0;
+  }
+
+  std::expected<std::string, Error> fpRes = KeyFingerprint(key);
+  if (!fpRes) {
+    ESP_LOGW(TAG, "unable to create user key fingeprint: %d", (int)fpRes.error());
     return false;
   }
 
-  if (user != rootUser) {
-    out.IsSysop = false;
-    out.User = user;
-    out.KeyFingerprint = std::move(fpRes.value());
-    return true;
-  }
-  
   std::string targetFp = std::move(fpRes.value());
   bool containsFp = std::find(rootFingerprints.cbegin(), rootFingerprints.cend(), targetFp) != rootFingerprints.cend();
-  if (containsFp) {
-    out.IsSysop = true;
-    out.User = user;
-    out.KeyFingerprint = std::move(targetFp);
-    return true;
-  }
+  return containsFp;
+}
 
-  return false;
+UserRole AuthProvider::Role(const std::string& user) const
+{
+  return user == rootUser ? UserRole::SysOp : UserRole::User;
 }

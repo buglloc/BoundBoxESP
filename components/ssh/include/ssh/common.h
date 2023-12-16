@@ -1,12 +1,15 @@
 #pragma once
 
-#include <stdint.h>
+#include <string>
+#include <expected>
 
 namespace SSH
 {
+  typedef std::basic_string<uint8_t> Bytes;
+
   enum class Error: uint8_t
   {
-    None,
+    None = 0,
     MalformedKey,
     Unsupported,
     ShitHappens
@@ -14,10 +17,13 @@ namespace SSH
 
   enum class ListenError: uint8_t
   {
-    None,
+    None = 0,
     Sock,
     Bind,
     Accept,
+    Unsupported,
     ShitHappens
   };
+
+  std::expected<std::string, Error> KeyFingerprint(const Bytes& key);
 }

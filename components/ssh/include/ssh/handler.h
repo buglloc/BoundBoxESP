@@ -4,18 +4,13 @@
 #include <functional>
 #include <string>
 
+#include "auth_provider.h"
+#include "stream.h"
+
+
 namespace SSH
 {
-  struct AuthInfo
-  {
-    std::string User;
-    std::string KeyFingerprint;
-    std::string ClientIP;
-    bool IsSysop;
-  };
 
-  // using TSshReader = XSSH::ChanReader;
-  // using TSshWriter = XSSH::ChanWriter;
-  using AuthInfoHolder = std::unique_ptr<AuthInfo>;
-  using HandlerCallback = std::function<bool(const AuthInfo& auth, const std::string& cmd, TSshReader& r, TSshWriter& w)>;
+  using UserInfoHolder = std::unique_ptr<UserInfo>;
+  using HandlerCallback = std::function<bool(const UserInfo& userInfo, const std::string& cmd, Stream& stream)>;
 }

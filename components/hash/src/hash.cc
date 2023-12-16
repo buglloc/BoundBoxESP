@@ -1,25 +1,25 @@
 #include "hash.h"
 
-#include <wolfssl.h>
+#include <expected>
 
-#include "result.h"
+#include "wolfssl_init.h"
 #include "types.h"
 
 
 using namespace Hash;
 
-cpp::result<Bytes, Error> Sum(const Bytes& key, const Bytes& msg, HashType type)
+std::expected<Bytes, Error> Sum(const Bytes& key, const Bytes& msg, HashType type)
 {
   HMAC hmac(key, type);
-  auto writeRes = hmac.Write(msg);
-  if (writeRes.has_error()) {
-    return cpp::fail(writeRes.error());
+  std::expected<void, Error> writeRes = hmac.Write(msg);
+  if (!writeRes) {
+    return std::unexpected<Error>(writeRes.error());
   }
 
   return hmac.Sum();
 }
 
-cpp::result<Bytes, Error> HKDF(const Bytes& key, const Bytes& salt, const Bytes& info, size_t outLen, HashType hashType = HashType::SHA256)
+std::expected<Bytes, Error> HKDF(const Bytes& key, const Bytes& salt, const Bytes& info, size_t outLen, HashType hashType = HashType::SHA256)
 {
   int wcType;
   switch (hashType)
@@ -35,13 +35,13 @@ cpp::result<Bytes, Error> HKDF(const Bytes& key, const Bytes& salt, const Bytes&
     break;
 
   default:
-    return cpp::fail(Error::Unsupported);
+    return std::unexpected<Error>(Error::Unsupported);
   }
 
   Bytes out(outLen, '\xff');
   int ret = wc_HKDF(wcType, key.c_str(), key.size(), salt.c_str(), salt.size(), info.c_str(), info.size(), out.data(), outLen);
   if (ret != 0) {
-    return cpp::fail(Error::ShitHappens);
+    return std::unexpected<Error>(Error::ShitHappens);
   }
 
   return out;
@@ -66,7 +66,7 @@ HMAC::HMAC(const Bytes& key, HashType hashType)
     err = Error::Unsupported;
     return;
   }
-  
+
   int ret = wc_HmacInit(&ctx, nullptr, INVALID_DEVID);
   if (ret != 0) {
     err = Error::InitFailed;
@@ -81,35 +81,35 @@ HMAC::HMAC(const Bytes& key, HashType hashType)
   }
 }
 
-cpp::result<void, Error> HMAC::Write(const Bytes& data)
+std::expected<void, Error> HMAC::Write(const Bytes& data)
 {
   if (err != Error::None) {
-    return cpp::fail(err);
+    return std::unexpected<Error>(err);
   }
 
   int ret = wc_HmacUpdate(&ctx, data.c_str(), data.size());
   if (ret != 0) {
-    return cpp::fail(Error::ShitHappens);
+    return std::unexpected<Error>(Error::ShitHappens);
   }
 
   return {};
 }
 
-cpp::result<Bytes, Error> HMAC::Sum()
+std::expected<Bytes, Error> HMAC::Sum()
 {
   if (err != Error::None) {
-    return cpp::fail(err);
+    return std::unexpected<Error>(err);
   }
 
   size_t hashLen = wc_HmacSizeByType(ctx.macType);
   if (hashLen <= 0) {
-    return cpp::fail(Error::ShitHappens);
+    return std::unexpected<Error>(Error::ShitHappens);
   }
 
   Bytes out(hashLen, '\xff');
   int ret = wc_HmacFinal(&ctx, out.data());
   if (ret != 0) {
-    return cpp::fail(Error::ShitHappens);
+    return std::unexpected<Error>(Error::ShitHappens);
   }
 
   return out;

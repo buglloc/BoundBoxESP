@@ -7,7 +7,7 @@ namespace Hash
 {
   enum class Error: uint8_t
   {
-    None,
+    None = 0,
     Unsupported,
     InitFailed,
     InvalidKey,
@@ -16,7 +16,7 @@ namespace Hash
 
   enum class HashType: uint8_t
   {
-    None,
+    None = 0,
     SHA1,
     SHA256,
     SHA512,

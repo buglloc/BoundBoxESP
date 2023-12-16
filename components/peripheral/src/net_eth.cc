@@ -50,7 +50,7 @@ namespace
     // Configure SPI interface for specific SPI module
     spi_device_interface_config_t spi_devcfg = {
       .mode = 0,
-      .clock_speed_hz = ETH_SPI_CLOCK_MHZ * 1000 * 1000,
+      .clock_speed_hz = CONFIG_BBP_ETH_SPI_CLOCK_MHZ * 1000 * 1000,
       .spics_io_num = cfg.spi_cs_gpio,
       .queue_size = 20,
     };
@@ -164,10 +164,10 @@ namespace
 esp_err_t NetEth::Initialize()
 {
   spi_eth_module_config_t spi_eth_module_config = {
-    .spi_cs_gpio = ETH_CS_GPIO,
-    .int_gpio = ETH_INT_GPIO,
-    .phy_reset_gpio = ETH_RST_GPIO,
-    .phy_addr = ETH_PHY_ADDR,
+    .spi_cs_gpio = CONFIG_BBP_ETH_CS_GPIO,
+    .int_gpio = CONFIG_BBP_ETH_INT_GPIO,
+    .phy_reset_gpio = CONFIG_BBP_ETH_RST_GPIO,
+    .phy_addr = CONFIG_BBP_ETH_PHY_ADDR,
   };
 
   // The SPI Ethernet module(s) might not have a burned factory MAC address, hence use manually configured address(es).

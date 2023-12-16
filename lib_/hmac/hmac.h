@@ -12,7 +12,7 @@ namespace HMAC
 {
   enum class Error: uint8_t
   {
-    None,
+    None = 0,
     InitFailed,
     NoCtx,
     ShitHappens,
@@ -20,7 +20,7 @@ namespace HMAC
 
   enum class Type: uint8_t
   {
-    None,
+    None = 0,
     SHA1,
     SHA256,
     SHA512,

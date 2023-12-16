@@ -15,9 +15,10 @@
  */
 #define NO_FILESYSTEM
 #define WOLFSSH_NO_FILESYSTEM
+#define WOLFSSL_USER_SETTINGS
 
 /* make sure this appears before any other wolfSSL headers */
 #include <wolfssl/wolfcrypt/settings.h>
-#include <wolfssl/include/user_settings.h>
+#include <user_settings.h>
 #include <wolfssl/wolfcrypt/logging.h>
 #include <wolfssl/ssl.h>
