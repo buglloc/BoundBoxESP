@@ -13,6 +13,9 @@ namespace Amoled
     esp_err_t Initialize();
     esp_err_t InitializeLVGL();
 
+    void Restart();
+    void Shutdown();
+
     Amoled::Display& Display()
     {
       return display;
@@ -22,7 +25,7 @@ namespace Amoled
     {
       return ts;
     }
-  
+
   private:
     void guiTask(void *arg);
 

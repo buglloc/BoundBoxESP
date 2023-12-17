@@ -5,25 +5,41 @@
 
 #include "sdkconfig.h"
 
+#include <expected>
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
 #include <esp_timer.h>
-#include <esp_event.h>
+#include <esp_check.h>
+#include <esp_err.h>
 #include <esp_log.h>
 
 #include <peripheral/manager.h>
+#include <ssh/server.h>
+
+#include "common.h"
+
 
 namespace {
   static const char *TAG = "main";
-  static Peripheral::Manager peripheral;
+  Peripheral::Manager& peripheral = Peripheral::Manager::Instance();
+  SSH::Server sshd;
 }
 
 extern "C" void app_main(void)
 {
-  ESP_ERROR_CHECK(peripheral.Initialize());
-  ESP_ERROR_CHECK(peripheral.Net().Attach());
+  ESP_SHUTDOWN_ON_ERROR(peripheral.Initialize(), TAG, "initialize peripheral");
+
+  SSH::ServerConfig sshCfg = {
+    .Banner = "BoundBoxESP",
+    .RootUser = "buglloc",
+    .RootKeys = {"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMoBFbg9zagjN1z2vBi5eE62qG/9vCxsZXlAiNcmTFak"},
+  };
+  std::expected<void, SSH::Error> sshRet = sshd.Initialize(sshCfg);
+  TRUE_OR_SHUTDOWN(sshRet, TAG, "ssh initialize");
+
+  ESP_SHUTDOWN_ON_ERROR(peripheral.Net().Attach(), TAG, "network attach");
 
   // Block for 500ms.
   const TickType_t xDelay = 500 / portTICK_PERIOD_MS;
@@ -33,9 +49,19 @@ extern "C" void app_main(void)
     vTaskDelay(xDelay);
   } while (!peripheral.Net().Ready());
 
+  const TickType_t sshDelay = 100 / portTICK_PERIOD_MS;
+  std::expected<void, SSH::ListenError> listenRet;
   for (;;) {
-    ESP_LOGI(TAG, "heartbit");
+    listenRet = sshd.Listen([](const SSH::UserInfo& userInfo, const std::string& cmd, SSH::Stream& stream) -> bool {
+      ESP_LOGI(TAG, "new command: %s", cmd.c_str());
+      return true;
+    });
+
+    if (!listenRet) {
+      ESP_LOGE(TAG, "listen failed: %d", (int)listenRet.error());
+    }
+
     taskYIELD();
-    vTaskDelay(xDelay);
+    vTaskDelay(sshDelay);
   }
 }

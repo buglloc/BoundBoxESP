@@ -3,10 +3,10 @@
 #include <string>
 #include <expected>
 
+#include <blob/bytes.h>
+
 namespace SSH
 {
-  typedef std::basic_string<uint8_t> Bytes;
-
   enum class Error: uint8_t
   {
     None = 0,
@@ -25,5 +25,5 @@ namespace SSH
     ShitHappens
   };
 
-  std::expected<std::string, Error> KeyFingerprint(const Bytes& key);
+  std::expected<std::string, Error> KeyFingerprint(const Blob::Bytes& key);
 }

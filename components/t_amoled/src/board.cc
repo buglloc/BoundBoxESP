@@ -12,6 +12,7 @@
 #include <esp_log.h>
 #include <esp_heap_caps.h>
 #include <esp_timer.h>
+#include <esp_sleep.h>
 
 #include <lvgl.h>
 
@@ -150,4 +151,19 @@ esp_err_t Board::InitializeLVGL()
 
   xTaskCreatePinnedToCore(lvGuiTask, "lvgl gui task", LV_TASK_STACK_DEPTH, nullptr, LV_TASK_PRIO, nullptr, LV_TASK_CORE);
   return ESP_OK;
+}
+
+void Board::Restart()
+{
+  esp_restart();
+}
+
+void Board::Shutdown()
+{
+  for (int d = ESP_PD_DOMAIN_RTC_PERIPH; d < ESP_PD_DOMAIN_MAX; ++d) {
+    esp_sleep_pd_config(static_cast<esp_sleep_pd_domain_t>(d), ESP_PD_OPTION_OFF);
+  }
+
+  esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
+  esp_deep_sleep_start();
 }

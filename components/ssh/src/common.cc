@@ -1,11 +1,15 @@
 #include "ssh/common.h"
 
+#include <string>
+
 #include <wolfssl/wolfcrypt/sha256.h>
-#include <base64.h>
+
+#include <blob/base64.h>
+
 
 namespace SSH
 {
-  std::expected<std::string, Error> KeyFingerprint(const Bytes& key)
+  std::expected<std::string, Error> KeyFingerprint(const Blob::Bytes& key)
   {
     wc_Sha256 sha;
     if (wc_InitSha256(&sha) != 0) {
@@ -22,7 +26,8 @@ namespace SSH
     }
 
     std::string out("SHA256:");
-    out += Base64::Encode(Bytes{digest, sizeof(digest)});
+    out += Blob::Base64Encode({digest, sizeof(digest)});
+
     return out;
   }
 }

@@ -103,10 +103,8 @@ menu "BoundBox Peripheral"
   config BBP_WIFI_SSID
     string "WiFi SSID"
     default "BuggIOT"
-    depends on BBP_NETKIND_WIFI_STA
 
   config BBP_WIFI_PASSWORD
     string "WiFi Password"
-    depends on BBP_NETKIND_WIFI_STA
 
 endmenu

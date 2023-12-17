@@ -6,6 +6,8 @@ SRCS
   "src/stream.cc"
 INCLUDE_DIRS
   "include"
+REQUIRES
+  blob
 PRIV_REQUIRES
-  wolfssh wolfssl lwip defer base64
+  wolfssh wolfssl lwip defer
 )

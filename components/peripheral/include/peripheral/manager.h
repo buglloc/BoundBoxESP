@@ -11,7 +11,8 @@ namespace Peripheral
   class Manager
   {
   public:
-    Manager() = default;
+    static Manager &Instance();
+
     esp_err_t Initialize();
 
     Amoled::Board& Board()
@@ -23,6 +24,9 @@ namespace Peripheral
     {
       return net;
     }
+
+  private:
+    Manager() = default;
 
   private:
     bool initialized;

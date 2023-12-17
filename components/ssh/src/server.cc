@@ -164,10 +164,10 @@ std::expected<void, Error> Server::Initialize(const ServerConfig& cfg)
   ESP_LOGI(TAG,"WolfSSL debug ON");
 #endif
 
-#ifdef DEBUG_WOLFSSH
+// #ifdef DEBUG_WOLFSSH
   wolfSSH_Debugging_ON();
   ESP_LOGI(TAG,"WolfSSH debug ON");
-#endif
+// #endif
 
 #ifndef WOLFSSL_TLS13
   ESP_LOGE(TAG,"requires #ifndef WOLFSSL_TLS13");
@@ -217,7 +217,7 @@ std::expected<void, Error> Server::SetupWolfSSH(const ServerConfig& cfg)
     AuthContext* authCtx = reinterpret_cast<AuthContext *>(ctx);
 
     std::string userName(reinterpret_cast<const char*>(authData->username), authData->usernameSz);
-    Bytes userKey(authData->sf.publicKey.publicKey, authData->sf.publicKey.publicKeySz);
+    Blob::Bytes userKey(authData->sf.publicKey.publicKey, authData->sf.publicKey.publicKeySz);
     bool ok = authCtx->Provider.Authenticate(userName, userKey);
     return ok ? WOLFSSH_USERAUTH_SUCCESS : WOLFSSH_USERAUTH_INVALID_PUBLICKEY;
   });
@@ -232,7 +232,7 @@ std::expected<void, Error> Server::SetupWolfSSH(const ServerConfig& cfg)
     authCtx->Out.Name = std::string(reinterpret_cast<const char*>(authData->username), authData->usernameSz);
     authCtx->Out.Role = authCtx->Provider.Role(authCtx->Out.Name);
 
-    Bytes userKey(authData->sf.publicKey.publicKey, authData->sf.publicKey.publicKeySz);
+    Blob::Bytes userKey(authData->sf.publicKey.publicKey, authData->sf.publicKey.publicKeySz);
     std::expected<std::string, Error> fpRet = KeyFingerprint(userKey);
     if (!fpRet) {
       ESP_LOGW(TAG, "unable to generate user key fingeprint: %d", (int)fpRet.error());

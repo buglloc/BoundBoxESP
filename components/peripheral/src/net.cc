@@ -36,9 +36,9 @@ namespace
         *ready = true;
         ESP_LOGI(TAG, "%s IP Address", event_id == IP_EVENT_ETH_GOT_IP ? "Ethernet" : "WiFi");
         ESP_LOGI(TAG, "~~~~~~~~~~~");
-        ESP_LOGI(TAG, "IP:" IPSTR, IP2STR(&ip_info->ip));
-        ESP_LOGI(TAG, "MASK:" IPSTR, IP2STR(&ip_info->netmask));
-        ESP_LOGI(TAG, "GW:" IPSTR, IP2STR(&ip_info->gw));
+        ESP_LOGI(TAG, "IP: " IPSTR, IP2STR(&ip_info->ip));
+        ESP_LOGI(TAG, "Mask: " IPSTR, IP2STR(&ip_info->netmask));
+        ESP_LOGI(TAG, "Gateway: " IPSTR, IP2STR(&ip_info->gw));
         ESP_LOGI(TAG, "~~~~~~~~~~~");
       default:
         return;

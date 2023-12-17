@@ -1,8 +1,8 @@
 idf_component_register(
 SRCS
-  "src/hash.cc"
+  "src/base64.cc"
 INCLUDE_DIRS
   "include"
-PRIV_REQUIRES
+REQUIRES
   wolfssl
 )

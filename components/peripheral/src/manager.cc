@@ -66,6 +66,12 @@ namespace
   }
 }
 
+Manager& Manager::Instance()
+{
+  static Manager instance;
+  return instance;
+}
+
 esp_err_t Manager::Initialize()
 {
   if (initialized) {

@@ -29,7 +29,7 @@ namespace
       return;
 
     case WIFI_EVENT_STA_CONNECTED:
-      ESP_LOGI(TAG, "wifi link Up");
+      ESP_LOGI(TAG, "wifi connected");
       SetIPInfo(reinterpret_cast<esp_netif_t *>(arg));
       return;
 
@@ -68,11 +68,10 @@ esp_err_t NetWiFiSta::Attach(esp_netif_t* netif)
   ESP_RETURN_ON_ERROR(esp_netif_attach_wifi_station(netif), TAG, "netif attach failed");
   ESP_RETURN_ON_ERROR(esp_wifi_set_default_wifi_sta_handlers(), TAG, "register wifi handlers failed");
 
-
   wifi_init_config_t wifiCfg = WIFI_INIT_CONFIG_DEFAULT();
   ESP_RETURN_ON_ERROR(esp_wifi_init(&wifiCfg), TAG, "initialize wifi");
 
-  ESP_RETURN_ON_ERROR(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifiEventHandler, nullptr), TAG, "register event handlers");
+  ESP_RETURN_ON_ERROR(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifiEventHandler, (void *)netif), TAG, "register event handlers");
 
   wifi_config_t staCfg = {
       .sta = {

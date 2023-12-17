@@ -6,6 +6,8 @@ SRCS
   "src/net.cc"
 INCLUDE_DIRS
   "include"
+REQUIRES
+  esp_netif t_amoled
 PRIV_REQUIRES
-  driver esp_netif esp_eth esp_wifi esp_timer t_amoled nvs_flash
+  driver esp_eth esp_wifi esp_timer nvs_flash
 )

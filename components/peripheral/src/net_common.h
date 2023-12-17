@@ -32,6 +32,7 @@ namespace Peripheral
     // doesn't use static IP - nothing to do
     return;
   #else
+    assert(netif);
 
     esp_netif_ip_info_t ip;
     memset(&ip, 0 , sizeof(esp_netif_ip_info_t));

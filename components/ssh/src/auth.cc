@@ -50,7 +50,7 @@ namespace
 
     std::string_view keyBae64 = in.substr(typePos, keyPos);
 
-    Bytes keyMaterial((keyBae64.size() * 3 + 3) / 4, '\xff');
+    Blob::Bytes keyMaterial((keyBae64.size() * 3 + 3) / 4, '\xff');
     size_t keyMaterialLen;
     int ret = Base64_Decode(
       reinterpret_cast<const byte *>(keyBae64.cbegin()),
@@ -84,7 +84,7 @@ std::expected<void, Error> AuthProvider::Initialize(const ServerConfig& cfg)
   return {};
 }
 
-bool AuthProvider::Authenticate(const std::string& user, const Bytes& key) const
+bool AuthProvider::Authenticate(const std::string& user, const Blob::Bytes& key) const
 {
   if (user != rootUser) {
     return key.size() > 0;

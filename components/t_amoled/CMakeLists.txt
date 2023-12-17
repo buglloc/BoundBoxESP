@@ -6,7 +6,10 @@ SRCS
 INCLUDE_DIRS
   "include"
 REQUIRES
-  driver esp_timer heap lvgl esp_lcd esp_lcd_touch_cst816s
+  driver esp_lcd esp_lcd_touch_cst816s
+  lvgl
+PRIV_REQUIRES
+  esp_timer heap esp_hw_support
 )
 
 # TODO(buglloc): fix me
