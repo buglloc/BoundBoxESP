@@ -1,5 +1,6 @@
 #include "net_eth.h"
 #include "peripheral_config.h"
+#include "net_common.h"
 
 #include <assert.h>
 
@@ -19,7 +20,7 @@ using namespace Peripheral;
 
 namespace
 {
-  static const char* TAG = "peripheral_net_eth";
+  static const char* TAG = "peripheral::net::eth";
 
   typedef struct {
     uint8_t spi_cs_gpio;
@@ -28,11 +29,6 @@ namespace
     uint8_t phy_addr;
     uint8_t *mac_addr;
   } spi_eth_module_config_t;
-
-  typedef struct {
-    esp_netif_t *netif;
-    const NetConfig* netCfg;
-  } NetInfo;
 
   // copied from esp-idf ethernet example
   esp_eth_handle_t ethInitSpi(const spi_eth_module_config_t& cfg, esp_eth_mac_t** mac_out, esp_eth_phy_t** phy_out)
@@ -92,51 +88,12 @@ namespace
     return ret;
   }
 
-  esp_err_t setDnsServer(esp_netif_t *netif, const IP4Address& addr, esp_netif_dns_type_t type)
-  {
-    if (addr.Empty()) {
-      return ESP_OK;
-    }
-
-    esp_netif_dns_info_t dns;
-    dns.ip.u_addr.ip4 = addr.Addr();
-    dns.ip.type = ESP_IPADDR_TYPE_V4;
-    ESP_ERROR_CHECK(esp_netif_set_dns_info(netif, type, &dns));
-    return ESP_OK;
-  }
-
-  static void setIPInfo(esp_netif_t *netif, const NetConfig* cfg)
-  {
-    if (cfg->IP.Empty()) {
-      // doesn't use static IP - nothing to do
-      return;
-    }
-
-    if (esp_netif_dhcpc_stop(netif) != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to stop dhcp client");
-        return;
-    }
-
-    esp_netif_ip_info_t ip;
-    memset(&ip, 0 , sizeof(esp_netif_ip_info_t));
-    ip.ip = cfg->IP.Addr();
-    ip.netmask = cfg->Subnet.Addr();
-    ip.gw = cfg->Gateway.Addr();
-    if (esp_netif_set_ip_info(netif, &ip) != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to set ip info");
-        return;
-    }
-
-    ESP_LOGD(TAG, "Success to set static ip: %s, netmask: %s, gw: %s", cfg->IP.c_str(), cfg->Subnet.c_str(), cfg->Gateway.c_str());
-    setDnsServer(netif, cfg->DNS, ESP_NETIF_DNS_MAIN);
-  }
-
   void ethEventHandler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
   {
     uint8_t mac_addr[6] = {0};
     /* we can get the ethernet driver handle from event data */
     esp_eth_handle_t* eth_handle = reinterpret_cast<esp_eth_handle_t *>(event_data);
-    NetInfo* netInfo = reinterpret_cast<NetInfo *>(arg);
+    esp_netif_t* netif =  reinterpret_cast<esp_netif_t *>(arg);
 
     switch (event_id) {
     case ETHERNET_EVENT_CONNECTED:
@@ -144,7 +101,7 @@ namespace
       ESP_LOGI(TAG, "Ethernet Link Up");
       ESP_LOGI(TAG, "Ethernet HW Addr %02x:%02x:%02x:%02x:%02x:%02x",
         mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
-      setIPInfo(netInfo->netif, netInfo->netCfg);
+      SetIPInfo(netif);
       break;
     case ETHERNET_EVENT_DISCONNECTED:
       ESP_LOGI(TAG, "Ethernet Link Down");
@@ -163,6 +120,9 @@ namespace
 
 esp_err_t NetEth::Initialize()
 {
+  memcpy(&netifCfg, ESP_NETIF_BASE_DEFAULT_ETH, sizeof(netifCfg));
+  PatchNetifCfg(netifCfg);
+
   spi_eth_module_config_t spi_eth_module_config = {
     .spi_cs_gpio = CONFIG_BBP_ETH_CS_GPIO,
     .int_gpio = CONFIG_BBP_ETH_INT_GPIO,
@@ -187,21 +147,21 @@ esp_err_t NetEth::Initialize()
 
 esp_netif_config_t NetEth::NetifConfig() const
 {
-  return ESP_NETIF_DEFAULT_ETH();
+  return {
+    .base = &netifCfg,
+    .driver = NULL,
+    .stack = ESP_NETIF_NETSTACK_DEFAULT_ETH,
+  };
 }
 
-esp_err_t NetEth::Attach(esp_netif_t* netif, const NetConfig& netCfg)
+esp_err_t NetEth::Attach(esp_netif_t* netif)
 {
   assert(netif);
   // Attach Ethernet driver to TCP/IP stack
   ESP_RETURN_ON_ERROR(esp_netif_attach(netif, esp_eth_new_netif_glue(ethHandle)), TAG, "netif attach failed");
 
   // Register user defined event handers
-  NetInfo netInfo = {
-    .netif = netif,
-    .netCfg = &netCfg,
-  };
-  ESP_RETURN_ON_ERROR(esp_event_handler_register(ETH_EVENT, ESP_EVENT_ANY_ID, ethEventHandler, (void *)(&netInfo)), TAG, "attach eth events");
+  ESP_RETURN_ON_ERROR(esp_event_handler_register(ETH_EVENT, ESP_EVENT_ANY_ID, ethEventHandler, (void *)netif), TAG, "attach eth events");
 
   // Start network
   ESP_RETURN_ON_ERROR(esp_eth_start(ethHandle), TAG, "eth start");

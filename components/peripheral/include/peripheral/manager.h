@@ -19,9 +19,14 @@ namespace Peripheral
       return board;
     }
 
+    Peripheral::Net& Net()
+    {
+      return net;
+    }
+
   private:
     bool initialized;
     Amoled::Board board;
-    Net net;
+    Peripheral::Net net;
   };
 }

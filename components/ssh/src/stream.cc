@@ -12,7 +12,7 @@ using namespace SSH;
 
 namespace
 {
-  static const char* TAG = "ssh_stream";
+  static const char* TAG = "ssh::stream";
 }
 
 int Stream::read()

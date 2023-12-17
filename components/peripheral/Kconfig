@@ -1,5 +1,16 @@
 menu "BoundBox Peripheral"
 
+  choice BBP_SPI_HOST_ID
+    prompt "SPI Host id to use"
+    default BBP_USE_SPI3_HOST
+
+    config BBP_USE_SPI2_HOST
+      bool "SPI2_HOST"
+
+    config BBP_USE_SPI3_HOST
+      bool "SPI3_HOST"
+  endchoice
+
   config BBP_SPI_MOSI_GPIO
     int "Peripheral MOSI gpio"
     range 0 46
@@ -15,22 +26,7 @@ menu "BoundBox Peripheral"
     range 0 46
     default 12
 
-  config BBP_ETH_CS_GPIO
-    int "Ethernet CS gpio"
-    range 0 46
-    default 10
-
-  config BBP_ETH_INT_GPIO
-    int "Ethernet INT gpio"
-    range 0 46
-    default 15
-
-  config BBP_ETH_RST_GPIO
-    int "Ethernet RST gpio"
-    range 0 46
-    default 16
-
-  config BBP_HAS_ETHERNET
+  config BBP_HAS_ETH
     bool "Has ethernet"
     default y
 
@@ -38,19 +34,79 @@ menu "BoundBox Peripheral"
     int "Ethernet phy addr"
     range 0 46
     default 1
-    depends on BBP_HAS_ETHERNET
+    depends on BBP_HAS_ETH
 
   config BBP_ETH_SPI_CLOCK_MHZ
     int "Ethernet spi click (mhz)"
     default 20
-    depends on BBP_HAS_ETHERNET
+    depends on BBP_HAS_ETH
+
+  config BBP_ETH_CS_GPIO
+    int "Ethernet CS gpio"
+    range 0 46
+    default 10
+    depends on BBP_HAS_ETH
+
+  config BBP_ETH_INT_GPIO
+    int "Ethernet INT gpio"
+    range 0 46
+    default 15
+    depends on BBP_HAS_ETH
+
+  config BBP_ETH_RST_GPIO
+    int "Ethernet RST gpio"
+    range 0 46
+    default 16
+    depends on BBP_HAS_ETH
 
   config BBP_HAS_WIFI
     bool "Has WiFi"
     default y
 
-  config BBP_DEFAULT_HOSTNAME
+  choice BBP_NETKIND
+    prompt "Default network implementation"
+    default BBP_NETKIND_ETH
+
+    config BBP_NETKIND_ETH
+      bool "Ethernet"
+      depends on BBP_HAS_ETH
+
+    config BBP_NETKIND_WIFI_STA
+      bool "WiFi"
+      depends on BBP_HAS_WIFI
+  endchoice
+
+  config BBP_HOSTNAME
     string "Default hostname"
     default "BoundBoxESP"
+
+  config BBP_NET_USE_STATIC_IP
+    bool "Use static IP"
+    default n
+
+  config BBP_NET_IP
+    string "Static IP to use"
+    depends on BBP_NET_USE_STATIC_IP
+
+  config BBP_NET_SUBNET
+    string "Static Subnet to use"
+    depends on BBP_NET_USE_STATIC_IP
+
+  config BBP_NET_GW
+    string "Static Gateway to use"
+    depends on BBP_NET_USE_STATIC_IP
+
+  config BBP_NET_DNS
+    string "Static DNS to use"
+    depends on BBP_NET_USE_STATIC_IP
+
+  config BBP_WIFI_SSID
+    string "WiFi SSID"
+    default "BuggIOT"
+    depends on BBP_NETKIND_WIFI_STA
+
+  config BBP_WIFI_PASSWORD
+    string "WiFi Password"
+    depends on BBP_NETKIND_WIFI_STA
 
 endmenu

@@ -21,7 +21,7 @@ using namespace Amoled;
 
 namespace
 {
-  static const char* TAG = "amoled_touch";
+  static const char* TAG = "amoled::touch";
   static SemaphoreHandle_t xTouchMu;
 }
 
@@ -56,7 +56,7 @@ esp_err_t TouchSensor::Initialize()
   esp_lcd_panel_io_i2c_config_t tp_io_config = ESP_LCD_TOUCH_IO_I2C_CST816S_CONFIG();
   ret = esp_lcd_new_panel_io_i2c((esp_lcd_i2c_bus_handle_t)TOUCH_I2C_NUM, &tp_io_config, &tpIO);
   ESP_RETURN_ON_ERROR(ret, TAG, "create panel tp io");
-  
+
   esp_lcd_touch_config_t tp_cfg = {
     .x_max = TFT_WIDTH,
     .y_max = TFT_HEIGHT,

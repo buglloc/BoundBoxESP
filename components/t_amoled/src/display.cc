@@ -30,7 +30,7 @@ using namespace Amoled;
 
 namespace
 {
-  static const char* TAG = "amoled_display";
+  static const char* TAG = "amoled::display";
 
   const static LCDCommand kRM67162Init[] = {
     {0x11, {0x00}, 0x00}, // Sleep Out
@@ -54,7 +54,7 @@ esp_err_t Display::Initialize()
   gpio_set_direction(TFT_PIN_CS, GPIO_MODE_OUTPUT);
   gpio_set_direction(TFT_PIN_RST, GPIO_MODE_OUTPUT);
   gpio_set_direction(TFT_PIN_TE, GPIO_MODE_INPUT);
-    
+
   gpio_set_direction(BACKLIGHT_PIN, GPIO_MODE_OUTPUT);
   gpio_set_level(BACKLIGHT_PIN, HIGH);
 

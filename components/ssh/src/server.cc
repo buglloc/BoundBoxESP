@@ -22,7 +22,8 @@ using namespace SSH;
 
 namespace
 {
-  static const char* TAG = "ssh_server";
+  static const char* TAG = "ssh::server";
+
   struct AuthContext
   {
     const AuthProvider& Provider;

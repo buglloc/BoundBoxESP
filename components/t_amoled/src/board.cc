@@ -20,8 +20,8 @@ using namespace Amoled;
 
 namespace
 {
-  static const char* TAG = "amoled_board";
-  static const char* LV_TAG = "amoled_lvgl";
+  static const char* TAG = "amoled::board";
+  static const char* LV_TAG = "amoled::lvgl";
 
   static SemaphoreHandle_t xGuiMu;
   static bool initialized = false;
@@ -86,7 +86,7 @@ esp_err_t Board::InitializeLVGL()
   #if LV_USE_LOG
     lv_log_register_print_cb([](const char* buf) -> void {
       ESP_LOGI(LV_TAG, "%s", buf);
-    });      
+    });
   #endif
 
   // it's recommended to choose the size of the draw buffer(s) to be at least 1/10 screen sized

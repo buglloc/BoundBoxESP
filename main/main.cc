@@ -13,30 +13,29 @@
 #include <esp_event.h>
 #include <esp_log.h>
 
-#include <peripheral/manger.h>
+#include <peripheral/manager.h>
 
 namespace {
   static const char *TAG = "main";
-  Peripheral::Manager peripheral;
-
-  void init()
-  {
-    ESP_ERROR_CHECK(peripheral.Initialize());
-
-  }
+  static Peripheral::Manager peripheral;
 }
 
 extern "C" void app_main(void)
 {
-  init();
+  ESP_ERROR_CHECK(peripheral.Initialize());
+  ESP_ERROR_CHECK(peripheral.Net().Attach());
 
   // Block for 500ms.
   const TickType_t xDelay = 500 / portTICK_PERIOD_MS;
-  for (;;) {
-    /* we're not actually doing anything here, other than a heartbeat message */
-    ESP_LOGI(TAG,"wolfSSH Server main loop heartbeat!");
-
+  do {
+    ESP_LOGI(TAG, "Wait network");
     taskYIELD();
-    vTaskDelay(xDelay); /* Minimum delay = 1 tick */
+    vTaskDelay(xDelay);
+  } while (!peripheral.Net().Ready());
+
+  for (;;) {
+    ESP_LOGI(TAG, "heartbit");
+    taskYIELD();
+    vTaskDelay(xDelay);
   }
 }

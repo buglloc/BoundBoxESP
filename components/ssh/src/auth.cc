@@ -15,7 +15,7 @@ using namespace SSH;
 
 namespace
 {
-  static const char* TAG = "ssh_auth";
+  static const char* TAG = "ssh::auth";
 
   bool isAllowedType(const std::string_view keyType)
   {
