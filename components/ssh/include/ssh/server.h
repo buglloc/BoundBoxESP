@@ -17,7 +17,6 @@ namespace SSH
 {
   struct ServerConfig
   {
-    std::string Banner;
     std::string RootUser;
     std::vector<std::string> RootKeys;
   };

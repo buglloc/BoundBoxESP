@@ -7,6 +7,8 @@
 #include <freertos/task.h>
 #include <freertos/semphr.h>
 
+#include <driver/adc.h>
+
 #include <esp_err.h>
 #include <esp_check.h>
 #include <esp_log.h>
@@ -64,7 +66,13 @@ esp_err_t Board::Initialize()
   ESP_RETURN_ON_ERROR(display.Initialize(), TAG, "could't initialize display");
 
   ESP_LOGI(TAG, "setup touch sensor");
-  ESP_RETURN_ON_ERROR(ts.Initialize(), TAG, "could't initialize touch sensor");
+  ESP_RETURN_ON_ERROR(touchSensor.Initialize(), TAG, "could't initialize touch sensor");
+
+  ESP_LOGI(TAG, "setup temp sensor");
+  ESP_RETURN_ON_ERROR(tempSensor.Initialize(), TAG, "could't initialize temp sensor");
+
+  ESP_LOGI(TAG, "setup baterry controller");
+  ESP_RETURN_ON_ERROR(batteryController.Initialize(), TAG, "could't initialize baterry controller");
 
   initialized = true;
   return ESP_OK;
@@ -133,7 +141,7 @@ esp_err_t Board::InitializeLVGL()
   lv_indev_drv_init(&inDevDrv);
   inDevDrv.type = LV_INDEV_TYPE_POINTER;
   inDevDrv.disp = lvDisplay;
-  inDevDrv.user_data = &ts;
+  inDevDrv.user_data = &touchSensor;
   inDevDrv.read_cb = [](lv_indev_drv_t *drv, lv_indev_data_t *data) -> void {
     uint16_t x, y = 0;
     bool pressed = static_cast<Amoled::TouchSensor *>(drv->user_data)->GetPoint(x, y);

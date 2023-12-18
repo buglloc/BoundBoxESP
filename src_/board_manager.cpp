@@ -62,6 +62,7 @@ namespace
     v1 = esp_adc_cal_raw_to_voltage(raw, &adc_chars) * 2;
     return v1;
   #endif
+  ADC_CHANNEL_0
   }
 
   void initEsp32TempSensor()

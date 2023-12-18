@@ -28,7 +28,6 @@
 #define TFT_PIN_NONE          GPIO_NUM_NC
 
 #define BACKLIGHT_PIN         GPIO_NUM_38
-#define BATT_PIN_ADC          GPIO_NUM_4
 
 #define PIN_BUTTON_1          GPIO_NUM_0
 #define PIN_BUTTON_2          GPIO_NUM_21
@@ -47,3 +46,9 @@
 
 #define HOME_BUTTON_X         600
 #define HOME_BUTTON_Y         120
+
+#define BATT_ADC_UNIT         ADC_UNIT_1
+#define BATT_ADC_CHANNEL      ADC_CHANNEL_4
+#define BATT_ADC_ATTEN        ADC_ATTEN_DB_11
+#define BATT_ADC_WIDTH_BIT    ADC_BITWIDTH_12
+#define BATT_ADC_DEF_VREF     1100

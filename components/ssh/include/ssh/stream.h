@@ -1,14 +1,12 @@
 #pragma once
 
+#include <sdkconfig.h>
+
 #include <cstddef>
 #include <stdint.h>
 
-#include "config.h"
 #include "common.h"
 
-#ifndef SSH_BUFFER_SIZE
-    #define SSH_BUFFER_SIZE 512
-#endif
 
 // fwd
 struct WOLFSSH;
@@ -47,6 +45,6 @@ namespace SSH
     WOLFSSH* ssh = nullptr;
     bool nonBlock;
     size_t writeSize;
-    uint8_t writeBuf[SSH_BUFFER_SIZE];
+    uint8_t writeBuf[CONFIG_SSH_STREAM_BUFFER_SIZE];
   };
 }

@@ -2,7 +2,8 @@
 
 #include "display.h"
 #include "touch.h"
-
+#include "temp.h"
+#include "batt.h"
 
 namespace Amoled
 {
@@ -16,6 +17,16 @@ namespace Amoled
     void Restart();
     void Shutdown();
 
+    uint32_t BattVoltage()
+    {
+      return batteryController.BattVoltage();
+    }
+
+    float CoreTemp()
+    {
+      return tempSensor.CoreTemp();
+    }
+
     Amoled::Display& Display()
     {
       return display;
@@ -23,7 +34,17 @@ namespace Amoled
 
     Amoled::TouchSensor& TouchSensor()
     {
-      return ts;
+      return touchSensor;
+    }
+
+    Amoled::TempSensor& TempSensor()
+    {
+      return tempSensor;
+    }
+
+    Amoled::BatteryController& BatteryController()
+    {
+      return batteryController;
     }
 
   private:
@@ -31,6 +52,8 @@ namespace Amoled
 
   private:
     Amoled::Display display;
-    Amoled::TouchSensor ts;
+    Amoled::TouchSensor touchSensor;
+    Amoled::TempSensor tempSensor;
+    Amoled::BatteryController batteryController;
   };
 }

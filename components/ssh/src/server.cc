@@ -1,6 +1,6 @@
+#include <sdkconfig.h>
 #include "wolfssh_init.h"
 #include "ssh/server.h"
-#include "ssh/config.h"
 #include "ssh/common.h"
 
 #include <freertos/FreeRTOS.h>
@@ -9,12 +9,14 @@
 #include <wolfssl/wolfcrypt/types.h>
 #include <wolfssl/wolfcrypt/ecc.h>
 #include <wolfssh/ssh.h>
+#include <wolfssh/log.h>
 
 #include <lwip/netdb.h>
 #include <lwip/sockets.h>
 
 #include <defer.h>
 
+#include <esp_check.h>
 #include <esp_log.h>
 
 
@@ -39,14 +41,14 @@ namespace
 
   inline SelectResult tcpSelect(int socketfd, int deadline)
   {
-      WFD_SET_TYPE recvfds, errfds;
+      fd_set recvfds, errfds;
       int nfds = (int)socketfd + 1;
       struct timeval timeout = { (deadline > 0) ? deadline : 0, 0 };
 
-      WFD_ZERO(&recvfds);
-      WFD_SET(socketfd, &recvfds);
-      WFD_ZERO(&errfds);
-      WFD_SET(socketfd, &errfds);
+      FD_ZERO(&recvfds);
+      FD_SET(socketfd, &recvfds);
+      FD_ZERO(&errfds);
+      FD_SET(socketfd, &errfds);
 
       int ret = select(nfds, &recvfds, nullptr, &errfds, &timeout);
       if (ret == 0) {
@@ -54,11 +56,11 @@ namespace
       }
 
       if (ret > 0) {
-        if (WFD_ISSET(socketfd, &recvfds)) {
+        if (FD_ISSET(socketfd, &recvfds)) {
           return SelectResult::RecvReady;
         }
 
-        if (WFD_ISSET(socketfd, &errfds)) {
+        if (FD_ISSET(socketfd, &errfds)) {
           return SelectResult::ErrorReady;
         }
       }
@@ -148,6 +150,33 @@ namespace
       }
     }
   }
+
+#ifdef DEBUG_WOLFSSH
+  void wolfLog(enum wolfSSH_LogLevel logLevel, const char *const logMsg)
+  {
+    switch (logLevel) {
+    case WS_LOG_ERROR:
+      ESP_LOGE(TAG, "wolfssh: %s", logMsg);
+      break;
+
+    case WS_LOG_WARN:
+      ESP_LOGW(TAG, "wolfssh: %s", logMsg);
+      break;
+
+    case WS_LOG_INFO:
+      ESP_LOGI(TAG, "wolfssh: %s", logMsg);
+      break;
+
+    case WS_LOG_DEBUG:
+      ESP_LOGD(TAG, "wolfssh: %s", logMsg);
+      break;
+
+    default:
+      ESP_LOGI(TAG, "wolfssh: %s", logMsg);
+      break;
+    }
+  }
+#endif
 }
 
 std::expected<void, Error> Server::Initialize(const ServerConfig& cfg)
@@ -164,10 +193,11 @@ std::expected<void, Error> Server::Initialize(const ServerConfig& cfg)
   ESP_LOGI(TAG,"WolfSSL debug ON");
 #endif
 
-// #ifdef DEBUG_WOLFSSH
+#ifdef DEBUG_WOLFSSH
   wolfSSH_Debugging_ON();
-  ESP_LOGI(TAG,"WolfSSH debug ON");
-// #endif
+  wolfSSH_SetLoggingCb(wolfLog);
+  ESP_LOGI(TAG, "WolfSSH debug ON");
+#endif
 
 #ifndef WOLFSSL_TLS13
   ESP_LOGE(TAG,"requires #ifndef WOLFSSL_TLS13");
@@ -192,17 +222,11 @@ std::expected<void, Error> Server::Initialize(const ServerConfig& cfg)
 
 std::expected<void, Error> Server::SetupWolfSSH(const ServerConfig& cfg)
 {
+  int ret = 0;
   wolfCtx = wolfSSH_CTX_new(WOLFSSH_ENDPOINT_SERVER, NULL);
   if (wolfCtx == nullptr) {
     ESP_LOGE(TAG,"couldn't allocate SSH CTX data.");
     return std::unexpected<Error>{Error::ShitHappens};
-  }
-
-  // set the login banner message
-  if (!cfg.Banner.empty()) {
-    wolfSSH_CTX_SetBanner(wolfCtx, cfg.Banner.c_str());
-  } else {
-    wolfSSH_CTX_SetBanner(wolfCtx, SSH_SERVER_BANNER);
   }
 
   wolfSSH_SetUserAuthTypes(wolfCtx, [](WOLFSSH* ssh, void* ctx) -> int {
@@ -249,6 +273,35 @@ std::expected<void, Error> Server::SetupWolfSSH(const ServerConfig& cfg)
     return WS_SUCCESS;
   });
 
+/* ./keys/server-key-ecc.der, ECC */
+static const unsigned char ecc_key_der_256[] =
+{
+    0x30, 0x77, 0x02, 0x01, 0x01, 0x04, 0x20, 0x61, 0x09, 0x99,
+    0x0B, 0x79, 0xD2, 0x5F, 0x28, 0x5A, 0x0F, 0x5D, 0x15, 0xCC,
+    0xA1, 0x56, 0x54, 0xF9, 0x2B, 0x39, 0x87, 0x21, 0x2D, 0xA7,
+    0x7D, 0x85, 0x7B, 0xB8, 0x7F, 0x38, 0xC6, 0x6D, 0xD5, 0xA0,
+    0x0A, 0x06, 0x08, 0x2A, 0x86, 0x48, 0xCE, 0x3D, 0x03, 0x01,
+    0x07, 0xA1, 0x44, 0x03, 0x42, 0x00, 0x04, 0x81, 0x13, 0xFF,
+    0xA4, 0x2B, 0xB7, 0x9C, 0x45, 0x74, 0x7A, 0x83, 0x4C, 0x61,
+    0xF3, 0x3F, 0xAD, 0x26, 0xCF, 0x22, 0xCD, 0xA9, 0xA3, 0xBC,
+    0xA5, 0x61, 0xB4, 0x7C, 0xE6, 0x62, 0xD4, 0xC2, 0xF7, 0x55,
+    0x43, 0x9A, 0x31, 0xFB, 0x80, 0x11, 0x20, 0xB5, 0x12, 0x4B,
+    0x24, 0xF5, 0x78, 0xD7, 0xFD, 0x22, 0xEF, 0x46, 0x35, 0xF0,
+    0x05, 0x58, 0x6B, 0x5F, 0x63, 0xC8, 0xDA, 0x1B, 0xC4, 0xF5,
+    0x69
+};
+static const int sizeof_ecc_key_der_256 = sizeof(ecc_key_der_256);
+
+  ret = wolfSSH_CTX_UsePrivateKey_buffer(wolfCtx,
+    ecc_key_der_256, sizeof_ecc_key_der_256,
+    // rsa_key_der_2048, sizeof_rsa_key_der_2048,
+    WOLFSSH_FORMAT_ASN1
+  );
+  if (ret != WS_SUCCESS) {
+    ESP_LOGE(TAG, "unable to set banner: %d", ret);
+    return std::unexpected<Error>{Error::ShitHappens};
+  }
+
   return {};
 }
 
@@ -257,7 +310,7 @@ std::expected<void, ListenError> Server::Listen(const HandlerCallback& handler)
   struct sockaddr_in servAddr;
   memset(&servAddr, 0, sizeof(servAddr));
   servAddr.sin_family      = AF_INET;
-  servAddr.sin_port        = htons(SSH_SERVER_PORT);
+  servAddr.sin_port        = htons(CONFIG_SSH_SERVER_PORT);
   servAddr.sin_addr.s_addr = INADDR_ANY;
 
   // create socket
@@ -294,7 +347,7 @@ std::expected<void, ListenError> Server::Listen(const HandlerCallback& handler)
   }
 
   // listen, finally
-  ret = listen(sockfd, SSH_SERVER_BACKLOG);
+  ret = listen(sockfd, CONFIG_SSH_SERVER_BACKLOG);
   if (ret < 0) {
     ESP_LOGE(TAG, "failed to listen to socket: %d", ret);
     return std::unexpected<ListenError>{ListenError::Bind};
@@ -308,9 +361,9 @@ std::expected<void, ListenError> Server::Listen(const HandlerCallback& handler)
       return std::unexpected<ListenError>{ListenError::ShitHappens};
     }
 
-  #if SSH_HIGHWATER_MARK > 0
+  #if CONFIG_SSH_HIGHWATER_MARK > 0
     wolfSSH_SetHighwaterCtx(ssh, (void*)ssh);
-    wolfSSH_SetHighwater(ssh, SSH_HIGHWATER_MARK);
+    wolfSSH_SetHighwater(ssh, CONFIG_SSH_HIGHWATER_MARK);
   #endif
 
     struct sockaddr_in clientAddr;
@@ -385,6 +438,7 @@ std::expected<void, ListenError> Server::Listen(const HandlerCallback& handler)
       close(clientFd);
     }
 
+    ESP_LOGI(TAG, "stack HighWaterMark: %u", uxTaskGetStackHighWaterMark(nullptr));
     if (!connRes) {
       ESP_LOGE(TAG, "unable to process request: %d", (int)connRes.error());
       return std::unexpected<ListenError>(connRes.error());

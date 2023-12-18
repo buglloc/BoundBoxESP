@@ -1,0 +1,21 @@
+menu "SSH"
+
+  config SSH_SERVER_PORT
+    int "Server port to listen to"
+    range 0 32000
+    default 22
+
+  config SSH_SERVER_BACKLOG
+    int "Socket backlog size"
+    range 1 46
+    default 5
+
+  config SSH_HIGHWATER_MARK
+    int "Highwater mark"
+    default 1073709056
+
+  config SSH_STREAM_BUFFER_SIZE
+    int "Stream buf size"
+    default 4096
+
+endmenu

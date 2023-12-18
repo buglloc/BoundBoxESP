@@ -48,21 +48,20 @@ namespace
       keyPos = in.length();
     }
 
-    std::string_view keyBae64 = in.substr(typePos, keyPos);
-
-    Blob::Bytes keyMaterial((keyBae64.size() * 3 + 3) / 4, '\xff');
-    size_t keyMaterialLen;
+    std::string_view keyBase64 = in.substr(typePos, keyPos - typePos);
+    size_t keyMaterialSize = (keyBase64.size() * 3 + 3) / 4;
+    Blob::Bytes keyMaterial(keyMaterialSize, '\xff');
     int ret = Base64_Decode(
-      reinterpret_cast<const byte *>(keyBae64.cbegin()),
-      keyBae64.size(),
+      reinterpret_cast<const byte *>(keyBase64.cbegin()),
+      keyBase64.size(),
       keyMaterial.data(),
-      &keyMaterialLen
+      &keyMaterialSize
     );
-    if (ret!= 0) {
+    if (ret != 0) {
       return std::unexpected<Error>{Error::MalformedKey};
     }
 
-    keyMaterial.resize(keyMaterialLen);
+    keyMaterial.resize(keyMaterialSize);
     return KeyFingerprint(keyMaterial);
   }
 }
@@ -78,6 +77,7 @@ std::expected<void, Error> AuthProvider::Initialize(const ServerConfig& cfg)
       continue;
     }
 
+    ESP_LOGI(TAG, "loaded root user '%s' key: %s", rootUser.c_str(), keyFp.value().c_str());
     rootFingerprints.push_back(std::move(keyFp.value()));
   }
 
@@ -98,6 +98,9 @@ bool AuthProvider::Authenticate(const std::string& user, const Blob::Bytes& key)
 
   std::string targetFp = std::move(fpRes.value());
   bool containsFp = std::find(rootFingerprints.cbegin(), rootFingerprints.cend(), targetFp) != rootFingerprints.cend();
+  if (!containsFp) {
+    ESP_LOGW(TAG, "invalid root key: %s", targetFp.c_str());
+  }
   return containsFp;
 }
 

@@ -32,9 +32,8 @@ extern "C" void app_main(void)
   ESP_SHUTDOWN_ON_ERROR(peripheral.Initialize(), TAG, "initialize peripheral");
 
   SSH::ServerConfig sshCfg = {
-    .Banner = "BoundBoxESP",
     .RootUser = "buglloc",
-    .RootKeys = {"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMoBFbg9zagjN1z2vBi5eE62qG/9vCxsZXlAiNcmTFak"},
+    .RootKeys = {"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDD5skB0CnUQOBUMFdiwQRzf0Zg/B9gKsAsB+3IuPPP+OS5qeq1YkFjq3BtQiV+AwhKUIk/72+H4usTul2Z2BQ+BQeuzua9/Ht7VhdlqJYgC4h2mJ/hPeWnSPjzzjvY5Ar9G+EuGEtYyMaQ3fZ+0XqnvrXs4ENEpQ5angPfD77XDX1xzTw3JjjdIFqnFH/F/P3VJuypx9eTwVLqCH0yFQsUC+qFy1pQJYB8DUrMHtVPsl27Zd2EwZnCyC1ADEQiV1xTb+kiBK6jejydWpZqjHEDVaU8TDkkfk11NzhJx8+3hvcsA4/y5L+VECkUhQB3JhloOuQd0QKSrEMrcdEzp+o7 buglloc@bogs"},
   };
   std::expected<void, SSH::Error> sshRet = sshd.Initialize(sshCfg);
   TRUE_OR_SHUTDOWN(sshRet, TAG, "ssh initialize");

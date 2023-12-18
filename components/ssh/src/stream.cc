@@ -59,7 +59,7 @@ size_t Stream::readBytes(char* buffer, size_t length)
 
 size_t Stream::write(uint8_t b)
 {
-  if (writeSize + 1 >= SSH_BUFFER_SIZE && !flush()) {
+  if (writeSize + 1 >= CONFIG_SSH_STREAM_BUFFER_SIZE && !flush()) {
     return 0;
   }
 

@@ -19,6 +19,8 @@
   #define WOLFSSL_USER_SETTINGS
 #endif
 
+#define WOLFSSH_SMALL_STACK 1
+
 /* make sure this appears before any other wolfSSL headers */
 #include <wolfssl/wolfcrypt/settings.h>
 #include <user_settings.h>
