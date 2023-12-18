@@ -1,9 +1,9 @@
-#include "peripheral/net.h"
+#include "hardware/net.h"
 #include "sdkconfig.h"
-#if CONFIG_BBP_HAS_ETH
+#if CONFIG_BBHW_HAS_ETH
 #include "net_eth.h"
 #endif
-#if CONFIG_BBP_HAS_WIFI
+#if CONFIG_BBHW_HAS_WIFI
 #include "net_wifi.h"
 #endif
 
@@ -13,7 +13,7 @@
 #include <esp_check.h>
 
 
-using namespace Peripheral;
+using namespace Hardware;
 
 namespace
 {
@@ -48,11 +48,11 @@ namespace
 
 esp_err_t Net::Initialize()
 {
-#if CONFIG_BBP_NETKIND_ETH
+#if CONFIG_BBHW_NETKIND_ETH
   impl = std::make_unique<NetEth>();
   ESP_RETURN_ON_ERROR(impl->Initialize(), TAG, "failed to initialize ethernet network");
 
-#elif CONFIG_BBP_NETKIND_WIFI_STA
+#elif CONFIG_BBHW_NETKIND_WIFI_STA
   impl = std::make_unique<NetWiFiSta>();
   ESP_RETURN_ON_ERROR(impl->Initialize(), TAG, "failed to initialize wifi network");
 
@@ -73,7 +73,7 @@ esp_err_t Net::Attach()
 
   esp_netif_config_t netifCfg = impl->NetifConfig();
   esp_netif_t* netif = esp_netif_new(&netifCfg);
-  esp_netif_set_hostname(netif, CONFIG_BBP_HOSTNAME);
+  esp_netif_set_hostname(netif, CONFIG_BBHW_HOSTNAME);
 
   ESP_RETURN_ON_ERROR(esp_event_handler_register(IP_EVENT, ESP_EVENT_ANY_ID, &ipEventHandler, (void *)&ready), TAG, "attach got ip handler");
   return impl->Attach(netif);

@@ -12,7 +12,7 @@
 #include <esp_event.h>
 
 
-using namespace Peripheral;
+using namespace Hardware;
 
 namespace
 {
@@ -75,9 +75,9 @@ esp_err_t NetWiFiSta::Attach(esp_netif_t* netif)
 
   wifi_config_t staCfg = {
       .sta = {
-        #ifdef CONFIG_BBP_WIFI_SSID
-          .ssid = CONFIG_BBP_WIFI_SSID,
-          .password = CONFIG_BBP_WIFI_PASSWORD,
+        #ifdef CONFIG_BBHW_WIFI_SSID
+          .ssid = CONFIG_BBHW_WIFI_SSID,
+          .password = CONFIG_BBHW_WIFI_PASSWORD,
         #endif
           .threshold = {
             .authmode = WIFI_AUTH_WPA2_PSK

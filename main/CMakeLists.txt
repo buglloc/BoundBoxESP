@@ -3,5 +3,5 @@ SRCS
   "main.cc"
 PRIV_REQUIRES
   esp_timer heap # assets lvgl
-  peripheral ssh
+  hardware ssh
 )

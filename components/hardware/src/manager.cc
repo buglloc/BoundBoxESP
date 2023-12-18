@@ -1,5 +1,5 @@
 #include <sdkconfig.h>
-#include "peripheral/manager.h"
+#include "hardware/manager.h"
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
@@ -14,17 +14,17 @@
 
 
 #define ESP_INTR_FLAG_DEFAULT 0
-#define BBP_SPI_HOSTID NeedTooChooseSpiHost
-#ifdef CONFIG_BBP_USE_SPI2_HOST
-  #undef BBP_SPI_HOSTID
-  #define BBP_SPI_HOSTID SPI3_HOST
+#define BBHW_SPI_HOSTID NeedTooChooseSpiHost
+#ifdef CONFIG_BBHW_USE_SPI2_HOST
+  #undef BBHW_SPI_HOSTID
+  #define BBHW_SPI_HOSTID SPI3_HOST
 #endif
-#ifdef CONFIG_BBP_USE_SPI3_HOST
-  #undef BBP_SPI_HOSTID
-  #define BBP_SPI_HOSTID SPI3_HOST
+#ifdef CONFIG_BBHW_USE_SPI3_HOST
+  #undef BBHW_SPI_HOSTID
+  #define BBHW_SPI_HOSTID SPI3_HOST
 #endif
 
-using namespace Peripheral;
+using namespace Hardware;
 
 namespace
 {
@@ -52,15 +52,15 @@ namespace
   {
     // Init SPI bus
     spi_bus_config_t buscfg = {
-      .mosi_io_num = CONFIG_BBP_SPI_MOSI_GPIO,
-      .miso_io_num = CONFIG_BBP_SPI_MISO_GPIO,
-      .sclk_io_num = CONFIG_BBP_SPI_SCLK_GPIO,
+      .mosi_io_num = CONFIG_BBHW_SPI_MOSI_GPIO,
+      .miso_io_num = CONFIG_BBHW_SPI_MISO_GPIO,
+      .sclk_io_num = CONFIG_BBHW_SPI_SCLK_GPIO,
       .quadwp_io_num = -1,
       .quadhd_io_num = -1,
     };
 
-    esp_err_t ret = spi_bus_initialize(BBP_SPI_HOSTID, &buscfg, SPI_DMA_CH_AUTO);
-    ESP_RETURN_ON_ERROR(ret, TAG, "SPI host #%d init failed", BBP_SPI_HOSTID);
+    esp_err_t ret = spi_bus_initialize(BBHW_SPI_HOSTID, &buscfg, SPI_DMA_CH_AUTO);
+    ESP_RETURN_ON_ERROR(ret, TAG, "SPI host #%d init failed", BBHW_SPI_HOSTID);
 
     return ESP_OK;
   }

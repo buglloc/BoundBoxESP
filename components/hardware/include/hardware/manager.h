@@ -6,7 +6,7 @@
 
 #include "net.h"
 
-namespace Peripheral
+namespace Hardware
 {
   class Manager
   {
@@ -20,7 +20,7 @@ namespace Peripheral
       return board;
     }
 
-    Peripheral::Net& Net()
+    Hardware::Net& Net()
     {
       return net;
     }
@@ -31,6 +31,6 @@ namespace Peripheral
   private:
     bool initialized;
     Amoled::Board board;
-    Peripheral::Net net;
+    Hardware::Net net;
   };
 }

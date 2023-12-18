@@ -8,7 +8,7 @@
 
 #define ZERO_IP ((uint32_t)0xffffffffUL)
 
-namespace Peripheral
+namespace Hardware
 {
   class IP4Address
   {

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "peripheral/net.h"
+#include "hardware/net.h"
 
 #include <string.h>
 
@@ -8,7 +8,7 @@
 #include <esp_err.h>
 
 
-namespace Peripheral
+namespace Hardware
 {
   class NetEth final: public NetImpl
   {
