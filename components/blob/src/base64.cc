@@ -45,7 +45,7 @@ namespace
     return 255;
   }
 
-  size_t decodeBase64Length(const std::string& input) {
+  size_t decodeBase64Length(const std::string_view input) {
     size_t b64chars = 0;
     for (auto&& ch: input) {
       if (base64ToBinary(ch) >= 64) {
@@ -100,12 +100,12 @@ namespace Blob
     return out;
   }
 
-  Bytes Base64Decode(const std::string& in)
+  Bytes Base64Decode(const std::string_view in)
   {
     size_t outLen = decodeBase64Length(in);
     Bytes out(outLen, '\xff');
 
-    const char* inPtr = in.c_str();
+    const char* inPtr = in.cbegin();
     uint8_t* outPtr = &out[0];
     // While there are still full sets of 24 bits...
     for(unsigned int i = 2; i < outLen; i += 3) {

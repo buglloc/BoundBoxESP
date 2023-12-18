@@ -1,5 +1,4 @@
 #include "net_wifi.h"
-#include "peripheral_config.h"
 #include "net_common.h"
 
 #include <assert.h>
@@ -16,7 +15,7 @@ using namespace Hardware;
 
 namespace
 {
-  static const char* TAG = "peripheral::net::wifi";
+  static const char* TAG = "hardware::net::wifi";
 
   void wifiEventHandler(void* arg, esp_event_base_t eventBase, int32_t eventId, void* eventData)
   {

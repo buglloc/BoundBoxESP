@@ -35,13 +35,13 @@ namespace Blob
       break;
 
     default:
-      return std::unexpected<Error>(Error::Unsupported);
+      return std::unexpected<Error>{Error::Unsupported};
     }
 
     Bytes out(outLen, '\xff');
     int ret = wc_HKDF(wcType, key.c_str(), key.size(), salt.c_str(), salt.size(), info.c_str(), info.size(), out.data(), outLen);
     if (ret != 0) {
-      return std::unexpected<Error>(Error::ShitHappens);
+      return std::unexpected<Error>{Error::ShitHappens};
     }
 
     return out;
@@ -98,18 +98,18 @@ namespace Blob
   std::expected<Bytes, Error> HMAC::Sum()
   {
     if (err != Error::None) {
-      return std::unexpected<Error>(err);
+      return std::unexpected<Error>{err};
     }
 
     size_t hashLen = wc_HmacSizeByType(ctx.macType);
     if (hashLen <= 0) {
-      return std::unexpected<Error>(Error::ShitHappens);
+      return std::unexpected<Error>{Error::ShitHappens};
     }
 
     Bytes out(hashLen, '\xff');
     int ret = wc_HmacFinal(&ctx, out.data());
     if (ret != 0) {
-      return std::unexpected<Error>(Error::ShitHappens);
+      return std::unexpected<Error>{Error::ShitHappens};
     }
 
     return out;

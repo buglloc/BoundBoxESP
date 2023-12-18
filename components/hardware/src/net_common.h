@@ -1,8 +1,12 @@
 #pragma once
-#include <sdkconfig.h>
+
+#include "config.h"
+
+#include <lwip/inet.h>
+
 #include <esp_check.h>
 #include <esp_netif.h>
-#include <lwip/inet.h>
+
 
 namespace Hardware
 {

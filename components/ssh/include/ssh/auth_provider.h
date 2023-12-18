@@ -30,8 +30,8 @@ namespace SSH
   public:
     AuthProvider() = default;
     Error Initialize(const ServerConfig& cfg);
-    bool Authenticate(const std::string& user, const Blob::Bytes& key) const;
-    UserRole Role(const std::string& user) const;
+    bool Authenticate(const std::string_view user, const Blob::Bytes& key) const;
+    UserRole Role(const std::string_view user) const;
 
   private:
     std::string rootUser;

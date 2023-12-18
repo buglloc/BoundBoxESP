@@ -51,8 +51,8 @@ extern "C" void app_main(void)
   const TickType_t sshDelay = 100 / portTICK_PERIOD_MS;
   SSH::ListenError listenErr;
   for (;;) {
-    listenErr = sshd.Listen([](const SSH::UserInfo& userInfo, const std::string& cmd, SSH::Stream& stream) -> bool {
-      ESP_LOGI(TAG, "new command: %s", cmd.c_str());
+    listenErr = sshd.Listen([](const SSH::UserInfo& userInfo, const std::string_view cmd, SSH::Stream& stream) -> bool {
+      ESP_LOGI(TAG, "new command: %s", cmd.cbegin());
       return true;
     });
 

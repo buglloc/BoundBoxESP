@@ -1,5 +1,5 @@
 #include "hardware/net.h"
-#include "sdkconfig.h"
+#include "config.h"
 #if CONFIG_BBHW_HAS_ETH
 #include "net_eth.h"
 #endif
@@ -17,7 +17,7 @@ using namespace Hardware;
 
 namespace
 {
-  static const char* TAG = "peripheral::net";
+  static const char* TAG = "hardware::net";
 
   void ipEventHandler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
   {

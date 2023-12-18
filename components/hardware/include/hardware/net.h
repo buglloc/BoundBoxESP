@@ -15,7 +15,7 @@ namespace Hardware
   public:
     IP4Address() : addr({.addr = ZERO_IP}) {};
 
-    esp_err_t FromString(std::string_view in)
+    esp_err_t FromString(const std::string_view in)
     {
       esp_err_t ret = esp_netif_str_to_ip4(in.cbegin(), &addr);
       if (ret == ESP_OK) {

@@ -84,7 +84,7 @@ Error AuthProvider::Initialize(const ServerConfig& cfg)
   return Error::None;
 }
 
-bool AuthProvider::Authenticate(const std::string& user, const Blob::Bytes& key) const
+bool AuthProvider::Authenticate(const std::string_view user, const Blob::Bytes& key) const
 {
   if (user != rootUser) {
     return key.size() > 0;
@@ -104,7 +104,7 @@ bool AuthProvider::Authenticate(const std::string& user, const Blob::Bytes& key)
   return containsFp;
 }
 
-UserRole AuthProvider::Role(const std::string& user) const
+UserRole AuthProvider::Role(const std::string_view user) const
 {
   return user == rootUser ? UserRole::SysOp : UserRole::User;
 }
