@@ -66,7 +66,7 @@ namespace
   }
 }
 
-std::expected<void, Error> AuthProvider::Initialize(const ServerConfig& cfg)
+Error AuthProvider::Initialize(const ServerConfig& cfg)
 {
   rootUser = cfg.RootUser;
   rootFingerprints.reserve(cfg.RootKeys.size());
@@ -81,7 +81,7 @@ std::expected<void, Error> AuthProvider::Initialize(const ServerConfig& cfg)
     rootFingerprints.push_back(std::move(keyFp.value()));
   }
 
-  return {};
+  return Error::None;
 }
 
 bool AuthProvider::Authenticate(const std::string& user, const Blob::Bytes& key) const

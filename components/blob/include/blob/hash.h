@@ -32,7 +32,7 @@ namespace Blob
   {
   public:
     explicit HMAC(const Blob::Bytes& key, HashType type = HashType::SHA256);
-    std::expected<void, Error> Write(const Blob::Bytes& data);
+    Error Write(const Blob::Bytes& data);
     std::expected<Blob::Bytes, Error> Sum();
 
     ~HMAC();

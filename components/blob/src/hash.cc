@@ -11,9 +11,9 @@ namespace Blob
   std::expected<Bytes, Error> HMACSum(const Bytes& key, const Bytes& msg, HashType type)
   {
     HMAC hmac(key, type);
-    std::expected<void, Error> writeRes = hmac.Write(msg);
-    if (!writeRes) {
-      return std::unexpected<Error>(writeRes.error());
+    Error err = hmac.Write(msg);
+    if (err != Error::None) {
+      return err;
     }
 
     return hmac.Sum();
@@ -81,18 +81,18 @@ namespace Blob
     }
   }
 
-  std::expected<void, Error> HMAC::Write(const Bytes& data)
+  Error HMAC::Write(const Bytes& data)
   {
     if (err != Error::None) {
-      return std::unexpected<Error>(err);
+      return err;
     }
 
     int ret = wc_HmacUpdate(&ctx, data.c_str(), data.size());
     if (ret != 0) {
-      return std::unexpected<Error>(Error::ShitHappens);
+      return Error::ShitHappens;
     }
 
-    return {};
+    return Error::None;
   }
 
   std::expected<Bytes, Error> HMAC::Sum()

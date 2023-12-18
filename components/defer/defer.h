@@ -29,39 +29,37 @@
 #define VAR_DEFER_(x) VAR_DEFER__(x)
 
 // Capture all by ref
-#define REF_DEFER(ops) BBU::Defer VAR_DEFER_(__COUNTER__)([&]{ ops; })
+#define REF_DEFER(ops) Defer VAR_DEFER_(__COUNTER__)([&]{ ops; })
 // Capture all by val
-#define VAL_DEFER(ops) BBU::Defer VAR_DEFER_(__COUNTER__)([=]{ ops; })
+#define VAL_DEFER(ops) Defer VAR_DEFER_(__COUNTER__)([=]{ ops; })
 // Capture nothing
-#define NONE_DEFER(ops) BBU::Defer VAR_DEFER_(__COUNTER__)([ ]{ ops; })
+#define NONE_DEFER(ops) Defer VAR_DEFER_(__COUNTER__)([ ]{ ops; })
 
-namespace BBU
+
+class Defer
 {
-  class Defer
-  {
-  public:
-      using action = std::function<void(void)>;
+public:
+    using action = std::function<void(void)>;
 
-  public:
-      Defer(const action& act)
-          : _action(act) {}
-      Defer(action&& act)
-          : _action(std::move(act)) {}
+public:
+    Defer(const action& act)
+        : _action(act) {}
+    Defer(action&& act)
+        : _action(std::move(act)) {}
 
-      Defer(const Defer& act) = delete;
-      Defer& operator=(const Defer& act) = delete;
+    Defer(const Defer& act) = delete;
+    Defer& operator=(const Defer& act) = delete;
 
-      Defer(Defer&& act) = delete;
-      Defer& operator=(Defer&& act) = delete;
+    Defer(Defer&& act) = delete;
+    Defer& operator=(Defer&& act) = delete;
 
-      ~Defer()
-      {
-          _action();
-      }
+    ~Defer()
+    {
+        _action();
+    }
 
-  private:
-      action _action;
-  };
-}
+private:
+    action _action;
+};
 
 #endif

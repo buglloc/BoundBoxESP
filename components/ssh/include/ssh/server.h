@@ -25,14 +25,14 @@ namespace SSH
   {
   public:
     Server() = default;
-    std::expected<void, Error> Initialize(const ServerConfig& cfg);
-    std::expected<void, ListenError> Listen(const HandlerCallback& handler);
+    Error Initialize(const ServerConfig& cfg);
+    ListenError Listen(const HandlerCallback& handler);
 
     ~Server();
   private:
-    std::expected<void, Error> SetupWolfSSH(const ServerConfig& cfg);
-    std::expected<void, ListenError> AcceptConnection(WOLFSSH* ssh, const UserInfo& userInfo, const HandlerCallback& handler);
-    std::expected<void, ListenError> ProcessSessionCommand(WOLFSSH* ssh, const UserInfo& userInfo, const HandlerCallback& handler);
+    Error SetupWolfSSH(const ServerConfig& cfg);
+    ListenError AcceptConnection(WOLFSSH* ssh, const UserInfo& userInfo, const HandlerCallback& handler);
+    ListenError ProcessSessionCommand(WOLFSSH* ssh, const UserInfo& userInfo, const HandlerCallback& handler);
 
   private:
     WOLFSSH_CTX* wolfCtx = nullptr;

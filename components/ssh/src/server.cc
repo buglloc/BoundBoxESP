@@ -179,13 +179,13 @@ namespace
 #endif
 }
 
-std::expected<void, Error> Server::Initialize(const ServerConfig& cfg)
+Error Server::Initialize(const ServerConfig& cfg)
 {
   ESP_LOGI(TAG, "setup wolfcrypt");
   int ret = wolfCrypt_Init();
   if (ret != 0) {
     ESP_LOGE(TAG,"unable to initialize wolfSSL: %d", ret);
-    return std::unexpected<Error>{Error::ShitHappens};
+    return Error::ShitHappens;
   }
 
 #ifdef DEBUG_WOLFSSL
@@ -201,32 +201,32 @@ std::expected<void, Error> Server::Initialize(const ServerConfig& cfg)
 
 #ifndef WOLFSSL_TLS13
   ESP_LOGE(TAG,"requires #ifndef WOLFSSL_TLS13");
-  return std::unexpected<Error>{Error::ShitHappens};
+  return Error::ShitHappens;
 #endif
 
   ret = wolfSSH_Init();
   if (ret != WS_SUCCESS) {
     ESP_LOGE(TAG,"unable to initialize wolfSSH:: %d", ret);
-    return std::unexpected<Error>{Error::ShitHappens};
+    return Error::ShitHappens;
   }
 
   ESP_LOGI(TAG, "setup auth logic");
-  std::expected<void, Error> authRes = auth.Initialize(cfg);
-  if (!authRes) {
-    ESP_LOGE(TAG,"unable to initialize auth logic: %d", (int)authRes.error());
-    return std::unexpected<Error>{Error::ShitHappens};
+  Error err = auth.Initialize(cfg);
+  if (err != Error::None) {
+    ESP_LOGE(TAG,"unable to initialize auth logic: %d", (int)err);
+    return Error::ShitHappens;
   }
 
   return SetupWolfSSH(cfg);
 }
 
-std::expected<void, Error> Server::SetupWolfSSH(const ServerConfig& cfg)
+Error Server::SetupWolfSSH(const ServerConfig& cfg)
 {
   int ret = 0;
   wolfCtx = wolfSSH_CTX_new(WOLFSSH_ENDPOINT_SERVER, NULL);
   if (wolfCtx == nullptr) {
     ESP_LOGE(TAG,"couldn't allocate SSH CTX data.");
-    return std::unexpected<Error>{Error::ShitHappens};
+    return Error::ShitHappens;
   }
 
   wolfSSH_SetUserAuthTypes(wolfCtx, [](WOLFSSH* ssh, void* ctx) -> int {
@@ -299,13 +299,13 @@ static const int sizeof_ecc_key_der_256 = sizeof(ecc_key_der_256);
   );
   if (ret != WS_SUCCESS) {
     ESP_LOGE(TAG, "unable to set banner: %d", ret);
-    return std::unexpected<Error>{Error::ShitHappens};
+    return Error::ShitHappens;
   }
 
-  return {};
+  return Error::None;
 }
 
-std::expected<void, ListenError> Server::Listen(const HandlerCallback& handler)
+ListenError Server::Listen(const HandlerCallback& handler)
 {
   struct sockaddr_in servAddr;
   memset(&servAddr, 0, sizeof(servAddr));
@@ -317,7 +317,7 @@ std::expected<void, ListenError> Server::Listen(const HandlerCallback& handler)
   int sockfd = socket(AF_INET, SOCK_STREAM, 0);
   if (sockfd <= 0) {
     ESP_LOGE(TAG, "failed to create a socket: %d", sockfd);
-    return std::unexpected<ListenError>{ListenError::Sock};
+    return ListenError::Sock;
   }
   REF_DEFER(if (sockfd != SOCKET_INVALID) {close(sockfd); sockfd = SOCKET_INVALID;});
 
@@ -332,7 +332,7 @@ std::expected<void, ListenError> Server::Listen(const HandlerCallback& handler)
   );
   if (ret != 0) {
     ESP_LOGE(TAG, "failed to setsockopt addr on socket: %d", ret);
-    return std::unexpected<ListenError>{ListenError::Sock};
+    return ListenError::Sock;
   }
 
   // bind the server socket to our port
@@ -343,14 +343,14 @@ std::expected<void, ListenError> Server::Listen(const HandlerCallback& handler)
   );
   if (ret != 0) {
     ESP_LOGE(TAG, "failed to bind to socket: %d", ret);
-    return std::unexpected<ListenError>{ListenError::Bind};
+    return ListenError::Bind;
   }
 
   // listen, finally
   ret = listen(sockfd, CONFIG_SSH_SERVER_BACKLOG);
   if (ret < 0) {
     ESP_LOGE(TAG, "failed to listen to socket: %d", ret);
-    return std::unexpected<ListenError>{ListenError::Bind};
+    return ListenError::Bind;
   }
 
   // accept && process loop
@@ -358,7 +358,7 @@ std::expected<void, ListenError> Server::Listen(const HandlerCallback& handler)
     WOLFSSH* ssh = wolfSSH_new(wolfCtx);
     if (ssh == NULL) {
       ESP_LOGE(TAG, "couldn't allocate SSH data");
-      return std::unexpected<ListenError>{ListenError::ShitHappens};
+      return ListenError::ShitHappens;
     }
 
   #if CONFIG_SSH_HIGHWATER_MARK > 0
@@ -374,8 +374,8 @@ std::expected<void, ListenError> Server::Listen(const HandlerCallback& handler)
       &clientAddrSize
     );
     if (clientFd == -1) {
-      ESP_LOGI(TAG,"accept failed");
-      exit(EXIT_FAILURE);
+      ESP_LOGI(TAG, "accept failed");
+      return ListenError::Accept;
     }
 
     UserInfo userInfo;
@@ -392,7 +392,7 @@ std::expected<void, ListenError> Server::Listen(const HandlerCallback& handler)
     tcpSetNonblocking(&clientFd);
     wolfSSH_set_fd(ssh, clientFd);
 
-    std::expected<void, ListenError> connRes = AcceptConnection(ssh, userInfo, handler);
+    ListenError processErr = AcceptConnection(ssh, userInfo, handler);
 
     int error = wolfSSH_stream_exit(ssh, 0);
     int ret = wolfSSH_get_error(ssh);
@@ -439,21 +439,21 @@ std::expected<void, ListenError> Server::Listen(const HandlerCallback& handler)
     }
 
     ESP_LOGI(TAG, "stack HighWaterMark: %u", uxTaskGetStackHighWaterMark(nullptr));
-    if (!connRes) {
-      ESP_LOGE(TAG, "unable to process request: %d", (int)connRes.error());
-      return std::unexpected<ListenError>(connRes.error());
+    if (processErr != ListenError::None) {
+      ESP_LOGE(TAG, "unable to process request: %d", (int)processErr);
+      return processErr;
     }
   }
 
-  return {};
+  return ListenError::None;
 }
 
-std::expected<void, ListenError> Server::AcceptConnection(WOLFSSH* ssh, const UserInfo& userInfo, const HandlerCallback& handler)
+ListenError Server::AcceptConnection(WOLFSSH* ssh, const UserInfo& userInfo, const HandlerCallback& handler)
 {
   int ret = nonblockSSHAccept(ssh);
   if (ret != 0) {
     ESP_LOGE(TAG, "accept conn from %s failed: %d", userInfo.ClientIP.c_str(), ret);
-    return std::unexpected<ListenError>{ListenError::Accept};
+    return ListenError::Accept;
   }
 
   WS_SessionType sessType = wolfSSH_GetSessionType(ssh);
@@ -463,11 +463,11 @@ std::expected<void, ListenError> Server::AcceptConnection(WOLFSSH* ssh, const Us
 
   default:
     ESP_LOGW(TAG, "unsupported session from %s: %s", userInfo.ClientIP.c_str(), sessTypeName(sessType));
-    return std::unexpected<ListenError>{ListenError::Unsupported};
+    return ListenError::Unsupported;
   }
 }
 
-std::expected<void, ListenError> Server::ProcessSessionCommand(WOLFSSH* ssh, const UserInfo& userInfo, const HandlerCallback& handler)
+ListenError Server::ProcessSessionCommand(WOLFSSH* ssh, const UserInfo& userInfo, const HandlerCallback& handler)
 {
   std::string cmd = wolfSSH_GetSessionCommand(ssh);
   Stream stream(ssh, true);
@@ -475,7 +475,7 @@ std::expected<void, ListenError> Server::ProcessSessionCommand(WOLFSSH* ssh, con
     ESP_LOGE(TAG, "handler fail");
   }
 
-  return {};
+  return ListenError::None;
 }
 
 Server::~Server()

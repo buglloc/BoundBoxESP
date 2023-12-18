@@ -35,8 +35,8 @@ extern "C" void app_main(void)
     .RootUser = "buglloc",
     .RootKeys = {"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDD5skB0CnUQOBUMFdiwQRzf0Zg/B9gKsAsB+3IuPPP+OS5qeq1YkFjq3BtQiV+AwhKUIk/72+H4usTul2Z2BQ+BQeuzua9/Ht7VhdlqJYgC4h2mJ/hPeWnSPjzzjvY5Ar9G+EuGEtYyMaQ3fZ+0XqnvrXs4ENEpQ5angPfD77XDX1xzTw3JjjdIFqnFH/F/P3VJuypx9eTwVLqCH0yFQsUC+qFy1pQJYB8DUrMHtVPsl27Zd2EwZnCyC1ADEQiV1xTb+kiBK6jejydWpZqjHEDVaU8TDkkfk11NzhJx8+3hvcsA4/y5L+VECkUhQB3JhloOuQd0QKSrEMrcdEzp+o7 buglloc@bogs"},
   };
-  std::expected<void, SSH::Error> sshRet = sshd.Initialize(sshCfg);
-  TRUE_OR_SHUTDOWN(sshRet, TAG, "ssh initialize");
+  SSH::Error sshErr = sshd.Initialize(sshCfg);
+  TRUE_OR_SHUTDOWN(sshErr != SSH::Error::None, TAG, "ssh initialize");
 
   ESP_SHUTDOWN_ON_ERROR(hw.Net().Attach(), TAG, "network attach");
 
@@ -49,15 +49,15 @@ extern "C" void app_main(void)
   } while (!hw.Net().Ready());
 
   const TickType_t sshDelay = 100 / portTICK_PERIOD_MS;
-  std::expected<void, SSH::ListenError> listenRet;
+  SSH::ListenError listenErr;
   for (;;) {
-    listenRet = sshd.Listen([](const SSH::UserInfo& userInfo, const std::string& cmd, SSH::Stream& stream) -> bool {
+    listenErr = sshd.Listen([](const SSH::UserInfo& userInfo, const std::string& cmd, SSH::Stream& stream) -> bool {
       ESP_LOGI(TAG, "new command: %s", cmd.c_str());
       return true;
     });
 
-    if (!listenRet) {
-      ESP_LOGE(TAG, "listen failed: %d", (int)listenRet.error());
+    if (listenErr != SSH::ListenError::None) {
+      ESP_LOGE(TAG, "listen failed: %d", (int)listenErr);
     }
 
     taskYIELD();
