@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <string>
 #include <memory>
+#include <functional>
 #include <expected>
 
 #include <nvs_handle.hpp>
@@ -23,19 +24,18 @@ public:
 
 public:
   Preferences() = default;
-  ~Preferences();
-  Error Open(const std::string_view name = std::string_view());
+  Error Open(const std::string& name = std::string());
 
-  Error Remove(const std::string_view key);
+  Error Remove(const std::string& key);
   Error Erase();
 
-  std::expected<Blob::Bytes, Error> GetBytes(const std::string_view key);
-  Error StoreBytes(const std::string_view key, const Blob::Bytes& data);
+  std::expected<Blob::Bytes, Error> GetBytes(const std::string& key);
+  Error StoreBytes(const std::string& key, const Blob::Bytes& data);
 
-  std::expected<std::string, Error> GetString(const std::string_view key);
-  Error StoreString(const std::string_view key, const std::string_view data);
+  std::expected<std::string, Error> GetString(const std::string& key);
+  Error StoreString(const std::string& key, const std::string& data);
 
 private:
-  bool opened;
+  bool opened = false;
   std::unique_ptr<nvs::NVSHandle> nvs;
 };

@@ -1,0 +1,37 @@
+menu "BoundBox"
+
+  config ROOT_USERNAME
+    string "Root username"
+    default "buglloc"
+
+  config ROOT_KEY
+    string "Root user authorized key"
+    default "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEa0shQISF2GdAgQrFyY6XsvdbVK33cdbYTVR4pldLUC4548mMDWiqXm4V67yFtcxbHaCtKbzYRXXaCraZkTgbU="
+
+  choice HOSTKEY_TYPE
+    prompt "Default host key type"
+    default HOSTKEY_TYPE_ECDSA
+
+    config HOSTKEY_TYPE_RSA
+      bool "RSA"
+
+    config HOSTKEY_TYPE_ECDSA
+      bool "ECDSA"
+
+  endchoice
+
+  config HOSTKEY_RSA_BITS
+    int "RSA key bits"
+    default 2048
+    depends on HOSTKEY_TYPE_RSA
+
+  config HOSTKEY_ECDSA_BITS
+    int "ECDSA key bits"
+    default 256
+    depends on HOSTKEY_TYPE_ECDSA
+
+  config SECRET_KEY_SIZE
+    int "Default secret key size"
+    default 32
+
+endmenu

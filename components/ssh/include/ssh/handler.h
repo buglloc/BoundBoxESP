@@ -10,7 +10,6 @@
 
 namespace SSH
 {
-
   using UserInfoHolder = std::unique_ptr<UserInfo>;
   using HandlerCallback = std::function<bool(const UserInfo& userInfo, std::string_view cmd, Stream& stream)>;
 }

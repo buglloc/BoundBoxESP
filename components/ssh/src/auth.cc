@@ -1,5 +1,6 @@
 #include "ssh/auth_provider.h"
 #include "ssh/server.h"
+#include "ssh/keys.h"
 #include "ssh/common.h"
 
 #include <algorithm>

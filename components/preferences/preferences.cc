@@ -22,14 +22,14 @@ namespace
   static const char* TAG = "preferences";
 }
 
-Preferences::Error Preferences::Open(const std::string_view name)
+Preferences::Error Preferences::Open(const std::string& name)
 {
   if (opened) {
     ESP_LOGW(TAG, "already opened");
     return Error::InvalidState;
   }
 
-  const char* nvsName = name.empty() ? CONFIG_BB_PREF_NAMESPACE : name.cbegin();
+  const char* nvsName = name.empty() ? CONFIG_BB_PREF_NAMESPACE : name.c_str();
   ESP_LOGI(TAG, "open NVS flash: %s", nvsName);
 
   esp_err_t err = nvs_flash_init();
@@ -42,7 +42,7 @@ Preferences::Error Preferences::Open(const std::string_view name)
   return Error::None;
 }
 
-Preferences::Error Preferences::Remove(const std::string_view name)
+Preferences::Error Preferences::Remove(const std::string& name)
 {
   if (!opened) {
     return Error::InvalidState;
@@ -52,7 +52,7 @@ Preferences::Error Preferences::Remove(const std::string_view name)
     return Error::InvalidArg;
   }
 
-  esp_err_t err = nvs->erase_item(name.cbegin());
+  esp_err_t err = nvs->erase_item(name.c_str());
   if (err == ESP_ERR_NVS_NOT_FOUND) {
     return Error::None;
   }
@@ -79,79 +79,69 @@ Preferences::Error Preferences::Erase()
   return Error::None;
 }
 
-std::expected<Blob::Bytes, Preferences::Error> Preferences::GetBytes(const std::string_view key)
+std::expected<Blob::Bytes, Preferences::Error> Preferences::GetBytes(const std::string& key)
 {
   if (!opened) {
     return std::unexpected<Error>{Error::InvalidState};
   }
 
   size_t size = 0;
-  esp_err_t err = nvs->get_item_size(nvs::ItemType::BLOB, key.cbegin(), size);
+  esp_err_t err = nvs->get_item_size(nvs::ItemType::BLOB, key.c_str(), size);
   if (size == 0 || err == ESP_ERR_NVS_NOT_FOUND) {
     return std::unexpected<Error>{Error::NotExist};
   }
 
   Blob::Bytes out(size, '\xff');
-  err = nvs->get_blob(key.cbegin(), out.data(), size);
+  err = nvs->get_blob(key.c_str(), out.data(), size);
   RETURN_ON_ERROR(err, std::unexpected<Error>{Error::Internal}, "get blob");
 
   return out;
 }
 
-Preferences::Error Preferences::StoreBytes(const std::string_view key, const Blob::Bytes& data)
+Preferences::Error Preferences::StoreBytes(const std::string& key, const Blob::Bytes& data)
 {
   if (!opened) {
     return Error::InvalidState;
   }
 
-  esp_err_t err = nvs->set_blob(key.cbegin(), (const void *)data.data(), data.size());
+  esp_err_t err = nvs->set_blob(key.c_str(), (const void *)data.c_str(), data.size());
   RETURN_ON_ERROR(err, Error::Internal, "set blob");
 
   err = nvs->commit();
   RETURN_ON_ERROR(err, Error::Internal, "commit");
-
   return Error::None;
 }
 
-std::expected<std::string, Preferences::Error> Preferences::GetString(const std::string_view key)
+std::expected<std::string, Preferences::Error> Preferences::GetString(const std::string& key)
 {
   if (!opened) {
     return std::unexpected<Error>{Error::InvalidState};
   }
 
   size_t size = 0;
-  esp_err_t err = nvs->get_item_size(nvs::ItemType::SZ, key.cbegin(), size);
+  esp_err_t err = nvs->get_item_size(nvs::ItemType::SZ, key.c_str(), size);
   if (size == 0 || err == ESP_ERR_NVS_NOT_FOUND) {
     return std::unexpected<Error>{Error::NotExist};
   }
 
   std::string out(size, '\xff');
-  err = nvs->get_string(key.cbegin(), out.data(), size);
+  err = nvs->get_string(key.c_str(), out.data(), size);
   RETURN_ON_ERROR(err, std::unexpected<Error>{Error::Internal}, "get string");
 
   return out;
 }
 
-Preferences::Error Preferences::StoreString(const std::string_view key, const std::string_view data)
+Preferences::Error Preferences::StoreString(const std::string& key, const std::string& data)
 {
   if (!opened) {
     return Error::InvalidState;
   }
 
-  esp_err_t err = nvs->set_string(key.cbegin(), data.cbegin());
+  esp_err_t err = nvs->set_string(key.c_str(), data.c_str());
   RETURN_ON_ERROR(err, Error::Internal, "set string");
 
   err = nvs->commit();
   RETURN_ON_ERROR(err, Error::Internal, "commit");
 
   return Error::None;
-}
-
-Preferences::~Preferences()
-{
-  if(!opened){
-    return;
-  }
-
-  opened = false;
 }

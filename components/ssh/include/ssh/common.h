@@ -1,9 +1,7 @@
 #pragma once
 
-#include <string>
-#include <expected>
+#include <stdint.h>
 
-#include <blob/bytes.h>
 
 namespace SSH
 {
@@ -12,6 +10,7 @@ namespace SSH
     None = 0,
     MalformedKey,
     Unsupported,
+    Internal,
     ShitHappens
   };
 
@@ -24,6 +23,4 @@ namespace SSH
     Unsupported,
     ShitHappens
   };
-
-  std::expected<std::string, Error> KeyFingerprint(const Blob::Bytes& key);
 }

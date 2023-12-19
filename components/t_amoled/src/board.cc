@@ -168,10 +168,6 @@ void Board::Restart()
 
 void Board::Shutdown()
 {
-  for (int d = ESP_PD_DOMAIN_RTC_PERIPH; d < ESP_PD_DOMAIN_MAX; ++d) {
-    esp_sleep_pd_config(static_cast<esp_sleep_pd_domain_t>(d), ESP_PD_OPTION_OFF);
-  }
-
   esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
   esp_deep_sleep_start();
 }

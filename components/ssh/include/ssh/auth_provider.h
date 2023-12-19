@@ -4,6 +4,7 @@
 #include <vector>
 #include <expected>
 
+#include <blob/bytes.h>
 #include "common.h"
 
 namespace SSH
