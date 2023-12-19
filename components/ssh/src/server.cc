@@ -4,6 +4,8 @@
 #include "ssh/common.h"
 #include "ssh/keys.h"
 
+#include <cerrno>
+
 #include <freertos/FreeRTOS.h>
 
 #include <wolfssl/ssl.h>
@@ -314,7 +316,7 @@ ListenError Server::Listen(const HandlerCallback& handler)
   // create socket
   int sockfd = socket(AF_INET, SOCK_STREAM, 0);
   if (sockfd <= 0) {
-    ESP_LOGE(TAG, "failed to create a socket: %d", sockfd);
+    ESP_LOGE(TAG, "failed to create a socket: %s", esp_err_to_name(errno));
     return ListenError::Sock;
   }
   REF_DEFER(if (sockfd != SOCKET_INVALID) {close(sockfd); sockfd = SOCKET_INVALID;});
@@ -329,7 +331,7 @@ ListenError Server::Listen(const HandlerCallback& handler)
     (socklen_t)sizeof(on)
   );
   if (ret != 0) {
-    ESP_LOGE(TAG, "failed to setsockopt addr on socket: %d", ret);
+    ESP_LOGE(TAG, "failed to setsockopt addr on socket: %s", esp_err_to_name(errno));
     return ListenError::Sock;
   }
 
@@ -340,19 +342,21 @@ ListenError Server::Listen(const HandlerCallback& handler)
     sizeof(servAddr)
   );
   if (ret != 0) {
-    ESP_LOGE(TAG, "failed to bind to socket: %d", ret);
+    ESP_LOGE(TAG, "failed to bind to socket:%s", esp_err_to_name(errno));
     return ListenError::Bind;
   }
 
   // listen, finally
   ret = listen(sockfd, CONFIG_SSH_SERVER_BACKLOG);
   if (ret < 0) {
-    ESP_LOGE(TAG, "failed to listen to socket: %d", ret);
+    ESP_LOGE(TAG, "failed to listen to socket: %s", esp_err_to_name(errno));
     return ListenError::Bind;
   }
 
   // accept && process loop
   for(;;) {
+    ESP_LOGI(TAG, "waiting new connection...");
+
     WOLFSSH* ssh = wolfSSH_new(wolfCtx);
     if (ssh == NULL) {
       ESP_LOGE(TAG, "couldn't allocate SSH data");
@@ -363,7 +367,7 @@ ListenError Server::Listen(const HandlerCallback& handler)
     wolfSSH_SetHighwaterCtx(ssh, (void*)ssh);
     wolfSSH_SetHighwater(ssh, CONFIG_SSH_HIGHWATER_MARK);
   #endif
-
+  
     struct sockaddr_in clientAddr;
     socklen_t clientAddrSize = sizeof(clientAddr);
     int clientFd = accept(

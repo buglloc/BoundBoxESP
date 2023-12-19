@@ -34,4 +34,8 @@ menu "BoundBox"
     int "Default secret key size"
     default 32
 
+  config SSHD_TASK_STACK_SIZE
+    int "SSHD task stack size"
+    default 32768
+
 endmenu

@@ -25,6 +25,29 @@ namespace {
   static const char *TAG = "main";
   Hardware::Manager& hw = Hardware::Manager::Instance();
   SSH::Server sshd;
+
+  void sshdTask(void *arg)
+  {
+    ESP_LOGI(TAG, "SSH task started");
+    SSH::Server* srv = reinterpret_cast<SSH::Server *>(arg);
+    assert(srv);
+
+    const TickType_t sshDelay = 500 / portTICK_PERIOD_MS;
+    SSH::ListenError listenErr;
+    for (;;) {
+      listenErr = srv->Listen([](const SSH::UserInfo& userInfo, const std::string_view cmd, SSH::Stream& stream) -> bool {
+        ESP_LOGI(TAG, "new command: %s", cmd.cbegin());
+        return true;
+      });
+
+      if (listenErr != SSH::ListenError::None) {
+        ESP_LOGE(TAG, "listen failed: %d", (int)listenErr);
+      }
+
+      taskYIELD();
+      vTaskDelay(sshDelay);
+    }
+  }
 }
 
 extern "C" void app_main(void)
@@ -42,7 +65,7 @@ extern "C" void app_main(void)
       .RootUser = CONFIG_ROOT_USERNAME,
       .RootKeys = {CONFIG_ROOT_KEY},
     };
-    HALT_ASSERT(sshd.Initialize(sshCfg) != SSH::Error::None, TAG, "ssh initialize");
+    HALT_ASSERT(sshd.Initialize(sshCfg) == SSH::Error::None, TAG, "ssh initialize");
   }
 
   ESP_LOGI(TAG, "attach network");
@@ -58,22 +81,13 @@ extern "C" void app_main(void)
     } while (!hw.Net().Ready());
   }
 
-  ESP_LOGI(TAG, "app started, wait for connection");
-  {
-    const TickType_t sshDelay = 100 / portTICK_PERIOD_MS;
-    SSH::ListenError listenErr;
-    for (;;) {
-      listenErr = sshd.Listen([](const SSH::UserInfo& userInfo, const std::string_view cmd, SSH::Stream& stream) -> bool {
-        ESP_LOGI(TAG, "new command: %s", cmd.cbegin());
-        return true;
-      });
+  xTaskCreate(sshdTask, "sshd", CONFIG_SSHD_TASK_STACK_SIZE, &sshd, tskIDLE_PRIORITY, nullptr);
 
-      if (listenErr != SSH::ListenError::None) {
-        ESP_LOGE(TAG, "listen failed: %d", (int)listenErr);
-      }
-
+  // TODO(buglloc): do something useful
+  ESP_LOGI(TAG, "app initialized, switched to busy looping");
+  const TickType_t xDelay = 500 / portTICK_PERIOD_MS;
+  for (;;) {
       taskYIELD();
-      vTaskDelay(sshDelay);
-    }
+      vTaskDelay(xDelay);
   }
 }

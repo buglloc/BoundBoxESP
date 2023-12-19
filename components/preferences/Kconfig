@@ -1,4 +1,4 @@
-menu "BoundBox preferences"
+menu "BoundBox Preferences"
 
   config BB_PREF_NAMESPACE
     string "Namespace"
