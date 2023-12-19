@@ -18,4 +18,12 @@ menu "SSH"
     int "Stream buf size"
     default 4096
 
+  config SSH_CHANNEL_INITIAL_WINDOW
+    int "Channel initial window"
+    default 1024
+
+  config SSH_CHANNEL_MAX_PACKET_SIZE
+    int "Channel max packet size"
+    default 32768
+
 endmenu

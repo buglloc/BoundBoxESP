@@ -231,6 +231,7 @@ Error Server::SetupWolfSSH(const ServerConfig& cfg)
     return Error::ShitHappens;
   }
 
+  wolfSSH_CTX_SetWindowPacketSize(wolfCtx, CONFIG_SSH_CHANNEL_INITIAL_WINDOW, CONFIG_SSH_CHANNEL_MAX_PACKET_SIZE);
   wolfSSH_SetUserAuthTypes(wolfCtx, [](WOLFSSH* ssh, void* ctx) -> int {
     return WOLFSSH_USERAUTH_PUBLICKEY;
   });
