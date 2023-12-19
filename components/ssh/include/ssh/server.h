@@ -6,6 +6,7 @@
 #include <expected>
 
 #include "common.h"
+#include "keys.h"
 #include "handler.h"
 #include "auth_provider.h"
 
@@ -17,8 +18,9 @@ namespace SSH
 {
   struct ServerConfig
   {
-    std::string RootUser;
-    std::vector<std::string> RootKeys;
+    const std::string RootUser;
+    const std::vector<std::string> RootKeys;
+    const PrivateKey& HostKey;
   };
 
   class Server

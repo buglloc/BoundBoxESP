@@ -49,7 +49,12 @@ Error Secrets::Initalize()
 
   std::expected<Blob::Bytes, Preferences::Error> prefBytes = prefs.GetBytes(HOST_KEY_KEY);
   if (prefBytes) {
-    hostKey = std::move(prefBytes.value());
+    SSH::Error sshErr = hostKey.ImportPem(std::move(prefBytes.value()));
+    if (sshErr != SSH::Error::None) {
+      ESP_LOGE(TAG, "unable to import host key: %d", (int)sshErr);
+      return Error::ShitHappens;
+    }
+
   } else if (prefBytes.error() != Preferences::Error::NotExist) {
     ESP_LOGE(TAG, "read host key: %d", (int)prefBytes.error());
     return Error::ShitHappens;
@@ -68,46 +73,54 @@ Error Secrets::Initalize()
 
 Error Secrets::Store()
 {
-  Preferences::Error err = prefs.StoreBytes(HOST_KEY_KEY, hostKey);
-  if (err != Preferences::Error::None) {
-    ESP_LOGE(TAG, "unable to store new host key '%s': %d", HOST_KEY_KEY, (int)err);
-    return Error::InvalidHostKey;
-  }
-  ESP_LOGI(TAG, "host key stored in: %s",  HOST_KEY_KEY);
+  if (!hostKey.IsEmpty()) {
+    std::expected<Blob::Bytes, SSH::Error> hostPem = hostKey.ExportPem();
+    if (!hostPem) {
+      ESP_LOGE(TAG,  "unable to export generated host key: %d", (int)hostPem.error());
+      return Error::ShitHappens;
+    }
 
-  err = prefs.StoreBytes(SECRET_KEY_KEY, secretKey);
-  if (err != Preferences::Error::None) {
-    ESP_LOGE(TAG, "unable to store new secret key '%s': %d", SECRET_KEY_KEY, (int)err);
-    return Error::InvalidSecretKey;
+    Preferences::Error err = prefs.StoreBytes(HOST_KEY_KEY, std::move(hostPem.value()));
+    if (err != Preferences::Error::None) {
+      ESP_LOGE(TAG, "unable to store new secret key: %d", (int)err);
+      return Error::ShitHappens;
+    }
+
+    ESP_LOGI(TAG, "host key stored in: %s", HOST_KEY_KEY);
+  } else {
+    ESP_LOGW(TAG, "ignore empty host key storing");
   }
-  ESP_LOGI(TAG, "host key stored in: %s",  SECRET_KEY_KEY);
+
+  if (!secretKey.empty()) {
+    Preferences::Error err = prefs.StoreBytes(SECRET_KEY_KEY, secretKey);
+    if (err != Preferences::Error::None) {
+      ESP_LOGE(TAG, "unable to store new secret key '%s': %d", SECRET_KEY_KEY, (int)err);
+      return Error::InvalidSecretKey;
+    }
+    ESP_LOGI(TAG, "host key stored in: %s",  SECRET_KEY_KEY);
+  } else {
+    ESP_LOGW(TAG, "ignore empty secret key storing");
+  }
 
   return Error::None;
 }
 
 Error Secrets::migrate()
 {
-  if (hostKey.empty()) {
+  bool restore = false;
+  if (hostKey.IsEmpty()) {
     ESP_LOGW(TAG, "no %s found: generate new one", HOST_KEY_KEY);
-    std::expected<Blob::Bytes, SSH::Error> newKey = SSH::KeyGen(CONFIG_HOST_KEY_TYPE, CONFIG_HOST_KEY_BITS);
+    std::expected<SSH::PrivateKey, SSH::Error> newKey = SSH::KeyGen(CONFIG_HOST_KEY_TYPE, CONFIG_HOST_KEY_BITS);
     if (!newKey) {
       ESP_LOGE(TAG,  "unable to generate new host key: %d", (int)newKey.error());
       return Error::ShitHappens;
     }
 
-    // ESP_LOGI(TAG, "new key: %s", newKey.value().data());
-    // auto newKeyStr = XSSH::MarshalPrivateKey(newKey.value());
-    // if (newKeyStr.has_error()) {
-    //   return cpp::fail(TSecrets::Error::ShitHappens);
-    // }
 
-    // hostKey = newKeyStr.value();
-    // auto keyStore = preferences.StoreString(HOST_KEY_KEY, hostKey);
-    // if (keyStore.has_error()) {
-    //   Log.errorln(LOG_PREFIX "unable to store new host key: %d", keyStore.error());
-    // } else {
-    //   Log.infoln(LOG_PREFIX "new host key stored in: " HOST_KEY_KEY);
-    // }
+    hostKey = std::move(newKey.value());
+
+    ESP_LOGI(TAG, "new host key generated");
+    restore = true;
   }
 
   if (secretKey.empty()) {
@@ -116,13 +129,12 @@ Error Secrets::migrate()
     secretKey = genSecretKey(CONFIG_SECRET_KEY_SIZE);
     assert(secretKey[0] != '\xff');
 
-    Preferences::Error err = prefs.StoreBytes(SECRET_KEY_KEY, secretKey);
-    if (err != Preferences::Error::None) {
-      ESP_LOGE(TAG, "unable to store new secret key: %d", (int)err);
-      return Error::ShitHappens;
-    }
+    ESP_LOGI(TAG, "new secret key generated");
+    restore = true;
+  }
 
-    ESP_LOGI(TAG, "new secret key stored in: %s", SECRET_KEY_KEY);
+  if (restore) {
+    return Store();
   }
 
   return Error::None;

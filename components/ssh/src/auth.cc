@@ -91,6 +91,10 @@ bool AuthProvider::Authenticate(const std::string_view user, const Blob::Bytes& 
     return key.size() > 0;
   }
 
+  if (rootUser.empty()) {
+    return false;
+  }
+
   std::expected<std::string, Error> fpRes = KeyFingerprint(key);
   if (!fpRes) {
     ESP_LOGW(TAG, "unable to create user key fingeprint: %d", (int)fpRes.error());
@@ -107,5 +111,5 @@ bool AuthProvider::Authenticate(const std::string_view user, const Blob::Bytes& 
 
 UserRole AuthProvider::Role(const std::string_view user) const
 {
-  return user == rootUser ? UserRole::SysOp : UserRole::User;
+  return user == rootUser && !rootUser.empty() ? UserRole::SysOp : UserRole::User;
 }

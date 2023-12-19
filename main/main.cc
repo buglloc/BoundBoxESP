@@ -64,6 +64,7 @@ extern "C" void app_main(void)
     SSH::ServerConfig sshCfg = {
       .RootUser = CONFIG_ROOT_USERNAME,
       .RootKeys = {CONFIG_ROOT_KEY},
+      .HostKey = secrets.HostKey(),
     };
     HALT_ASSERT(sshd.Initialize(sshCfg) == SSH::Error::None, TAG, "ssh initialize");
   }

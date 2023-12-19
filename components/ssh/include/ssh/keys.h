@@ -24,6 +24,34 @@ namespace SSH
     ED25519
   };
 
+  class PrivateKey
+  {
+  public:
+    Error ImportPem(const Blob::Bytes& pem);
+    std::expected<Blob::Bytes, Error> ExportPem() const;
+
+    Error ImportDer(KeyType keyType, Blob::Bytes& blob);
+    std::expected<Blob::Bytes, Error> ExportDer() const;
+
+    const Blob::Bytes& Ref() const
+    {
+      return keyDer;
+    }
+
+    KeyType Type() const
+    {
+      return keyType;
+    }
+
+    bool IsEmpty() const {
+      return keyType == KeyType::None || keyDer.empty();
+    }
+
+  private:
+    KeyType keyType;
+    Blob::Bytes keyDer;
+  };
+
   std::expected<std::string, Error> KeyFingerprint(const Blob::Bytes& pubKey);
-  std::expected<Blob::Bytes, Error> KeyGen(KeyType keyType, uint32_t bits);
+  std::expected<PrivateKey, Error> KeyGen(KeyType keyType, uint32_t bits);
 }

@@ -5,13 +5,13 @@
 #include <wolfssl/wolfcrypt/sha256.h>
 #include <wolfssl/wolfcrypt/random.h>
 #include <wolfssl/wolfcrypt/rsa.h>
+#include <wolfssl/wolfcrypt/asn.h>
 #ifdef HAVE_ECC
   #include <wolfssl/wolfcrypt/ecc.h>
 #endif
 #ifdef HAVE_ED25519
   #include <wolfssl/wolfcrypt/ed25519.h>
 #endif
-#include <wolfssl/wolfcrypt/asn_public.h>
 
 #include <esp_log.h>
 #include <esp_check.h>
@@ -165,19 +165,122 @@ namespace SSH
     return out;
   }
 
-  std::expected<Blob::Bytes, Error> KeyGen(KeyType keyType, uint32_t bits)
+  std::expected<PrivateKey, Error> KeyGen(KeyType keyType, uint32_t bits)
   {
-    switch (keyType)
-    {
+    std::expected<Blob::Bytes, Error> newKey;
+    switch (keyType) {
     case KeyType::RSA:
-      return makeRsaKey(bits);
+      newKey = makeRsaKey(bits);
+      break;
     case KeyType::ECDSA:
-      return makeEcdsaKey(bits);
+      newKey = makeEcdsaKey(bits);
+      break;
     case KeyType::ED25519:
-      return makeEd25519Key();
+      newKey = makeEd25519Key();
+      break;
     default:
       ESP_LOGE(TAG, "requested unsupported key type %d generation", (int)keyType);
       return std::unexpected<Error>{Error::Unsupported};
     }
+
+    if (!newKey) {
+      return std::unexpected<Error>{newKey.error()};
+    }
+
+    PrivateKey out;
+    Error err = out.ImportDer(keyType, newKey.value());
+    if (err != Error::None) {
+      return std::unexpected<Error>{err};
+    }
+
+    return out;
+  }
+
+  Error PrivateKey::ImportPem(const Blob::Bytes& pem)
+  {
+    DerBuffer* der = nullptr;
+    int wcType;
+    int actualSize = wc_PemToDer(pem.data(), pem.size(), PRIVATEKEY_TYPE, &der, nullptr, nullptr, &wcType);
+    if (actualSize < 0) {
+      ESP_LOGE(TAG, "wc_KeyPemToDer returns gen zero der");
+      return Error::Internal;
+    }
+
+    KeyType keyType = KeyType::None;
+    switch (wcType) {
+    case 645:
+      // RSAk
+      keyType = KeyType::RSA;
+      break;
+    case 518:
+      // ECDSAk
+      keyType = KeyType::ECDSA;
+      break;
+    case 256:
+      // ED25519k
+      keyType = KeyType::ED25519;
+      break;
+    default:
+      ESP_LOGE(TAG, "unsupported wolf key type %d to PEM import", wcType);
+      return Error::Unsupported;
+    }
+
+    Blob::Bytes key(der->buffer, der->length);
+    wc_FreeDer(&der);
+    return ImportDer(keyType, key);
+  }
+
+  std::expected<Blob::Bytes, Error> PrivateKey::ExportPem() const
+  {
+    int wcType = 0;
+    switch (keyType) {
+    case KeyType::RSA:
+      wcType = RSA_TYPE;
+      break;
+    case KeyType::ECDSA:
+      wcType = ECC_TYPE;
+      break;
+    default:
+      ESP_LOGE(TAG, "requested unsupported key type %d to PEM export", (int)keyType);
+      return std::unexpected<Error>{Error::Unsupported};
+    }
+
+    int pemSize = wc_DerToPemEx(keyDer.data(), keyDer.size(), nullptr, 0, nullptr, wcType);
+    if (pemSize < 0) {
+      ESP_LOGE(TAG, "wc_DerToPemEx returns zero size");
+      return std::unexpected<Error>{Error::Internal};
+    }
+
+    Blob::Bytes out(pemSize, '\xff');
+    int actualPemSize = wc_DerToPemEx(keyDer.data(), keyDer.size(), out.data(), out.size(), nullptr, wcType);
+    if (actualPemSize < 0) {
+      ESP_LOGE(TAG, "wc_DerToPemEx returns gen zero pem");
+      return std::unexpected<Error>{Error::Internal};
+    }
+
+    out.resize(actualPemSize);
+    return out;
+  }
+
+  Error PrivateKey::ImportDer(KeyType keyType, Blob::Bytes& blob)
+  {
+    switch (keyType) {
+    case KeyType::RSA:
+    case KeyType::ECDSA:
+    case KeyType::ED25519:
+      break;
+    default:
+      ESP_LOGE(TAG, "requested unsupported key type %d to import", (int)keyType);
+      return Error::Unsupported;
+    }
+
+    this->keyType = keyType;
+    this->keyDer = blob;
+    return Error::None;
+  }
+
+  std::expected<Blob::Bytes, Error> PrivateKey::ExportDer() const
+  {
+    return keyDer;
   }
 }
