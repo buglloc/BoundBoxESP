@@ -14,9 +14,9 @@ namespace Hardware
   {
   public:
     NetEth() = default;
-    virtual esp_err_t Initialize() override;
-    virtual esp_netif_config_t NetifConfig() const override;
-    virtual esp_err_t Attach(esp_netif_t* netif) override;
+    esp_err_t Initialize() override;
+    esp_netif_config_t NetifConfig() const override;
+    esp_err_t Attach(esp_netif_t* netif) override;
 
     ~NetEth()
     {

@@ -11,7 +11,7 @@ namespace Hardware
   class Manager
   {
   public:
-    static Manager &Instance();
+    static Manager& Instance();
 
     esp_err_t Initialize();
 

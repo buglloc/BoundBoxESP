@@ -16,16 +16,20 @@
 #include <esp_log.h>
 
 #include <hardware/manager.h>
+#include <ui/manager.h>
 #include <ssh/server.h>
 
 #include "errors.h"
 #include "secrets.h"
+#include "authenticator.h"
 #include "commands.h"
 
 
 namespace {
   static const char *TAG = "main";
+  const TickType_t xWaitDelay = 100 / portTICK_PERIOD_MS;
   Hardware::Manager& hw = Hardware::Manager::Instance();
+  UI::Manager& ui = UI::Manager::Instance();
   SSH::Server sshd;
 
   struct SshdCtx {
@@ -43,13 +47,15 @@ namespace {
     SSH::ListenError listenErr;
     for (;;) {
       listenErr = ctx->Srv.Listen([ctx](const SSH::UserInfo& userInfo, const std::string_view cmd, SSH::Stream& stream) -> int {
+        ui.SetAppState(UI::AppState::Process);
+
         Error err = ctx->Handler.Dispatch(userInfo, cmd, stream);
         if (err != Error::None) {
           ESP_LOGE(TAG, "command '%s' process failed: %d", cmd.cbegin(), (int)err);
-          return 1;
         }
 
-        return 0;
+        ui.SetAppState(UI::AppState::Idle);
+        return err != Error::None ? 1 : 0;
       });
 
       if (listenErr != SSH::ListenError::None) {
@@ -71,6 +77,17 @@ extern "C" void app_main(void)
   Secrets secrets;
   SHUTDOWN_ON_ERROR(secrets.Initalize(), TAG, "secrets initialize");
 
+  ESP_LOGI(TAG, "initialize authenticator");
+  Authenticator auth;
+  SHUTDOWN_ON_ERROR(auth.Initialize(&secrets), TAG, "secrets initialize");
+
+  ESP_LOGI(TAG, "initialize commands handler");
+  Commands commandHandler;
+  SHUTDOWN_ON_ERROR(commandHandler.Initialize(&auth), TAG, "commands handler");
+
+  ESP_LOGI(TAG, "initialize UI");
+  ESP_SHUTDOWN_ON_ERROR(ui.Initialize(&auth), TAG, "initialize UI");
+
   ESP_LOGI(TAG, "initialize sshd");
   {
     SSH::ServerConfig sshCfg = {
@@ -81,30 +98,35 @@ extern "C" void app_main(void)
     HALT_ASSERT(sshd.Initialize(sshCfg) == SSH::Error::None, TAG, "ssh initialize");
   }
 
-  ESP_LOGI(TAG, "initialize commands handler");
-  Commands commandHandler;
-  SHUTDOWN_ON_ERROR(commandHandler.Initialize(), TAG, "commands handler");
-
   ESP_LOGI(TAG, "attach network");
   {
+    ui.SetAppState(UI::AppState::WaitNet);
     ESP_SHUTDOWN_ON_ERROR(hw.Net().Attach(), TAG, "network attach");
 
-    // Block for 500ms.
-    const TickType_t xDelay = 500 / portTICK_PERIOD_MS;
     do {
-      ESP_LOGI(TAG, "Wait network");
       taskYIELD();
-      vTaskDelay(xDelay);
+      vTaskDelay(xWaitDelay);
     } while (!hw.Net().Ready());
   }
 
+  ESP_LOGI(TAG, "wait credentials");
+  {
+    ui.SetAppState(UI::AppState::WaitCredential);
+    auth.BuildCredential();
+
+    do {
+      taskYIELD();
+      vTaskDelay(xWaitDelay);
+    } while (!auth.HasCredential());
+  }
+
+  ui.SetAppState(UI::AppState::Idle);
   SshdCtx sshdCtx = {
     .Srv = sshd,
     .Handler = commandHandler,
   };
   xTaskCreate(sshdTask, "sshd", CONFIG_SSHD_TASK_STACK_SIZE, &sshdCtx, tskIDLE_PRIORITY, nullptr);
 
-  // TODO(buglloc): do something useful
   ESP_LOGI(TAG, "app initialized, switched to busy looping");
   const TickType_t xDelay = 500 / portTICK_PERIOD_MS;
   for (;;) {

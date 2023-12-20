@@ -22,7 +22,7 @@ namespace Blob
   {
     const Blob::Bytes& Key;
     const Blob::Bytes& Salt;
-    HashType HashType = HashType::SHA256;
+    Blob::HashType HashType = HashType::SHA256;
   };
 
   std::expected<Bytes, Error> HMACSum(const Blob::Bytes& key, const Blob::Bytes& msg, HashType hashType = HashType::SHA256);

@@ -20,8 +20,7 @@ namespace
   void wifiEventHandler(void* arg, esp_event_base_t eventBase, int32_t eventId, void* eventData)
   {
     esp_err_t ret = ESP_OK;
-    switch (eventId)
-    {
+    switch (eventId) {
     case WIFI_EVENT_STA_START:
       ESP_LOGI(TAG, "wifi starts");
       ESP_GOTO_ON_ERROR(esp_wifi_connect(), err, TAG, "wifi connect");

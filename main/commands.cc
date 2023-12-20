@@ -12,7 +12,7 @@
 namespace
 {
   static const char *TAG = "main::cmd";
-  
+
   using HandleFn = std::function<bool(const SSH::UserInfo& userInfo, const JsonObjectConst& req, JsonObject& rsp)>;
 
   struct Command
@@ -24,8 +24,9 @@ namespace
   };
 }
 
-Error Commands::Initialize()
+Error Commands::Initialize(Authenticator* auth)
 {
+  this->auth = auth;
   return Error::None;
 }
 

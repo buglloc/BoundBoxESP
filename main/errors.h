@@ -11,9 +11,11 @@
 enum class Error: uint8_t
 {
   None,
+  InvalidState,
   InvalidHostKey,
   InvalidSecretKey,
   CommandFailed,
+  NoCredential,
   ShitHappens
 };
 

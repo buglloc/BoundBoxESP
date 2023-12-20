@@ -1,5 +1,6 @@
 #include "hardware/net.h"
 #include "config.h"
+
 #if CONFIG_BBHW_HAS_ETH
 #include "net_eth.h"
 #endif
@@ -18,28 +19,32 @@ using namespace Hardware;
 namespace
 {
   static const char* TAG = "hardware::net";
+  static bool netReady = false;
+  static esp_ip4_addr_t localIP;
 
   void ipEventHandler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
   {
     ip_event_got_ip_t* event = reinterpret_cast<ip_event_got_ip_t *>(event_data);
     const esp_netif_ip_info_t* ip_info = &event->ip_info;
-    bool* ready = reinterpret_cast<bool *>(arg);
 
-    switch (event_id)
-    {
+    switch (event_id) {
       case IP_EVENT_ETH_LOST_IP:
       case IP_EVENT_STA_LOST_IP:
-        *ready = false;
-        return;
+        netReady = false;
+        localIP.addr = ZERO_IP;
+        break;
       case IP_EVENT_ETH_GOT_IP:
       case IP_EVENT_STA_GOT_IP:
-        *ready = true;
+        netReady = true;
+        localIP = ip_info->ip;
+
         ESP_LOGI(TAG, "%s IP Address", event_id == IP_EVENT_ETH_GOT_IP ? "Ethernet" : "WiFi");
         ESP_LOGI(TAG, "~~~~~~~~~~~");
         ESP_LOGI(TAG, "IP: " IPSTR, IP2STR(&ip_info->ip));
         ESP_LOGI(TAG, "Mask: " IPSTR, IP2STR(&ip_info->netmask));
         ESP_LOGI(TAG, "Gateway: " IPSTR, IP2STR(&ip_info->gw));
         ESP_LOGI(TAG, "~~~~~~~~~~~");
+        break;
       default:
         return;
     }
@@ -75,11 +80,16 @@ esp_err_t Net::Attach()
   esp_netif_t* netif = esp_netif_new(&netifCfg);
   esp_netif_set_hostname(netif, CONFIG_BBHW_HOSTNAME);
 
-  ESP_RETURN_ON_ERROR(esp_event_handler_register(IP_EVENT, ESP_EVENT_ANY_ID, &ipEventHandler, (void *)&ready), TAG, "attach got ip handler");
+  ESP_RETURN_ON_ERROR(esp_event_handler_register(IP_EVENT, ESP_EVENT_ANY_ID, &ipEventHandler, nullptr), TAG, "attach got ip handler");
   return impl->Attach(netif);
+}
+
+esp_ip4_addr_t Net::LocalIP()
+{
+  return localIP;
 }
 
 bool Net::Ready()
 {
-  return ready;
+  return netReady;
 }

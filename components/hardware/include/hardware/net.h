@@ -13,7 +13,13 @@ namespace Hardware
   class IP4Address
   {
   public:
-    IP4Address() : addr({.addr = ZERO_IP}) {};
+    explicit IP4Address(esp_ip4_addr_t addr)
+      : addr(std::move(addr))
+      {};
+
+    IP4Address()
+      : addr({.addr = ZERO_IP})
+      {};
 
     esp_err_t FromString(const std::string_view in)
     {
@@ -28,6 +34,10 @@ namespace Hardware
 
     std::string ToString() const
     {
+      if (addr.addr == 0) {
+        return "N/A";
+      }
+
       return addrStr;
     }
 
@@ -66,9 +76,9 @@ namespace Hardware
     esp_err_t Initialize();
     esp_err_t Attach();
     bool Ready();
+    esp_ip4_addr_t LocalIP();
 
   private:
     std::unique_ptr<NetImpl> impl;
-    bool ready;
   };
 }

@@ -36,7 +36,7 @@ namespace
   {
     ESP_LOGI(LV_TAG, "Starting LVGL task");
     uint32_t taskDelayMS = 0;
-    while (1)
+    for (;;)
     {
       taskDelayMS = 0;
       if (xSemaphoreTake(xGuiMu, portMAX_DELAY) == pdTRUE) {

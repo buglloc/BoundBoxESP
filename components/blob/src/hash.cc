@@ -1,9 +1,7 @@
-#include "bytes/hash.h"
+#include "blob/hash.h"
+#include "blob/wolfssl_init.h"
 
 #include <expected>
-
-#include "wolfssl_init.h"
-#include "types.h"
 
 
 namespace Blob
@@ -13,7 +11,7 @@ namespace Blob
     HMAC hmac(key, type);
     Error err = hmac.Write(msg);
     if (err != Error::None) {
-      return err;
+      return std::unexpected<Error>(err);
     }
 
     return hmac.Sum();
