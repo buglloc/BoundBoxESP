@@ -18,7 +18,11 @@ namespace
 int Stream::read()
 {
   char b;
-  return readBytes(&b, 1);
+  if (readBytes(&b, 1) == 1) {
+    return b;
+  }
+
+  return -1;
 }
 
 size_t Stream::readBytes(char* buffer, size_t length)
@@ -42,17 +46,22 @@ size_t Stream::readBytes(char* buffer, size_t length)
     }
 
     rc = wolfSSH_stream_read(ssh, (uint8_t *)buffer, length);
-    if (rc <= 0) {
+    if (rc == WS_EOF) {
+      return 0;
+    }
+
+    if (rc < 0) {
       rc = wolfSSH_get_error(ssh);
-      if (rc != WS_WANT_READ && rc != WS_WANT_WRITE) {
-        ESP_LOGE(TAG, "stream read error: %d", rc);
-        return 0;
+      if (rc == WS_WANT_READ || rc == WS_WANT_WRITE) {
+        // no data, just wait
+        rc = 0;
+        taskYIELD();
+        continue;
       }
 
-      // no data, just wait
-      taskYIELD();
+      ESP_LOGE(TAG, "stream read error: %d", rc);
     }
-  } while (nonBlock);
+  } while (nonBlock && rc == 0);
 
   return static_cast<size_t>(rc);
 }

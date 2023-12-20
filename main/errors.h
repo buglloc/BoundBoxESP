@@ -13,6 +13,7 @@ enum class Error: uint8_t
   None,
   InvalidHostKey,
   InvalidSecretKey,
+  CommandFailed,
   ShitHappens
 };
 

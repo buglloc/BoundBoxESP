@@ -33,8 +33,8 @@ namespace SSH
     ~Server();
   private:
     Error SetupWolfSSH(const ServerConfig& cfg);
-    ListenError AcceptConnection(WOLFSSH* ssh, const UserInfo& userInfo, const HandlerCallback& handler);
-    ListenError ProcessSessionCommand(WOLFSSH* ssh, const UserInfo& userInfo, const HandlerCallback& handler);
+    std::expected<int, ListenError> HandleConnection(WOLFSSH* ssh, const UserInfo& userInfo, const HandlerCallback& handler);
+    std::expected<int, ListenError> DoExec(WOLFSSH* ssh, const UserInfo& userInfo, const HandlerCallback& handler);
 
   private:
     WOLFSSH_CTX* wolfCtx = nullptr;

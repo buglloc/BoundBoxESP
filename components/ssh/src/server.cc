@@ -379,44 +379,44 @@ ListenError Server::Listen(const HandlerCallback& handler)
     tcpSetNonblocking(&clientFd);
     wolfSSH_set_fd(ssh, clientFd);
 
-    ListenError processErr = AcceptConnection(ssh, userInfo, handler);
+    std::expected<int, ListenError> handleRet = HandleConnection(ssh, userInfo, handler);
 
-    int error = wolfSSH_stream_exit(ssh, 0);
-    int ret = wolfSSH_get_error(ssh);
-    if (error != WS_SOCKET_ERROR_E && error != WS_FATAL_ERROR) {
-      ret = wolfSSH_shutdown(ssh);
-      // peer hung up, stop shutdown
-      if (ret == WS_SOCKET_ERROR_E) {
-        ret = 0;
+    int ret;
+    {
+      int error = 0;
+      int maxAttempt = 5; // make 10 attempts max before giving up
+      int attempt;
+
+      for (attempt = 0; attempt < maxAttempt; attempt++) {
+        ret = wolfSSH_worker(ssh, nullptr);
+        error = wolfSSH_get_error(ssh);
+
+        // peer succesfully closed down gracefully
+        if (ret == WS_CHANNEL_CLOSED) {
+          break;
+        }
+
+        // peer hung up, stop shutdown
+        if (ret == WS_SOCKET_ERROR_E) {
+          break;
+        }
+
+        if (error != WS_WANT_READ && error != WS_WANT_WRITE) {
+          break;
+        }
       }
 
-      error = wolfSSH_get_error(ssh);
-      if (error != WS_SOCKET_ERROR_E && (error == WS_WANT_READ || error == WS_WANT_WRITE)) {
-        int maxAttempt = 10; // make 10 attempts max before giving up
-        int attempt;
+      if (attempt == maxAttempt) {
+        ESP_LOGW(TAG, "gave up on gracefull shutdown, closing client %s socket", userInfo.ClientIP.c_str());
+      }
 
-        for (attempt = 0; attempt < maxAttempt; attempt++) {
-            ret = wolfSSH_worker(ssh, NULL);
-            error = wolfSSH_get_error(ssh);
+      error = wolfSSH_stream_exit(ssh, handleRet ? handleRet.value() : 127);
+      if (error != WS_SUCCESS) {
+        ESP_LOGW(TAG, "unable to close stream wich client %s: %d", userInfo.ClientIP.c_str(), error);
+      }
 
-            // peer succesfully closed down gracefully
-            if (ret == WS_CHANNEL_CLOSED) {
-              break;
-            }
-
-            // peer hung up, stop shutdown
-            if (ret == WS_SOCKET_ERROR_E) {
-              break;
-            }
-
-            if (error != WS_WANT_READ && error != WS_WANT_WRITE) {
-              break;
-            }
-        }
-
-        if (attempt == maxAttempt) {
-          ESP_LOGW(TAG, "gave up on gracefull shutdown, closing client %s socket", userInfo.ClientIP.c_str());
-        }
+      if (error != WS_SOCKET_ERROR_E && error != WS_FATAL_ERROR) {
+        ret = wolfSSH_shutdown(ssh);
       }
     }
 
@@ -426,43 +426,44 @@ ListenError Server::Listen(const HandlerCallback& handler)
     }
 
     ESP_LOGI(TAG, "stack HighWaterMark: %u", uxTaskGetStackHighWaterMark(nullptr));
-    if (processErr != ListenError::None) {
-      ESP_LOGE(TAG, "unable to process request: %d", (int)processErr);
-      return processErr;
+    if (!handleRet) {
+      ESP_LOGE(TAG, "unable to process request: %d", (int)handleRet.error());
+      return handleRet.error();
     }
   }
 
   return ListenError::None;
 }
 
-ListenError Server::AcceptConnection(WOLFSSH* ssh, const UserInfo& userInfo, const HandlerCallback& handler)
+std::expected<int, ListenError> Server::HandleConnection(WOLFSSH* ssh, const UserInfo& userInfo, const HandlerCallback& handler)
 {
   int ret = nonblockSSHAccept(ssh);
   if (ret != 0) {
     ESP_LOGE(TAG, "accept conn from %s failed: %d", userInfo.ClientIP.c_str(), ret);
-    return ListenError::Accept;
+    return std::unexpected<ListenError>{ListenError::Accept};
   }
 
   WS_SessionType sessType = wolfSSH_GetSessionType(ssh);
   switch (sessType) {
   case WOLFSSH_SESSION_EXEC:
-    return ProcessSessionCommand(ssh, userInfo, handler);
+    return DoExec(ssh, userInfo, handler);
 
   default:
     ESP_LOGW(TAG, "unsupported session from %s: %s", userInfo.ClientIP.c_str(), sessTypeName(sessType));
-    return ListenError::Unsupported;
+    return 127;
   }
 }
 
-ListenError Server::ProcessSessionCommand(WOLFSSH* ssh, const UserInfo& userInfo, const HandlerCallback& handler)
+std::expected<int, ListenError> Server::DoExec(WOLFSSH* ssh, const UserInfo& userInfo, const HandlerCallback& handler)
 {
   std::string cmd = wolfSSH_GetSessionCommand(ssh);
   Stream stream(ssh, true);
-  if (!handler(userInfo, cmd, stream)) {
-    ESP_LOGE(TAG, "handler fail");
+  int status = handler(userInfo, cmd, stream);
+  if (status != 0) {
+    ESP_LOGE(TAG, "command '%s' failed with status: %d", cmd.c_str(), status);
   }
 
-  return ListenError::None;
+  return status;
 }
 
 Server::~Server()

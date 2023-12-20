@@ -20,24 +20,36 @@
 
 #include "errors.h"
 #include "secrets.h"
+#include "commands.h"
+
 
 namespace {
   static const char *TAG = "main";
   Hardware::Manager& hw = Hardware::Manager::Instance();
   SSH::Server sshd;
 
+  struct SshdCtx {
+    SSH::Server& Srv;
+    Commands& Handler;
+  };
+
   void sshdTask(void *arg)
   {
     ESP_LOGI(TAG, "SSH task started");
-    SSH::Server* srv = reinterpret_cast<SSH::Server *>(arg);
-    assert(srv);
+    SshdCtx* ctx = reinterpret_cast<SshdCtx *>(arg);
+    assert(ctx);
 
     const TickType_t sshDelay = 500 / portTICK_PERIOD_MS;
     SSH::ListenError listenErr;
     for (;;) {
-      listenErr = srv->Listen([](const SSH::UserInfo& userInfo, const std::string_view cmd, SSH::Stream& stream) -> bool {
-        ESP_LOGI(TAG, "new command: %s", cmd.cbegin());
-        return true;
+      listenErr = ctx->Srv.Listen([ctx](const SSH::UserInfo& userInfo, const std::string_view cmd, SSH::Stream& stream) -> int {
+        Error err = ctx->Handler.Dispatch(userInfo, cmd, stream);
+        if (err != Error::None) {
+          ESP_LOGE(TAG, "command '%s' process failed: %d", cmd.cbegin(), (int)err);
+          return 1;
+        }
+
+        return 0;
       });
 
       if (listenErr != SSH::ListenError::None) {
@@ -69,6 +81,10 @@ extern "C" void app_main(void)
     HALT_ASSERT(sshd.Initialize(sshCfg) == SSH::Error::None, TAG, "ssh initialize");
   }
 
+  ESP_LOGI(TAG, "initialize commands handler");
+  Commands commandHandler;
+  SHUTDOWN_ON_ERROR(commandHandler.Initialize(), TAG, "commands handler");
+
   ESP_LOGI(TAG, "attach network");
   {
     ESP_SHUTDOWN_ON_ERROR(hw.Net().Attach(), TAG, "network attach");
@@ -82,7 +98,11 @@ extern "C" void app_main(void)
     } while (!hw.Net().Ready());
   }
 
-  xTaskCreate(sshdTask, "sshd", CONFIG_SSHD_TASK_STACK_SIZE, &sshd, tskIDLE_PRIORITY, nullptr);
+  SshdCtx sshdCtx = {
+    .Srv = sshd,
+    .Handler = commandHandler,
+  };
+  xTaskCreate(sshdTask, "sshd", CONFIG_SSHD_TASK_STACK_SIZE, &sshdCtx, tskIDLE_PRIORITY, nullptr);
 
   // TODO(buglloc): do something useful
   ESP_LOGI(TAG, "app initialized, switched to busy looping");

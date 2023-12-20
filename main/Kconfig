@@ -38,4 +38,8 @@ menu "BoundBox"
     int "SSHD task stack size"
     default 32768
 
+  config COMMAND_BUFFER_SIZE
+    int "Command buffer size"
+    default 16384
+
 endmenu
