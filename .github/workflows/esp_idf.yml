@@ -1,0 +1,20 @@
+name: ESP-IDF build
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+jobs:
+  build_esp32:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v2
+      with:
+        submodules: 'recursive'
+    - name: ESP-IDF v5.1.2 build esp32s3
+      uses: espressif/esp-idf-ci-action@v1
+      with:
+        esp_idf_version: 5.1.2
+        target: esp32s3
+        command: 'idf.py set-target esp32s3 build'
