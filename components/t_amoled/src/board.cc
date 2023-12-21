@@ -7,8 +7,6 @@
 #include <freertos/task.h>
 #include <freertos/semphr.h>
 
-#include <driver/adc.h>
-
 #include <esp_err.h>
 #include <esp_check.h>
 #include <esp_log.h>
@@ -26,22 +24,22 @@ namespace
   static const char* TAG = "amoled::board";
   static const char* LV_TAG = "amoled::lvgl";
 
-  static SemaphoreHandle_t xGuiMu;
   static bool initialized = false;
   static lv_disp_draw_buf_t dispBuf; // Internal graphic buffer(s) called draw buffer(s)
   static lv_disp_drv_t dispDrv;      // Display driver (LCD)
   static lv_indev_drv_t inDevDrv;    // Input device driver (Touch)
 
-  static void lvGuiTask(void *arg)
+  void lvGuiTask(void *arg)
   {
     ESP_LOGI(LV_TAG, "Starting LVGL task");
     uint32_t taskDelayMS = 0;
+    Board* board = reinterpret_cast<Board *>(arg);
     for (;;)
     {
       taskDelayMS = 0;
-      if (xSemaphoreTake(xGuiMu, portMAX_DELAY) == pdTRUE) {
+      if (board->GuiLock()) {
         taskDelayMS = lv_task_handler();
-        xSemaphoreGive(xGuiMu);
+        board->GuiUnlock();
       }
 
       if (taskDelayMS > 500) {
@@ -78,11 +76,22 @@ esp_err_t Board::Initialize()
   return ESP_OK;
 }
 
+bool Board::GuiLock()
+{
+  return xSemaphoreTake(guiMu, portMAX_DELAY) == pdTRUE;
+}
+
+void Board::GuiUnlock()
+{
+  xSemaphoreGive(guiMu);
+}
+
+
 esp_err_t Board::InitializeLVGL()
 {
   esp_err_t ret;
-  xGuiMu = xSemaphoreCreateMutex();
-  if (xGuiMu == nullptr) {
+  guiMu = xSemaphoreCreateMutex();
+  if (guiMu == nullptr) {
     ret = ESP_ERR_NO_MEM;
     ESP_RETURN_ON_ERROR(ret, TAG, "no mutex allocated");
   }
@@ -96,9 +105,11 @@ esp_err_t Board::InitializeLVGL()
   #endif
 
   // it's recommended to choose the size of the draw buffer(s) to be at least 1/10 screen sized
-  lv_color_t* buf = reinterpret_cast<lv_color_t *>(heap_caps_malloc(LV_LCD_BUF_SIZE * sizeof(lv_color_t), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-  assert(buf);
-  lv_disp_draw_buf_init(&dispBuf, buf, nullptr, LV_LCD_BUF_SIZE);
+  lv_color_t* buf1 = reinterpret_cast<lv_color_t *>(heap_caps_malloc(LV_LCD_BUF_SIZE * sizeof(lv_color_t), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT));
+  assert(buf1);
+  lv_color_t* buf2 = reinterpret_cast<lv_color_t *>(heap_caps_malloc(LV_LCD_BUF_SIZE * sizeof(lv_color_t), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT));
+  assert(buf2);
+  lv_disp_draw_buf_init(&dispBuf, buf1, buf2, LV_LCD_BUF_SIZE);
 
   lv_disp_drv_init(&dispDrv);
   dispDrv.hor_res = TFT_WIDTH;
@@ -154,7 +165,7 @@ esp_err_t Board::InitializeLVGL()
     ESP_RETURN_ON_ERROR(ret, TAG, "register lvgl indev driver");
   }
 
-  xTaskCreatePinnedToCore(lvGuiTask, "lvgl gui task", LV_TASK_STACK_DEPTH, nullptr, LV_TASK_PRIO, nullptr, LV_TASK_CORE);
+  xTaskCreatePinnedToCore(lvGuiTask, "lvgl gui task", LV_TASK_STACK_DEPTH, this, LV_TASK_PRIO, nullptr, LV_TASK_CORE);
   return ESP_OK;
 }
 

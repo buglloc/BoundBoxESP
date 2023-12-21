@@ -3,7 +3,7 @@ menu "BoundBox UI"
   config UI_PERIOD_TIME_MS
     int "UI update period time (ms)"
     range 5 100
-    default 30
+    default 60
 
   config UI_LONG_PRESS_TIME_MS
     int "Button long press time (ms)"

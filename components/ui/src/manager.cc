@@ -3,6 +3,7 @@
 #include "gui.h"
 
 #include <hardware/manager.h>
+#include <defer.h>
 #include <lvgl.h>
 
 #include <esp_check.h>
@@ -31,9 +32,13 @@ esp_err_t Manager::Initialize(Handler* handler)
   ESP_RETURN_ON_ERROR(sceneManager.Initialize(), TAG, "scene manager initialization");
 
   ESP_LOGI(TAG, "create GUI");
-  gui = std::make_unique<GUI>();
-  handler = handler;
+  this->gui = std::make_unique<GUI>();
+  this->handler = handler;
 
+  // use lvgl timer instead of esp timer due to:
+  // If you want to use a task to create the graphic, you NEED to create a Pinned task
+  // Otherwise there can be problem such as memory corruption and so on.
+  // source: https://github.com/lvgl/lv_port_esp32/blob/cffa173c6e410965da12875103b934ec9d28f4e5/main/main.c#L64-L66
   ESP_LOGI(TAG, "initialize ui task timer");
   const esp_timer_create_args_t timerArgs = {
     .callback = [](void* arg) -> void {
@@ -43,6 +48,7 @@ esp_err_t Manager::Initialize(Handler* handler)
     .name = "Manager::periodic"
   };
   ESP_RETURN_ON_ERROR(esp_timer_create(&timerArgs, &timer), TAG, "create timer");
+  ESP_RETURN_ON_ERROR(esp_timer_start_periodic(timer, CONFIG_UI_PERIOD_TIME_MS * 1000), TAG, "start timer");
 
   lv_msg_subscribe(GUI_MESSAGE_PIN_PROMPT,
     [](void* s, lv_msg_t* m) -> void {
@@ -50,7 +56,7 @@ esp_err_t Manager::Initialize(Handler* handler)
       Handler* handler = reinterpret_cast<Handler *>(lv_msg_get_user_data(m));
       handler->OnPinEnter(*value);
     },
-    &handler
+    this->handler
   );
 
   ShowIdle();
@@ -94,6 +100,7 @@ void Manager::Tick()
 
 void Manager::tickHomeButton()
 {
+
   if (!homeButton.UpdateState(hw.Board().TouchSensor().HomePressed())) {
     // nothing to do
     return;

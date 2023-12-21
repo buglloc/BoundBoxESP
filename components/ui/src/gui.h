@@ -46,7 +46,6 @@ namespace UI
     bool isPersistentScreen(lv_obj_t* scr);
 
   private:
-    lv_style_t mainStyle;
     lv_obj_t* notifyScreen = nullptr;
     lv_obj_t* idleScreen = nullptr;
   };

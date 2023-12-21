@@ -189,15 +189,30 @@ namespace {
         break;
     }
   }
+
+  lv_style_t* mainStyle()
+  {
+    static lv_style_t mainStyle;
+    static bool inited = false;
+    if (inited) {
+      return &mainStyle;
+    }
+
+    lv_style_set_border_width(&mainStyle, 0);
+    lv_style_set_bg_color(&mainStyle, bgColor);
+    lv_style_set_text_font(&mainStyle, &font_roboto_mono_24);
+    lv_style_set_text_color(&mainStyle, textColor);
+    inited = true;
+    return &mainStyle;
+  }
 }
 
 GUI::GUI()
 {
-  static  lv_style_t style;
-  lv_style_set_border_width(&mainStyle, 0);
-  lv_style_set_bg_color(&mainStyle, bgColor);
-  lv_style_set_text_font(&mainStyle, &font_roboto_mono_24);
-  lv_style_set_text_color(&mainStyle, textColor);
+//   lv_style_set_border_width(&mainStyle, 0);
+//   lv_style_set_bg_color(&mainStyle, bgColor);
+//   lv_style_set_text_font(&mainStyle, &font_roboto_mono_24);
+//   lv_style_set_text_color(&mainStyle, textColor);
 }
 
 void GUI::ShowScreenPinEnter()
@@ -436,7 +451,7 @@ lv_obj_t* GUI::createPage(lv_obj_t *screen)
 {
   lv_obj_t *cont = lv_obj_create(screen);
   lv_obj_set_size(cont, lv_disp_get_physical_hor_res(nullptr), lv_disp_get_ver_res(nullptr));
-  lv_obj_add_style(cont, &mainStyle, LV_PART_MAIN);
+  lv_obj_add_style(cont, mainStyle(), LV_PART_MAIN);
   lv_obj_remove_style(cont, 0, LV_PART_SCROLLBAR);
   lv_obj_set_style_pad_all(cont, 0, 0);
   lv_obj_set_style_border_width(cont, 0, 0);
@@ -452,6 +467,7 @@ lv_obj_t* GUI::switchScreen(lv_obj_t *targetScreen)
   if (targetScreen == nullptr) {
     targetScreen = lv_obj_create(nullptr);
   }
+  assert(targetScreen);
 
   if (prevScr == targetScreen) {
     return targetScreen;

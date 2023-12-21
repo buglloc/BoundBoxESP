@@ -1,5 +1,9 @@
 #pragma once
 
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#include <freertos/semphr.h>
+
 #include "display.h"
 #include "touch.h"
 #include "temp.h"
@@ -16,6 +20,9 @@ namespace Amoled
 
     void Restart();
     void Shutdown();
+
+    bool GuiLock();
+    void GuiUnlock();
 
     uint32_t BattVoltage()
     {
@@ -51,6 +58,7 @@ namespace Amoled
     void guiTask(void *arg);
 
   private:
+    SemaphoreHandle_t guiMu;
     Amoled::Display display;
     Amoled::TouchSensor touchSensor;
     Amoled::TempSensor tempSensor;
