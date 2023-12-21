@@ -25,12 +25,10 @@ Manager& Manager::Instance()
 esp_err_t Manager::Initialize(Handler* handler)
 {
   ESP_LOGI(TAG, "initialize LVGL");
-  esp_err_t err = hw.Board().InitializeLVGL();
-  ESP_RETURN_ON_ERROR(err, TAG, "LVGL initialization");
+  ESP_RETURN_ON_ERROR(hw.Board().InitializeLVGL(), TAG, "LVGL initialization");
 
   ESP_LOGI(TAG, "initialize scene manager");
-  err = sceneManager.Initialize();
-  ESP_RETURN_ON_ERROR(err, TAG, "scene manager initialization");
+  ESP_RETURN_ON_ERROR(sceneManager.Initialize(), TAG, "scene manager initialization");
 
   ESP_LOGI(TAG, "create GUI");
   gui = std::make_unique<GUI>();

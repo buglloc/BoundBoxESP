@@ -193,11 +193,11 @@ namespace {
 
 GUI::GUI()
 {
+  static  lv_style_t style;
   lv_style_set_border_width(&mainStyle, 0);
   lv_style_set_bg_color(&mainStyle, bgColor);
   lv_style_set_text_font(&mainStyle, &font_roboto_mono_24);
   lv_style_set_text_color(&mainStyle, textColor);
-  lv_style_set_border_width(&mainStyle, 0);
 }
 
 void GUI::ShowScreenPinEnter()

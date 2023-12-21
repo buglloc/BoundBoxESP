@@ -81,9 +81,6 @@ esp_err_t Board::Initialize()
 esp_err_t Board::InitializeLVGL()
 {
   esp_err_t ret;
-  ret = Initialize();
-  ESP_RETURN_ON_ERROR(ret, TAG, "board initialize");
-
   xGuiMu = xSemaphoreCreateMutex();
   if (xGuiMu == nullptr) {
     ret = ESP_ERR_NO_MEM;
@@ -99,7 +96,7 @@ esp_err_t Board::InitializeLVGL()
   #endif
 
   // it's recommended to choose the size of the draw buffer(s) to be at least 1/10 screen sized
-  lv_color_t* buf = reinterpret_cast<lv_color_t *>(heap_caps_malloc(LV_LCD_BUF_SIZE * sizeof(lv_color_t), MALLOC_CAP_DMA));
+  lv_color_t* buf = reinterpret_cast<lv_color_t *>(heap_caps_malloc(LV_LCD_BUF_SIZE * sizeof(lv_color_t), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
   assert(buf);
   lv_disp_draw_buf_init(&dispBuf, buf, nullptr, LV_LCD_BUF_SIZE);
 
