@@ -47,14 +47,14 @@ namespace {
     SSH::ListenError listenErr;
     for (;;) {
       listenErr = ctx->Srv.Listen([ctx](const SSH::UserInfo& userInfo, const std::string_view cmd, SSH::Stream& stream) -> int {
-        ui.SetAppState(UI::AppState::Process);
+        ui.SetBoardState(UI::BoardState::Process);
 
         Error err = ctx->Handler.Dispatch(userInfo, cmd, stream);
         if (err != Error::None) {
           ESP_LOGE(TAG, "command '%s' process failed: %d", cmd.cbegin(), (int)err);
         }
 
-        ui.SetAppState(UI::AppState::Idle);
+        ui.SetBoardState(UI::BoardState::Idle);
         return err != Error::None ? 1 : 0;
       });
 
@@ -100,7 +100,7 @@ extern "C" void app_main(void)
 
   ESP_LOGI(TAG, "attach network");
   {
-    ui.SetAppState(UI::AppState::WaitNet);
+    ui.SetBoardState(UI::BoardState::WaitNet);
     ESP_SHUTDOWN_ON_ERROR(hw.Net().Attach(), TAG, "network attach");
 
     do {
@@ -111,7 +111,7 @@ extern "C" void app_main(void)
 
   ESP_LOGI(TAG, "wait credentials");
   {
-    ui.SetAppState(UI::AppState::WaitCredential);
+    ui.SetBoardState(UI::BoardState::WaitCredential);
     auth.BuildCredential();
 
     do {
@@ -120,7 +120,7 @@ extern "C" void app_main(void)
     } while (!auth.HasCredential());
   }
 
-  ui.SetAppState(UI::AppState::Idle);
+  ui.SetBoardState(UI::BoardState::Idle);
   SshdCtx sshdCtx = {
     .Srv = sshd,
     .Handler = commandHandler,

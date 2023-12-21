@@ -45,7 +45,7 @@ std::expected<Blob::Bytes, Error> Authenticator::MakeAssertion(const Blob::Bytes
 
   std::expected<Blob::Bytes, Error> out = makeAssertion(salt);
   if (out) {
-    ui.ShowNotify(client);
+    ui.ShowAssertation(client);
   }
 
   return std::move(out.value());

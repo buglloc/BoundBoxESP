@@ -6,7 +6,7 @@
 #include <esp_err.h>
 
 
-#define AMOLED_DEFAULT_BRIGHTNESS 175
+#define AMOLED_DEFAULT_BRIGHTNESS 50
 
 
 namespace Amoled

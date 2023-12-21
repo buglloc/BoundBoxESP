@@ -47,8 +47,8 @@
 #define HOME_BUTTON_X         600
 #define HOME_BUTTON_Y         120
 
-#define BATT_ADC_UNIT         ADC_UNIT_1
-#define BATT_ADC_CHANNEL      ADC_CHANNEL_4
+#define BATT_ADC_UNIT         ADC_UNIT_2
+#define BATT_ADC_CHANNEL      ADC_CHANNEL_0
 #define BATT_ADC_ATTEN        ADC_ATTEN_DB_11
 #define BATT_ADC_WIDTH_BIT    ADC_BITWIDTH_12
 #define BATT_ADC_DEF_VREF     1100

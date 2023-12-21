@@ -5,31 +5,20 @@
 
 #include <lvgl.h>
 
+#include "ui/manager.h"
+
 
 #define GUI_MESSAGE_PIN_PROMPT 100
-#define GUI_MESSAGE_UPDATE_BOARD_INFO 101
-#define GUI_MESSAGE_NOTIFY 102
+#define GUI_MESSAGE_NOTIFY 101
+#define GUI_MESSAGE_NEW_BOARD_STATE 110
+#define GUI_MESSAGE_NEW_ADDR 111
+#define GUI_MESSAGE_NEW_BATT_VOLTAGE 112
+#define GUI_MESSAGE_NEW_CORE_TEMP 113
+#define GUI_MESSAGE_NEW_ASSERTATIONS 114
+
 
 namespace UI
 {
-  enum class BoardState: uint8_t
-  {
-    None,
-    Boot,
-    WaitNet,
-    WaitCredential,
-    Process,
-    Idle,
-  };
-
-  struct BoardInfo
-  {
-    BoardState State;
-    uint32_t LocalAddr;
-    uint32_t BattVoltage;
-    float CoreTemp;
-  };
-
   class GUI
   {
   public:

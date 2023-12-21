@@ -6,10 +6,7 @@
 #include <algorithm>
 
 
-LV_FONT_DECLARE(font_roboto_black_14);
 LV_FONT_DECLARE(font_roboto_black_20);
-LV_FONT_DECLARE(font_roboto_black_24);
-
 LV_FONT_DECLARE(font_roboto_mono_20);
 LV_FONT_DECLARE(font_roboto_mono_24);
 LV_FONT_DECLARE(font_roboto_mono_32);
@@ -74,7 +71,7 @@ namespace
 {
   lv_obj_t* createPadButton(lv_obj_t* parent, bool clickable, size_t idx)
   {
-    static const lv_color_t panBgColor = lv_color_hex(0xfafafa);
+    static const lv_color_t panBgColor = lv_color_hex(0xf6f6f6);
     static const lv_color_t pressedColor = lv_color_hex(0x939ea3);
 
     lv_obj_t *btn = lv_obj_create(parent);
@@ -176,8 +173,8 @@ namespace
 
   lv_style_t* mainStyle()
   {
-    static lv_color_t bgColor = lv_color_hex(0x000000);// lv_color_hex(0xd4d4d4);
-    static lv_color_t textColor = lv_color_hex(0x030303);
+    static lv_color_t bgColor = lv_color_hex(0xdcdcdc);
+    static lv_color_t textColor = lv_color_hex(0x111111);
     static lv_style_t mainStyle;
     static bool inited = false;
     if (inited) {
@@ -341,16 +338,18 @@ void GUI::ShowScreenIdle()
       lv_msg_t* m = lv_event_get_msg(e);
       lv_obj_t* label = lv_event_get_target(e);
 
-      auto info = reinterpret_cast<const BoardInfo*>(lv_msg_get_payload(m));
-      setBoardStateLabel(label, info->State);
+      auto boardState = reinterpret_cast<const BoardState*>(lv_msg_get_payload(m));
+      if (boardState != nullptr) {
+        setBoardStateLabel(label, *boardState);
+      }
     },
     LV_EVENT_MSG_RECEIVED,
     nullptr
   );
-  lv_msg_subsribe_obj(GUI_MESSAGE_UPDATE_BOARD_INFO, stateLabel, nullptr);
+  lv_msg_subsribe_obj(GUI_MESSAGE_NEW_BOARD_STATE, stateLabel, nullptr);
 
   lv_obj_t* ipLabel = lv_label_create(cont);
-  lv_obj_align(ipLabel, LV_ALIGN_BOTTOM_LEFT, 24, -24);
+  lv_obj_align(ipLabel, LV_ALIGN_TOP_LEFT, 24, 24);
   lv_obj_set_style_text_font(ipLabel, &font_roboto_mono_20, 0);
   lv_obj_set_style_text_align(ipLabel, LV_TEXT_ALIGN_LEFT, 0);
   lv_label_set_text_static(ipLabel, "IP: N/A");
@@ -360,60 +359,82 @@ void GUI::ShowScreenIdle()
       lv_msg_t* m = lv_event_get_msg(e);
       lv_obj_t* label = lv_event_get_target(e);
 
-      auto info = reinterpret_cast<const BoardInfo*>(lv_msg_get_payload(m));
-      if (info->LocalAddr == 0) {
+      auto addr = reinterpret_cast<const uint32_t*>(lv_msg_get_payload(m));
+      if (addr == nullptr || *addr == 0) {
         lv_label_set_text_static(label, "IP: N/A");
       } else {
-        // lv_label_set_text_fmt(label, "IP: %d", 1234);
-        lv_label_set_text_fmt(label, "IP: " ADDRSTR, ADDR2STR(info->LocalAddr));
+        lv_label_set_text_fmt(label, "IP: " ADDRSTR, ADDR2STR(*addr));
       }
     },
     LV_EVENT_MSG_RECEIVED,
     nullptr
   );
-  lv_msg_subsribe_obj(GUI_MESSAGE_UPDATE_BOARD_INFO, ipLabel, nullptr);
+  lv_msg_subsribe_obj(GUI_MESSAGE_NEW_ADDR, ipLabel, nullptr);
 
-#if HAVE_TEMP_SENSOR
+  lv_obj_t* assesLabel = lv_label_create(cont);
+  lv_obj_align(assesLabel, LV_ALIGN_TOP_RIGHT, -24, 24);
+  lv_obj_set_style_text_font(assesLabel, &font_roboto_mono_20, 0);
+  lv_obj_set_style_text_align(assesLabel, LV_TEXT_ALIGN_LEFT, 0);
+  lv_label_set_text_static(assesLabel, "Asses: 0000");
+
+  lv_obj_add_event_cb(assesLabel,
+    [](lv_event_t* e) -> void {
+      lv_msg_t* m = lv_event_get_msg(e);
+      lv_obj_t* label = lv_event_get_target(e);
+
+      auto asses = reinterpret_cast<const uint32_t*>(lv_msg_get_payload(m));
+      if (asses == nullptr || *asses == 0) {
+        lv_label_set_text_static(label, "Asses: 0000");
+      } else {
+        lv_label_set_text_fmt(label, "Asses: %4lu", *asses);
+      }
+    },
+    LV_EVENT_MSG_RECEIVED,
+    nullptr
+  );
+  lv_msg_subsribe_obj(GUI_MESSAGE_NEW_ASSERTATIONS, assesLabel, nullptr);
+
   lv_obj_t* tempLabel = lv_label_create(cont);
-  lv_obj_align(tempLabel, LV_ALIGN_BOTTOM_MID, 0, -24);
+  lv_obj_align(tempLabel, LV_ALIGN_BOTTOM_LEFT, 24, -24);
   lv_obj_set_style_text_font(tempLabel, &font_roboto_mono_20, 0);
-  lv_obj_set_style_text_align(tempLabel, LV_TEXT_ALIGN_CENTER, 0);
-  lv_label_set_text_fmt(tempLabel, "Core: %.2f°C", boardInfo.CoreTemp);
+  lv_obj_set_style_text_align(tempLabel, LV_TEXT_ALIGN_LEFT, 0);
+  lv_label_set_text_static(tempLabel, "Core: N/A");
 
   lv_obj_add_event_cb(tempLabel,
     [](lv_event_t* e) -> void {
       lv_msg_t* m = lv_event_get_msg(e);
       lv_obj_t* label = lv_event_get_target(e);
 
-      auto info = reinterpret_cast<const TBoardManager::BoardInfo*>(lv_msg_get_payload(m));
-      lv_label_set_text_fmt(label, "BATT: %.2f°C", info->CoreTemp);
+      auto temp = reinterpret_cast<const uint32_t*>(lv_msg_get_payload(m));
+      if (temp != nullptr && *temp > 0.0) {
+        lv_label_set_text_fmt(label, "Core: %lu°C", *temp);
+      }
     },
     LV_EVENT_MSG_RECEIVED,
     nullptr
   );
-  lv_msg_subsribe_obj(GUI_MESSAGE_UPDATE_BOARD_INFO, tempLabel, nullptr);
-#endif
+  lv_msg_subsribe_obj(GUI_MESSAGE_NEW_CORE_TEMP, tempLabel, nullptr);
 
-#if HAVE_BATTERY
   lv_obj_t* battLabel = lv_label_create(cont);
   lv_obj_align(battLabel, LV_ALIGN_BOTTOM_RIGHT, -24, -24);
   lv_obj_set_style_text_font(battLabel, &font_roboto_mono_20, 0);
   lv_obj_set_style_text_align(battLabel, LV_TEXT_ALIGN_RIGHT, 0);
-  lv_label_set_text_fmt(battLabel, "BATT: %.2fV", boardInfo.BattVoltage/1000.0f);
+  lv_label_set_text_static(battLabel, "Batt: N/A");
 
   lv_obj_add_event_cb(battLabel,
     [](lv_event_t* e) -> void {
       lv_msg_t* m = lv_event_get_msg(e);
       lv_obj_t* label = lv_event_get_target(e);
 
-      auto info = reinterpret_cast<const TBoardManager::BoardInfo*>(lv_msg_get_payload(m));
-      lv_label_set_text_fmt(label, "BATT: %.2fV", info->BattVoltage/1000.0f);
+      auto voltage = reinterpret_cast<const uint32_t*>(lv_msg_get_payload(m));
+      if (voltage && *voltage != 0) {
+        lv_label_set_text_fmt(label, "Batt: %lumV", *voltage);
+      }
     },
     LV_EVENT_MSG_RECEIVED,
     nullptr
   );
-  lv_msg_subsribe_obj(GUI_MESSAGE_UPDATE_BOARD_INFO, battLabel, nullptr);
-#endif
+  lv_msg_subsribe_obj(GUI_MESSAGE_NEW_BATT_VOLTAGE, battLabel, nullptr);
 }
 
 GUI::~GUI()

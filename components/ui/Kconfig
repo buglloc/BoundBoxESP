@@ -16,13 +16,13 @@ menu "BoundBox UI"
     default 1000
 
   config UI_UPDATE_INFO_PERIOD_MS
-    int "UI update board info period time (ms)"
+    int "How ofen update very dynamic info (e.g. core temp) in ms"
     range 50 5000
-    default 500
+    default 1500
 
   config UI_DEFAULT_BRIGHTNESS
     int "Default screen brightness"
     range 50 200
-    default 75
+    default 150
 
 endmenu

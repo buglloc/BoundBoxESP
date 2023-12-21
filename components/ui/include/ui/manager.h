@@ -16,7 +16,7 @@ namespace UI
   // fwd
   class GUI;
 
-  enum class AppState: uint8_t
+  enum class BoardState: uint8_t
   {
     None,
     Boot,
@@ -40,10 +40,10 @@ namespace UI
     static Manager& Instance();
     esp_err_t Initialize(Handler* handler);
 
-    void SetAppState(AppState appState);
+    void SetBoardState(BoardState newState);
     void ShowRequestPin();
     void ShowVerifyPin(const std::string& verification);
-    void ShowNotify(const std::string& msg);
+    void ShowAssertation(const std::string& client);
     void ShowIdle();
 
     void Tick();
@@ -54,13 +54,15 @@ namespace UI
     void tickStateTransition();
 
   private:
-    std::atomic<AppState> appState = AppState::Boot;
+    std::atomic<BoardState> boardState = BoardState::Boot;
     std::unique_ptr<GUI> gui;
     Handler* handler = nullptr;
     SceneManager sceneManager;
     Button homeButton;
     std::string pinVerification;
     std::string notifyMsg;
-    uint16_t updateTtlTicks = 0;
+    uint16_t ticksToUpdate = 0;
+    uint32_t lastLocalAddr = 0;
+    uint32_t assertations = 0;
   };
 }

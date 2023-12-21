@@ -59,9 +59,10 @@ esp_err_t Manager::Initialize(Handler* handler)
   return ESP_OK;
 }
 
-void Manager::SetAppState(AppState newState)
+void Manager::SetBoardState(BoardState newState)
 {
-  appState = newState;
+  boardState = newState;
+  lv_msg_send(GUI_MESSAGE_NEW_BOARD_STATE, &boardState);
 }
 
 void Manager::ShowRequestPin()
@@ -75,9 +76,12 @@ void Manager::ShowVerifyPin(const std::string& verification)
   sceneManager.SwitchTo(SceneId::PinVerify);
 }
 
-void Manager::ShowNotify(const std::string& msg)
+void Manager::ShowAssertation(const std::string& client)
 {
-  notifyMsg = msg;
+  assertations++;
+  lv_msg_send(GUI_MESSAGE_NEW_ASSERTATIONS, &assertations);
+
+  notifyMsg = client;
   sceneManager.SwitchTo(SceneId::Notify);
 }
 
@@ -132,19 +136,28 @@ void Manager::tickHomeButton()
 
 void Manager::tickBoardInfo()
 {
-  if (updateTtlTicks > 0) {
-    updateTtlTicks--;
+  if (ticksToUpdate > 0) {
+    ticksToUpdate--;
     return;
   }
 
-  BoardInfo info = {
-    .State = static_cast<BoardState>(appState.load()),
-    .LocalAddr = hw.Net().LocalIP().addr,
-    .BattVoltage = hw.Board().BattVoltage(),
-    .CoreTemp = hw.Board().CoreTemp(),
-  };
-  lv_msg_send(GUI_MESSAGE_UPDATE_BOARD_INFO, &info);
-  updateTtlTicks = (CONFIG_UI_UPDATE_INFO_PERIOD_MS /CONFIG_UI_PERIOD_TIME_MS);
+  uint32_t newLocalAddr = hw.Net().LocalIP().addr;
+  if (newLocalAddr != lastLocalAddr) {
+    lastLocalAddr = newLocalAddr;
+    lv_msg_send(GUI_MESSAGE_NEW_ADDR, &lastLocalAddr);
+  }
+
+  uint32_t battVoltage = hw.Board().BattVoltage();
+  if (battVoltage > 0) {
+    lv_msg_send(GUI_MESSAGE_NEW_BATT_VOLTAGE, &battVoltage);
+  }
+
+  uint32_t coreTemp = hw.Board().CoreTemp();
+  if (coreTemp > 0) {
+    lv_msg_send(GUI_MESSAGE_NEW_CORE_TEMP, &coreTemp);
+  }
+
+  ticksToUpdate = (CONFIG_UI_UPDATE_INFO_PERIOD_MS /CONFIG_UI_PERIOD_TIME_MS);
 }
 
 void Manager::tickStateTransition()
