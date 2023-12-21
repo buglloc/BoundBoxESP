@@ -7,6 +7,7 @@
 #include <lvgl.h>
 
 #include <esp_check.h>
+#include <esp_log.h>
 
 
 using namespace UI;
@@ -40,15 +41,9 @@ esp_err_t Manager::Initialize(Handler* handler)
   // Otherwise there can be problem such as memory corruption and so on.
   // source: https://github.com/lvgl/lv_port_esp32/blob/cffa173c6e410965da12875103b934ec9d28f4e5/main/main.c#L64-L66
   ESP_LOGI(TAG, "initialize ui task timer");
-  const esp_timer_create_args_t timerArgs = {
-    .callback = [](void* arg) -> void {
-      reinterpret_cast<Manager *>(arg)->Tick();
-    },
-    .arg = this,
-    .name = "Manager::periodic"
-  };
-  ESP_RETURN_ON_ERROR(esp_timer_create(&timerArgs, &timer), TAG, "create timer");
-  ESP_RETURN_ON_ERROR(esp_timer_start_periodic(timer, CONFIG_UI_PERIOD_TIME_MS * 1000), TAG, "start timer");
+  lv_timer_create([](lv_timer_t *t) {
+    reinterpret_cast<Manager *>(t->user_data)->Tick();
+  }, CONFIG_UI_PERIOD_TIME_MS, this);
 
   lv_msg_subscribe(GUI_MESSAGE_PIN_PROMPT,
     [](void* s, lv_msg_t* m) -> void {
@@ -100,7 +95,6 @@ void Manager::Tick()
 
 void Manager::tickHomeButton()
 {
-
   if (!homeButton.UpdateState(hw.Board().TouchSensor().HomePressed())) {
     // nothing to do
     return;
@@ -181,10 +175,4 @@ void Manager::tickStateTransition()
     ESP_LOGE(TAG, "unexpected scene: %d", (int)sceneManager.Id());
     break;
   }
-}
-
-Manager::~Manager()
-{
-  esp_timer_stop(timer);
-  esp_timer_delete(timer);
 }

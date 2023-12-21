@@ -13,7 +13,7 @@ bool Button::UpdateState(bool pressed)
   }
 
   state = newState;
-  return true;
+  return newState != ButtonState::None;
 }
 
 ButtonState Button::State() const

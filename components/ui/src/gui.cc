@@ -35,27 +35,11 @@ LV_IMG_DECLARE(bg_notify);
 
 
 #define ADDRSTR "%d.%d.%d.%d"
-#define _addr_get_byte(addr, idx) (((const uint8_t*)(addr))[idx])
-#define _addr1(addr) _addr_get_byte(addr, 0)
-#define _addr2(addr) _addr_get_byte(addr, 1)
-#define _addr3(addr) _addr_get_byte(addr, 2)
-#define _addr4(addr) _addr_get_byte(addr, 3)
+#define ADDR2STR(addr) (uint8_t)(addr & 0xFF), \
+  (uint8_t)((addr >> 8) & 0xFF), \
+  (uint8_t)((addr >> 16) & 0xFF), \
+  (uint8_t)((addr >> 24) & 0xFF)
 
-
-#define _addr1_16(addr) ((uint16_t)_addr1(addr))
-#define _addr2_16(addr) ((uint16_t)_addr2(addr))
-#define _addr3_16(addr) ((uint16_t)_addr3(addr))
-#define _addr4_16(addr) ((uint16_t)_addr4(addr))
-#define ADDR2STR(addr) _addr1_16(addr), \
-  _addr2_16(addr), \
-  _addr3_16(addr), \
-  _addr4_16(addr)
-
-
-#define IP2STR(ipaddr) _addr1_16(ipaddr), \
-    _addr2_16(ipaddr), \
-    _addr3_16(ipaddr), \
-    _addr4_16(ipaddr)
 
 using namespace UI;
 
@@ -383,6 +367,7 @@ void GUI::ShowScreenIdle()
       if (info->LocalAddr == 0) {
         lv_label_set_text_static(label, "IP: N/A");
       } else {
+        // lv_label_set_text_fmt(label, "IP: %d", 1234);
         lv_label_set_text_fmt(label, "IP: " ADDRSTR, ADDR2STR(info->LocalAddr));
       }
     },
@@ -473,14 +458,9 @@ lv_obj_t* GUI::switchScreen(lv_obj_t *targetScreen)
     return targetScreen;
   }
 
-  if (isPersistentScreen(prevScr)) {
-    lv_scr_load_anim(targetScreen, LV_SCR_LOAD_ANIM_FADE_OUT, 150, 50, false);
-    return targetScreen;
-  }
-
   if (prevScr != nullptr) {
-    lv_obj_clean(prevScr);
-    lv_scr_load_anim(targetScreen, LV_SCR_LOAD_ANIM_FADE_OUT, 150, 50, true);
+    bool autoDel = !isPersistentScreen(prevScr);
+    lv_scr_load_anim(targetScreen, LV_SCR_LOAD_ANIM_FADE_OUT, 60, 20, autoDel);
     return targetScreen;
   }
 

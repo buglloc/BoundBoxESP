@@ -8,8 +8,6 @@
 
 #include <hardware/manager.h>
 
-#include <esp_timer.h>
-
 #include "button.h"
 #include "scene.h"
 
@@ -49,7 +47,6 @@ namespace UI
     void ShowIdle();
 
     void Tick();
-    ~Manager();
 
   private:
     void tickHomeButton();
@@ -60,7 +57,6 @@ namespace UI
     std::atomic<AppState> appState = AppState::Boot;
     std::unique_ptr<GUI> gui;
     Handler* handler = nullptr;
-    esp_timer_handle_t timer;
     SceneManager sceneManager;
     Button homeButton;
     std::string pinVerification;

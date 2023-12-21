@@ -129,8 +129,6 @@ esp_err_t Display::SetBrightness(uint8_t level)
 
 esp_err_t Display::PushColors(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t* data)
 {
-  ESP_LOGI(TAG, "push colors %dx%d %dx%d", x, y, w, h);
-  ESP_LOGI(TAG, "push colors %dx%d %dx%d", x, y, x + w - 1, y + h - 1);
   esp_err_t ret = SetAddrWindow(x, y, x + w - 1, y + h - 1);
   if (ret != ESP_OK) {
     return ret;
