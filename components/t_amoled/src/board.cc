@@ -44,8 +44,8 @@ namespace
 
       if (taskDelayMS > 500) {
         taskDelayMS = 500;
-      } else if (taskDelayMS < 10) {
-        taskDelayMS = 10;
+      } else if (taskDelayMS < 5) {
+        taskDelayMS = 5;
       }
 
       vTaskDelay(pdMS_TO_TICKS(taskDelayMS));
@@ -114,7 +114,7 @@ esp_err_t Board::InitializeLVGL()
   lv_disp_drv_init(&dispDrv);
   dispDrv.hor_res = TFT_WIDTH;
   dispDrv.ver_res = TFT_HEIGHT;
-  dispDrv.full_refresh = 1;
+  // dispDrv.full_refresh = 1;
   dispDrv.draw_buf = &dispBuf;
 
   dispDrv.user_data = &display;

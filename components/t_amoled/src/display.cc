@@ -139,10 +139,11 @@ esp_err_t Display::PushColors(uint16_t x, uint16_t y, uint16_t w, uint16_t h, ui
 
 esp_err_t Display::PushColors(uint16_t* data, uint32_t size)
 {
-  bool started = false;
+  bool firstSend = false;
   esp_err_t ret = ESP_OK;
   uint16_t *p = data;
   assert(p);
+  assert(spi);
 
   SET_TFT_CS(LOW);
 
@@ -151,11 +152,11 @@ esp_err_t Display::PushColors(uint16_t* data, uint32_t size)
       spi_transaction_ext_t t = {0};
       memset(&t, 0, sizeof(t));
 
-      if (!started) {
+      if (!firstSend) {
           t.base.flags = SPI_TRANS_MODE_QIO;
           t.base.cmd = 0x32 ;
           t.base.addr = 0x002C00;
-          started = true;
+          firstSend = true;
       } else {
           t.base.flags = SPI_TRANS_MODE_QIO | SPI_TRANS_VARIABLE_CMD | SPI_TRANS_VARIABLE_ADDR | SPI_TRANS_VARIABLE_DUMMY;
           t.command_bits = 0;

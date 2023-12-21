@@ -23,6 +23,6 @@ menu "BoundBox UI"
   config UI_DEFAULT_BRIGHTNESS
     int "Default screen brightness"
     range 50 200
-    default 150
+    default 75
 
 endmenu

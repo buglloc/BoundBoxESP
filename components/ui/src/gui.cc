@@ -43,7 +43,8 @@ LV_IMG_DECLARE(bg_notify);
 
 using namespace UI;
 
-namespace {
+namespace
+{
   struct padInfo {
     int8_t Value;
     const void* ImgSrc;
@@ -69,14 +70,13 @@ namespace {
   };
 }
 
-namespace {
-  static const lv_color_t bgColor = lv_color_hex(0xd4d4d4);
-  static const lv_color_t panBgColor = lv_color_hex(0xfafafa);
-  static const lv_color_t textColor = lv_color_hex(0x030303);
-  static const lv_color_t pressedColor = lv_color_hex(0x939ea3);
-
+namespace
+{
   lv_obj_t* createPadButton(lv_obj_t* parent, bool clickable, size_t idx)
   {
+    static const lv_color_t panBgColor = lv_color_hex(0xfafafa);
+    static const lv_color_t pressedColor = lv_color_hex(0x939ea3);
+
     lv_obj_t *btn = lv_obj_create(parent);
     lv_obj_set_size(btn, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
     lv_obj_set_style_pad_all(btn, 0, 0);
@@ -176,6 +176,8 @@ namespace {
 
   lv_style_t* mainStyle()
   {
+    static lv_color_t bgColor = lv_color_hex(0x000000);// lv_color_hex(0xd4d4d4);
+    static lv_color_t textColor = lv_color_hex(0x030303);
     static lv_style_t mainStyle;
     static bool inited = false;
     if (inited) {
@@ -192,12 +194,7 @@ namespace {
 }
 
 GUI::GUI()
-{
-//   lv_style_set_border_width(&mainStyle, 0);
-//   lv_style_set_bg_color(&mainStyle, bgColor);
-//   lv_style_set_text_font(&mainStyle, &font_roboto_mono_24);
-//   lv_style_set_text_color(&mainStyle, textColor);
-}
+{}
 
 void GUI::ShowScreenPinEnter()
 {
@@ -440,7 +437,7 @@ lv_obj_t* GUI::createPage(lv_obj_t *screen)
   lv_obj_remove_style(cont, 0, LV_PART_SCROLLBAR);
   lv_obj_set_style_pad_all(cont, 0, 0);
   lv_obj_set_style_border_width(cont, 0, 0);
-  lv_obj_set_style_bg_color(cont, bgColor, 0);
+  // lv_obj_set_style_bg_color(cont, bgColor, 0);
 
   lv_obj_center(cont);
   return cont;
