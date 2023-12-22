@@ -65,9 +65,6 @@ bool Commands::Handle(const SSH::UserInfo& userInfo, std::string_view cmdName, c
   static const std::vector<Command> commands = {
 //     {"/make/assertation", true, "Generate assertion for req[\"salt\"] into rsp[\"assertion\"]", HandleMakeAssertion},
 //     {"/get/status", true, "Returns BoundBoxESP status", HandleGetStatus},
-//     {"/get/config", true, "Returns runtime config in rsp[\"config\"]", HandleGetConfig},
-//     {"/set/config", true, "Store runtime config from req[\"config\"]", HandleSetConfig},
-//     {"/reset/config", true, "Reset config to default values", HandleResetConfig},
 //     {"/set/secrets", true, "Store runtime secrets from req[\"secrets\"]", HandleSetSecrets},
 //     {"/reset/secrets", true, "Reset secrets to it's default values", HandleResetSecrets},
 // #if DANGEROUS_SECRETS

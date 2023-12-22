@@ -22,7 +22,7 @@ menu "BoundBox Hardware"
     default 13
 
   config BBHW_SPI_SCLK_GPIO
-    int "Peripheral MOSI gpio"
+    int "Peripheral SCLK gpio"
     range 0 46
     default 12
 
@@ -38,7 +38,7 @@ menu "BoundBox Hardware"
 
   config BBHW_ETH_SPI_CLOCK_MHZ
     int "Ethernet spi click (mhz)"
-    default 20
+    default 40
     depends on BBHW_HAS_ETH
 
   config BBHW_ETH_CS_GPIO
@@ -49,14 +49,14 @@ menu "BoundBox Hardware"
 
   config BBHW_ETH_INT_GPIO
     int "Ethernet INT gpio"
-    range 0 46
-    default 15
+    range 1 46
+    default 1
     depends on BBHW_HAS_ETH
 
   config BBHW_ETH_RST_GPIO
     int "Ethernet RST gpio"
-    range 0 46
-    default 16
+    range 1 46
+    default 14
     depends on BBHW_HAS_ETH
 
   config BBHW_HAS_WIFI

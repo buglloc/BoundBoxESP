@@ -69,8 +69,8 @@ esp_err_t Board::Initialize()
   ESP_LOGI(TAG, "setup temp sensor");
   ESP_RETURN_ON_ERROR(tempSensor.Initialize(), TAG, "could't initialize temp sensor");
 
-  ESP_LOGI(TAG, "setup baterry controller");
-  ESP_RETURN_ON_ERROR(batteryController.Initialize(), TAG, "could't initialize baterry controller");
+  // ESP_LOGI(TAG, "setup baterry controller");
+  // ESP_RETURN_ON_ERROR(batteryController.Initialize(), TAG, "could't initialize baterry controller");
 
   initialized = true;
   return ESP_OK;
