@@ -1,0 +1,110 @@
+menu "BoundBox Hardware"
+
+  choice BBHW_SPI_HOST_ID
+    prompt "SPI Host id to use"
+    default BBHW_USE_SPI3_HOST
+
+    config BBHW_USE_SPI2_HOST
+      bool "SPI2_HOST"
+
+    config BBHW_USE_SPI3_HOST
+      bool "SPI3_HOST"
+  endchoice
+
+  config BBHW_SPI_MOSI_GPIO
+    int "Peripheral MOSI gpio"
+    range 0 46
+    default 11
+
+  config BBHW_SPI_MISO_GPIO
+    int "Peripheral MISO gpio"
+    range 0 46
+    default 13
+
+  config BBHW_SPI_SCLK_GPIO
+    int "Peripheral SCLK gpio"
+    range 0 46
+    default 12
+
+  config BBHW_HAS_ETH
+    bool "Has ethernet"
+    default y
+
+  config BBHW_ETH_PHY_ADDR
+    int "Ethernet phy addr"
+    range 0 46
+    default 1
+    depends on BBHW_HAS_ETH
+
+  config BBHW_ETH_SPI_CLOCK_MHZ
+    int "Ethernet spi click (mhz)"
+    default 40
+    depends on BBHW_HAS_ETH
+
+  config BBHW_ETH_CS_GPIO
+    int "Ethernet CS gpio"
+    range 0 46
+    default 10
+    depends on BBHW_HAS_ETH
+
+  config BBHW_ETH_INT_GPIO
+    int "Ethernet INT gpio"
+    range 1 46
+    default 1
+    depends on BBHW_HAS_ETH
+
+  config BBHW_ETH_RST_GPIO
+    int "Ethernet RST gpio"
+    range 1 46
+    default 14
+    depends on BBHW_HAS_ETH
+
+  config BBHW_HAS_WIFI
+    bool "Has WiFi"
+    default y
+
+  choice BBHW_NETKIND
+    prompt "Default network implementation"
+    default BBHW_NETKIND_ETH
+
+    config BBHW_NETKIND_ETH
+      bool "Ethernet"
+      depends on BBHW_HAS_ETH
+
+    config BBHW_NETKIND_WIFI_STA
+      bool "WiFi"
+      depends on BBHW_HAS_WIFI
+  endchoice
+
+  config BBHW_HOSTNAME
+    string "Hostname"
+    default "BoundBoxESP"
+
+  config BBHW_NET_USE_STATIC_IP
+    bool "Use static IP"
+    default n
+
+  config BBHW_NET_IP
+    string "Static IP to use"
+    depends on BBHW_NET_USE_STATIC_IP
+
+  config BBHW_NET_SUBNET
+    string "Static Subnet to use"
+    depends on BBHW_NET_USE_STATIC_IP
+
+  config BBHW_NET_GW
+    string "Static Gateway to use"
+    depends on BBHW_NET_USE_STATIC_IP
+
+  config BBHW_NET_DNS
+    string "Static DNS to use"
+    depends on BBHW_NET_USE_STATIC_IP
+
+  config BBHW_WIFI_SSID
+    string "WiFi SSID"
+    default "BuggIOT"
+
+  config BBHW_WIFI_PASSWORD
+    string "WiFi Password"
+
+endmenu

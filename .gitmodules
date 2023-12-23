@@ -1,0 +1,6 @@
+[submodule "components/wolfssl"]
+	path = components/wolfssl
+	url = https://github.com/buglloc/wolfssl-idf.git
+[submodule "components/wolfssh"]
+	path = components/wolfssh
+	url = https://github.com/buglloc/wolfssh-idf.git

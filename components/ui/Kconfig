@@ -1,0 +1,28 @@
+menu "BoundBox UI"
+
+  config UI_PERIOD_TIME_MS
+    int "UI update period time (ms)"
+    range 5 100
+    default 60
+
+  config UI_LONG_PRESS_TIME_MS
+    int "Button long press time (ms)"
+    range 100 5000
+    default 500
+
+  config UI_SCENE_IDLE_TTL_MS
+    int "Scene idle state TTL (ms)"
+    range 500 50000
+    default 1000
+
+  config UI_UPDATE_INFO_PERIOD_MS
+    int "How ofen update very dynamic info (e.g. core temp) in ms"
+    range 50 5000
+    default 1500
+
+  config UI_DEFAULT_BRIGHTNESS
+    int "Default screen brightness"
+    range 50 200
+    default 150
+
+endmenu

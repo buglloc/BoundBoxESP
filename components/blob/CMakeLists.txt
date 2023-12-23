@@ -1,0 +1,10 @@
+idf_component_register(
+SRCS
+  "src/base64.cc"
+  "src/hash.cc"
+  "src/hex.cc"
+INCLUDE_DIRS
+  "include"
+REQUIRES
+  wolfssl
+)

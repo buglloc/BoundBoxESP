@@ -1,0 +1,7 @@
+menu "BoundBox Preferences"
+
+  config BB_PREF_NAMESPACE
+    string "Namespace"
+    default "bb_preferences"
+
+endmenu
