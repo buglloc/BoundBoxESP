@@ -4,6 +4,7 @@
 #include <esp_log.h>
 
 #include <hardware/manager.h>
+#include <ui/manager.h>
 #include <blob/hash.h>
 #include <blob/hex.h>
 

@@ -21,7 +21,7 @@ enum class Error: uint8_t
 };
 
 #ifdef CONFIG_SHUTDOWN_ON_ASSERT
-  #define ASSERT_ACTION Hardware::Manager::Instance().Board().Shutdown();
+  #define ASSERT_ACTION Hardware::Manager::Instance().Shutdown();
 #else
   #define ASSERT_ACTION abort();
 #endif

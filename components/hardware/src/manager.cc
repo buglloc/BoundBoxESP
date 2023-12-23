@@ -10,6 +10,7 @@
 #include <esp_event.h>
 #include <esp_check.h>
 #include <esp_log.h>
+#include <esp_timer.h>
 #include <nvs_flash.h>
 
 
@@ -89,4 +90,29 @@ esp_err_t Manager::Initialize()
 
   initialized = true;
   return ESP_OK;
+}
+
+esp_err_t Manager::ScheduleRestart(uint16_t delayMs)
+{
+  const esp_timer_create_args_t timerArgs = {
+    .callback = [](void* arg) -> void {
+      reinterpret_cast<Amoled::Board *>(arg)->Restart();
+    },
+    .arg = &board,
+    .name = "restart"
+  };
+  static esp_timer_handle_t restartTimer;
+  ESP_RETURN_ON_ERROR(esp_timer_create(&timerArgs, &restartTimer), TAG, "create timer");
+
+  return esp_timer_start_once(restartTimer, delayMs * 1000);
+}
+
+void Manager::Restart()
+{
+  board.Restart();
+}
+
+void Manager::Shutdown()
+{
+  board.Shutdown();
 }

@@ -15,6 +15,10 @@ namespace Hardware
 
     esp_err_t Initialize();
 
+    esp_err_t ScheduleRestart(uint16_t delayMs);
+    void Restart();
+    void Shutdown();
+
     Amoled::Board& Board()
     {
       return board;

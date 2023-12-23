@@ -54,7 +54,10 @@ namespace {
           ESP_LOGE(TAG, "command '%s' process failed: %d", cmd.cbegin(), (int)err);
         }
 
-        ui.SetBoardState(UI::BoardState::Idle);
+        if (ui.BoardState() == UI::BoardState::Process) {
+          ui.SetBoardState(UI::BoardState::Idle);
+        }
+
         return err != Error::None ? 1 : 0;
       });
 

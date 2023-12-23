@@ -1,3 +1,4 @@
+#include <sdkconfig.h>
 #include "commands.h"
 
 #include <vector>
@@ -8,10 +9,15 @@
 #include <defer.h>
 #include <ArduinoJson.h>
 
+#include <hardware/manager.h>
+#include <ui/manager.h>
+
 
 namespace
 {
   static const char *TAG = "main::cmd";
+  Hardware::Manager& hw = Hardware::Manager::Instance();
+  UI::Manager& ui = UI::Manager::Instance();
 
   using HandleFn = std::function<bool(const SSH::UserInfo& userInfo, const JsonObjectConst& req, JsonObject& rsp)>;
 
@@ -22,6 +28,18 @@ namespace
     std::string Help;
     HandleFn Handle;
   };
+
+  bool HandleRestart(const SSH::UserInfo& userInfo, const JsonObjectConst& req, JsonObject& rsp)
+  {
+    ui.SetBoardState(UI::BoardState::Restart);
+    esp_err_t err = hw.ScheduleRestart(req["delay_ms"] | CONFIG_DEFAULT_RESTART_DELAY_MS);
+    if (err != ESP_OK) {
+      ESP_LOGE(TAG, "schecule restart failed: %s", esp_err_to_name(err));
+      return false;
+    }
+
+    return true;
+  }
 }
 
 Error Commands::Initialize(Authenticator* auth)
@@ -32,9 +50,6 @@ Error Commands::Initialize(Authenticator* auth)
 
 Error Commands::Dispatch(const SSH::UserInfo& userInfo, std::string_view cmdName, SSH::Stream& stream)
 {
-  // boardManager.ToState(TBoardManager::BoardState::Process);
-  // REF_DEFER(boardManager.ToState(TBoardManager::BoardState::Idle));
-
   ESP_LOGI(TAG, "client %s called command: %s", userInfo.ClientIP.c_str(), cmdName.cbegin());
   DynamicJsonDocument req(CONFIG_COMMAND_BUFFER_SIZE);
   DeserializationError jsonErr = deserializeJson(req, stream);
@@ -70,8 +85,18 @@ bool Commands::Handle(const SSH::UserInfo& userInfo, std::string_view cmdName, c
 // #if DANGEROUS_SECRETS
 //     {"/get/secrets", true, "Returns runtime secrets in rsp[\"secrets\"]", HandleGetSecrets},
 // #endif
-//     {"/restart", true, "Restart BoundBoxESP in req[\"sec\"]", HandleRestart},
-    {"/help", false, "Returns commands info", nullptr},
+    {
+      .Name = "/restart",
+      .Restricted = true,
+      .Help = R"(Restart BoundBoxESP in req["delay_ms"])",
+      .Handle = HandleRestart
+    },
+    {
+      .Name = "/help",
+      .Restricted = false,
+      .Help = "Returns commands info",
+      .Handle = nullptr
+    },
   };
 
   if (cmdName == "/help") {

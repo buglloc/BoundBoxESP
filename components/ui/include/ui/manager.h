@@ -23,6 +23,7 @@ namespace UI
     WaitNet,
     WaitCredential,
     Process,
+    Restart,
     Idle,
   };
 
@@ -40,7 +41,8 @@ namespace UI
     static Manager& Instance();
     esp_err_t Initialize(Handler* handler);
 
-    void SetBoardState(BoardState newState);
+    void SetBoardState(UI::BoardState newState);
+    UI::BoardState BoardState();
     void ShowRequestPin();
     void ShowVerifyPin(const std::string& verification);
     void ShowAssertation(const std::string& client);
@@ -54,7 +56,7 @@ namespace UI
     void tickStateTransition();
 
   private:
-    std::atomic<BoardState> boardState = BoardState::Boot;
+    std::atomic<UI::BoardState> boardState = UI::BoardState::Boot;
     std::unique_ptr<GUI> gui;
     Handler* handler = nullptr;
     SceneManager sceneManager;

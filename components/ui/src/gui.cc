@@ -165,6 +165,10 @@ namespace
         lv_label_set_text_static(label, "Waiting for connection...");
         break;
 
+      case BoardState::Restart:
+        lv_label_set_text_static(label, "Restarting...");
+        break;
+
       default:
         lv_label_set_text_fmt(label, "Unknown[%d]", (int)state);
         break;

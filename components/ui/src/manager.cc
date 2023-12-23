@@ -59,10 +59,15 @@ esp_err_t Manager::Initialize(Handler* handler)
   return ESP_OK;
 }
 
-void Manager::SetBoardState(BoardState newState)
+void Manager::SetBoardState(UI::BoardState newState)
 {
   boardState = newState;
   lv_msg_send(GUI_MESSAGE_NEW_BOARD_STATE, &boardState);
+}
+
+UI::BoardState Manager::BoardState()
+{
+  return boardState.load();
 }
 
 void Manager::ShowRequestPin()

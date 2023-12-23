@@ -46,4 +46,9 @@ menu "BoundBox"
     bool "Use shutdown instead of assert (board will be available after manual rst)"
     default false
 
+  config DEFAULT_RESTART_DELAY_MS
+    int "Default restart delay (ms)"
+    range 0 100000
+    default 2000
+
 endmenu
