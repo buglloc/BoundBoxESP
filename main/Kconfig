@@ -42,4 +42,8 @@ menu "BoundBox"
     int "Command buffer size"
     default 16384
 
+  config SHUTDOWN_ON_ASSERT
+    bool "Use shutdown instead of assert (board will be available after manual rst)"
+    default false
+
 endmenu
