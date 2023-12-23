@@ -8,6 +8,7 @@
 #include <esp_random.h>
 
 #include <blob/bytes.h>
+#include <blob/base64.h>
 #include <ssh/keys.h>
 
 #define CONFIG_HOST_KEY_TYPE NeedTooChooseHostKeyType()
@@ -47,24 +48,24 @@ Error Secrets::Initalize()
     return Error::ShitHappens;
   }
 
-  std::expected<Blob::Bytes, Preferences::Error> prefBytes = prefs.GetBytes(HOST_KEY_KEY);
-  if (prefBytes) {
-    SSH::Error sshErr = hostKey.ImportPem(std::move(prefBytes.value()));
+  std::expected<std::string, Preferences::Error> storedHostKey = prefs.GetString(HOST_KEY_KEY);
+  if (storedHostKey) {
+    SSH::Error sshErr = hostKey.ImportPem(std::move(storedHostKey.value()));
     if (sshErr != SSH::Error::None) {
       ESP_LOGE(TAG, "unable to import host key: %d", (int)sshErr);
       return Error::ShitHappens;
     }
 
-  } else if (prefBytes.error() != Preferences::Error::NotExist) {
-    ESP_LOGE(TAG, "read host key: %d", (int)prefBytes.error());
+  } else if (storedHostKey.error() != Preferences::Error::NotExist) {
+    ESP_LOGE(TAG, "read host key: %d", (int)storedHostKey.error());
     return Error::ShitHappens;
   }
 
-  prefBytes = prefs.GetBytes(SECRET_KEY_KEY);
-  if (prefBytes) {
-    secretKey = std::move(prefBytes.value());
-  } else if (prefBytes.error() != Preferences::Error::NotExist) {
-    ESP_LOGE(TAG, "read secret key: %d", (int)prefBytes.error());
+  std::expected<Blob::Bytes, Preferences::Error> storedSecretKey = prefs.GetBytes(SECRET_KEY_KEY);
+  if (storedSecretKey) {
+    secretKey = std::move(storedSecretKey.value());
+  } else if (storedSecretKey.error() != Preferences::Error::NotExist) {
+    ESP_LOGE(TAG, "read secret key: %d", (int)storedSecretKey.error());
     return Error::ShitHappens;
   }
 
@@ -74,15 +75,15 @@ Error Secrets::Initalize()
 Error Secrets::Store()
 {
   if (!hostKey.IsEmpty()) {
-    std::expected<Blob::Bytes, SSH::Error> hostPem = hostKey.ExportPem();
+    std::expected<std::string, SSH::Error> hostPem = hostKey.ExportPem();
     if (!hostPem) {
       ESP_LOGE(TAG,  "unable to export generated host key: %d", (int)hostPem.error());
       return Error::ShitHappens;
     }
 
-    Preferences::Error err = prefs.StoreBytes(HOST_KEY_KEY, std::move(hostPem.value()));
+    Preferences::Error err = prefs.StoreString(HOST_KEY_KEY, std::move(hostPem.value()));
     if (err != Preferences::Error::None) {
-      ESP_LOGE(TAG, "unable to store new secret key: %d", (int)err);
+      ESP_LOGE(TAG, "unable to store new host key: %d", (int)err);
       return Error::ShitHappens;
     }
 
@@ -102,6 +103,57 @@ Error Secrets::Store()
     ESP_LOGW(TAG, "ignore empty secret key storing");
   }
 
+  return Error::None;
+}
+
+Error Secrets::Erase()
+{
+  Preferences::Error err = prefs.Remove(HOST_KEY_KEY);
+  if (err != Preferences::Error::None) {
+    ESP_LOGE(TAG, "unable to remove host key: %d", (int)err);
+    return Error::ShitHappens;
+  }
+
+  err = prefs.Remove(SECRET_KEY_KEY);
+  if (err != Preferences::Error::None) {
+    ESP_LOGE(TAG, "unable to remove secret key: %d", (int)err);
+    return Error::ShitHappens;
+  }
+
+  return Error::None;
+}
+
+Error Secrets::FromJson(const JsonObjectConst& obj) noexcept
+{
+  if (!obj.containsKey("host_key") || !obj.containsKey("secret_key")) {
+    return Error::ShitHappens;
+  }
+
+  SSH::Error sshErr = hostKey.ImportPem(obj["host_key"].as<std::string>());
+  if (sshErr != SSH::Error::None) {
+    ESP_LOGE(TAG, "unable to parse host key: %d", (int)sshErr);
+    return Error::ShitHappens;
+  }
+
+  secretKey = Blob::Base64Decode(obj["secret_key"].as<std::string_view>());
+  if (secretKey.empty()) {
+    ESP_LOGE(TAG, "unable to secret key");
+    return Error::ShitHappens;
+  }
+
+  return Error::None;
+}
+
+Error Secrets::ToJson(JsonObject& out) const noexcept
+{
+  std::expected<std::string, SSH::Error> hostPem = hostKey.ExportPem();
+  if (!hostPem) {
+    ESP_LOGE(TAG,  "unable to export generated host key: %d", (int)hostPem.error());
+    return Error::ShitHappens;
+  }
+
+  out["host_key"] = hostPem.value();
+  out["secret_key"] = Blob::Base64Encode(secretKey);
   return Error::None;
 }
 

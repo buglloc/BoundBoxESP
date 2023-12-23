@@ -6,12 +6,13 @@
 
 #include "errors.h"
 #include "authenticator.h"
+#include "secrets.h"
 
 
 class Commands
 {
 public:
-  Error Initialize(Authenticator* auth);
+  Error Initialize(Authenticator* auth, Secrets* secrets);
   Error Dispatch(const SSH::UserInfo& userInfo, std::string_view cmdName, SSH::Stream& stream);
 
 private:
@@ -19,4 +20,5 @@ private:
 
 private:
   Authenticator* auth;
+  Secrets* secrets;
 };

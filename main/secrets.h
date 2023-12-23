@@ -1,9 +1,10 @@
 #pragma once
 
-#include <ArduinoJson.hpp>
 #include <preferences.h>
 #include <blob/bytes.h>
 #include <ssh/keys.h>
+
+#include <ArduinoJson.h>
 
 #include "errors.h"
 
@@ -15,9 +16,10 @@ public:
   Error Initalize();
 
   Error Store();
+  Error Erase();
 
-  // Error FromJson(const JsonObjectConst& obj) noexcept;
-  // Error ToJson(JsonObject& out) const noexcept;
+  Error FromJson(const JsonObjectConst& obj) noexcept;
+  Error ToJson(JsonObject& out) const noexcept;
 
   const SSH::PrivateKey& HostKey() const
   {

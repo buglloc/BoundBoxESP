@@ -196,11 +196,11 @@ namespace SSH
     return out;
   }
 
-  Error PrivateKey::ImportPem(const Blob::Bytes& pem)
+  Error PrivateKey::ImportPem(const std::string& pem)
   {
     DerBuffer* der = nullptr;
     int wcType;
-    int actualSize = wc_PemToDer(pem.data(), pem.size(), PRIVATEKEY_TYPE, &der, nullptr, nullptr, &wcType);
+    int actualSize = wc_PemToDer(reinterpret_cast<const uint8_t *>(pem.data()), pem.size(), PRIVATEKEY_TYPE, &der, nullptr, nullptr, &wcType);
     if (actualSize < 0) {
       ESP_LOGE(TAG, "wc_KeyPemToDer returns gen zero der");
       return Error::Internal;
@@ -230,7 +230,7 @@ namespace SSH
     return ImportDer(keyType, key);
   }
 
-  std::expected<Blob::Bytes, Error> PrivateKey::ExportPem() const
+  std::expected<std::string, Error> PrivateKey::ExportPem() const
   {
     int wcType = 0;
     switch (keyType) {
@@ -251,8 +251,8 @@ namespace SSH
       return std::unexpected<Error>{Error::Internal};
     }
 
-    Blob::Bytes out(pemSize, '\xff');
-    int actualPemSize = wc_DerToPemEx(keyDer.data(), keyDer.size(), out.data(), out.size(), nullptr, wcType);
+    std::string out(pemSize, '\xff');
+    int actualPemSize = wc_DerToPemEx(keyDer.data(), keyDer.size(), reinterpret_cast<uint8_t *>(out.data()), out.size(), nullptr, wcType);
     if (actualPemSize < 0) {
       ESP_LOGE(TAG, "wc_DerToPemEx returns gen zero pem");
       return std::unexpected<Error>{Error::Internal};

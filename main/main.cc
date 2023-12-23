@@ -86,7 +86,7 @@ extern "C" void app_main(void)
 
   ESP_LOGI(TAG, "initialize commands handler");
   Commands commandHandler;
-  SHUTDOWN_ON_ERROR(commandHandler.Initialize(&auth), TAG, "commands handler");
+  SHUTDOWN_ON_ERROR(commandHandler.Initialize(&auth, &secrets), TAG, "commands handler");
 
   ESP_LOGI(TAG, "initialize UI");
   ESP_SHUTDOWN_ON_ERROR(ui.Initialize(&auth), TAG, "initialize UI");

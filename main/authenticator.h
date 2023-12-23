@@ -15,7 +15,7 @@ public:
 
   void BuildCredential();
   bool HasCredential();
-  std::expected<Blob::Bytes, Error> MakeAssertion(const Blob::Bytes& salt, std::string& client);
+  std::expected<Blob::Bytes, Error> MakeAssertion(const Blob::Bytes& salt, const std::string& client);
 
   void OnPinEnter(uint8_t ch);
   void OnPinEntered(bool ok);

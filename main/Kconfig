@@ -51,4 +51,8 @@ menu "BoundBox"
     range 0 100000
     default 2000
 
+  config DUMPABLE_SECRETS
+    bool "Allow to read secrets by sysops"
+    default false
+
 endmenu

@@ -37,7 +37,7 @@ bool Authenticator::HasCredential()
   return !credBuilding;
 }
 
-std::expected<Blob::Bytes, Error> Authenticator::MakeAssertion(const Blob::Bytes& salt, std::string& client)
+std::expected<Blob::Bytes, Error> Authenticator::MakeAssertion(const Blob::Bytes& salt, const std::string& client)
 {
   if (credBuilding) {
     ESP_LOGE(TAG, "unable to get makeAssertion w/o final credential");

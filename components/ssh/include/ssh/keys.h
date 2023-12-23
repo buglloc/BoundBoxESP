@@ -27,8 +27,8 @@ namespace SSH
   class PrivateKey
   {
   public:
-    Error ImportPem(const Blob::Bytes& pem);
-    std::expected<Blob::Bytes, Error> ExportPem() const;
+    Error ImportPem(const std::string& pem);
+    std::expected<std::string, Error> ExportPem() const;
 
     Error ImportDer(KeyType keyType, Blob::Bytes& blob);
     std::expected<Blob::Bytes, Error> ExportDer() const;

@@ -11,7 +11,15 @@
 
 #include <hardware/manager.h>
 #include <ui/manager.h>
+#include <blob/bytes.h>
+#include <blob/base64.h>
+#include <blob/hash.h>
 
+
+#define CMD_ERR_CODE_INVALID_ASSERTATION_SALT 1001
+#define CMD_ERR_CODE_GET_SECRETS_FAILED 1002
+#define CMD_ERR_CODE_SET_SECRETS_INVALID_HOST_KEY 1003
+#define CMD_ERR_CODE_SET_SECRETS_INVALID_SECRET_KEY 1004
 
 namespace
 {
@@ -24,10 +32,112 @@ namespace
   struct Command
   {
     std::string Name;
-    bool Restricted;
+    bool UsedAllowed;
     std::string Help;
     HandleFn Handle;
   };
+
+  bool HandleMakeAssertion(Authenticator* auth, const SSH::UserInfo& userInfo, const JsonObjectConst& req, JsonObject& rsp)
+  {
+    std::string_view encodedSalt = req["salt"].as<std::string_view>();
+    if (encodedSalt.empty()) {
+      rsp["error_code"] = CMD_ERR_CODE_INVALID_ASSERTATION_SALT;
+      rsp["error_msg"] = "no salt provided";
+      return false;
+    }
+
+    Blob::Bytes salt = Blob::Base64Decode(encodedSalt);
+    if (salt.empty()) {
+      rsp["error_code"] = CMD_ERR_CODE_INVALID_ASSERTATION_SALT;
+      rsp["error_msg"] = "invalid salst";
+      return false;
+    }
+    Blob::Bytes key = Blob::Bytes(userInfo.KeyFingerprint.begin(), userInfo.KeyFingerprint.end());
+    std::expected<Blob::Bytes, Blob::Error> bindedSalt = Blob::HMACSum(
+      key, salt, Blob::HashType::SHA256
+    );
+    if (!bindedSalt) {
+      rsp["error_code"] = static_cast<uint8_t>(bindedSalt.error());
+      rsp["error_msg"] = "bind salst to user key failed";
+      return false;
+    }
+
+    std::expected<Blob::Bytes, Error> assert = auth->MakeAssertion(
+      bindedSalt.value(), userInfo.ClientIP
+    );
+    if (!assert) {
+      rsp["error_code"] = static_cast<uint8_t>(assert.error());
+      rsp["error_msg"] = "assertation failed";
+      return false;
+    }
+
+    rsp["assertion"] = Blob::Base64Encode(assert.value());
+    return true;
+  }
+
+  bool HandleGetStatus(const SSH::UserInfo& userInfo, const JsonObjectConst& req, JsonObject& rsp)
+  {
+    // TODO(buglloc): show something usefull
+    return true;
+  }
+
+#if CONFIG_DUMPABLE_SECRETS
+  bool HandleGetSecrets(Secrets* secrets, const SSH::UserInfo& userInfo, const JsonObjectConst& req, JsonObject& rsp)
+  {
+    JsonObject secretsObj = rsp.createNestedObject("secrets");
+    Error err = secrets->ToJson(secretsObj);
+    if (err != Error::None) {
+      rsp["error_code"] = CMD_ERR_CODE_GET_SECRETS_FAILED;
+      return false;
+    }
+
+    return true;
+  }
+#endif
+
+  bool HandleSetSecrets(Secrets* secrets, const SSH::UserInfo& userInfo, const JsonObjectConst& req, JsonObject& rsp)
+  {
+    JsonObjectConst secretsJson = req["secrets"].as<JsonObjectConst>();
+    if (!secretsJson.containsKey("host_key")) {
+      rsp["error_code"] = CMD_ERR_CODE_SET_SECRETS_INVALID_HOST_KEY;
+      rsp["error_msg"] = "empty host key";
+      return false;
+    }
+
+    if (!secretsJson.containsKey("secret_key")) {
+      rsp["error_code"] = CMD_ERR_CODE_SET_SECRETS_INVALID_SECRET_KEY;
+      rsp["error_msg"] = "empty host key";
+      return false;
+    }
+
+    Error err = secrets->FromJson(secretsJson);
+    if (err != Error::None) {
+      rsp["error_code"] = static_cast<uint8_t>(err);
+      rsp["error_msg"] = "unable to load secrets from json";
+      return false;
+    }
+
+    err = secrets->Store();
+    if (err != Error::None) {
+      rsp["error_code"] = static_cast<uint8_t>(err);
+      rsp["error_msg"] = "unable to store secrets";
+      return false;
+    }
+
+    return true;
+  }
+
+  bool HandleResetSecrets(Secrets* secrets, const SSH::UserInfo& userInfo, const JsonObjectConst& req, JsonObject& rsp)
+  {
+    Error err = secrets->Erase();
+    if (err != Error::None) {
+      rsp["error_code"] = static_cast<uint8_t>(err);
+      rsp["error_msg"] = "erase failed";
+      return false;
+    }
+
+    return true;
+  }
 
   bool HandleRestart(const SSH::UserInfo& userInfo, const JsonObjectConst& req, JsonObject& rsp)
   {
@@ -42,9 +152,10 @@ namespace
   }
 }
 
-Error Commands::Initialize(Authenticator* auth)
+Error Commands::Initialize(Authenticator* auth, Secrets* secrets)
 {
   this->auth = auth;
+  this->secrets = secrets;
   return Error::None;
 }
 
@@ -78,33 +189,61 @@ Error Commands::Dispatch(const SSH::UserInfo& userInfo, std::string_view cmdName
 bool Commands::Handle(const SSH::UserInfo& userInfo, std::string_view cmdName, const JsonObjectConst& req, JsonObject& rsp)
 {
   static const std::vector<Command> commands = {
-//     {"/make/assertation", true, "Generate assertion for req[\"salt\"] into rsp[\"assertion\"]", HandleMakeAssertion},
-//     {"/get/status", true, "Returns BoundBoxESP status", HandleGetStatus},
-//     {"/set/secrets", true, "Store runtime secrets from req[\"secrets\"]", HandleSetSecrets},
-//     {"/reset/secrets", true, "Reset secrets to it's default values", HandleResetSecrets},
-// #if DANGEROUS_SECRETS
-//     {"/get/secrets", true, "Returns runtime secrets in rsp[\"secrets\"]", HandleGetSecrets},
-// #endif
     {
-      .Name = "/restart",
-      .Restricted = true,
-      .Help = R"(Restart BoundBoxESP in req["delay_ms"])",
-      .Handle = HandleRestart
+      .Name = "/make/assertation",
+      .UsedAllowed = true,
+      .Help = "Generate assertion for req[\"salt\"] into rsp[\"assertion\"]",
+      .Handle = std::bind(HandleMakeAssertion, auth, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)
     },
     {
       .Name = "/help",
-      .Restricted = false,
+      .UsedAllowed = true,
       .Help = "Returns commands info",
       .Handle = nullptr
     },
+    {
+      .Name = "/get/status",
+      .UsedAllowed = false,
+      .Help = "Returns BoundBoxESP status",
+      .Handle = HandleGetStatus,
+    },
+    {
+      .Name = "/set/secrets",
+      .UsedAllowed = false,
+      .Help = "Store runtime secrets from req[\"secrets\"]",
+      .Handle = std::bind(HandleSetSecrets, secrets, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)
+    },
+    {
+      .Name = "/reset/secrets",
+      .UsedAllowed = false,
+      .Help = "Reset secrets to it's default values",
+      .Handle = std::bind(HandleResetSecrets, secrets, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)
+    },
+#if CONFIG_DUMPABLE_SECRETS
+    {
+      .Name = "/get/secrets",
+      .UsedAllowed = false,
+      .Help = "Returns runtime secrets in rsp[\"secrets\"]",
+      .Handle = std::bind(HandleGetSecrets, secrets, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)
+    },
+#endif
+    {
+      .Name = "/restart",
+      .UsedAllowed = false,
+      .Help = R"(Restart BoundBoxESP in req["delay_ms"])",
+      .Handle = HandleRestart
+    }
   };
 
   if (cmdName == "/help") {
     JsonArray jsonCommands = rsp.createNestedArray("commands");
     for (const auto& cmd : commands) {
+      if (!cmd.UsedAllowed && userInfo.Role != SSH::UserRole::SysOp) {
+        continue;
+      }
+
       JsonObject jsonCmd = jsonCommands.createNestedObject();
       jsonCmd["command"] = cmd.Name;
-      jsonCmd["restricted"] = cmd.Restricted;
       jsonCmd["description"] = cmd.Help;
     }
 
@@ -116,7 +255,7 @@ bool Commands::Handle(const SSH::UserInfo& userInfo, std::string_view cmdName, c
       continue;
     }
 
-    if (cmd.Restricted && userInfo.Role != SSH::UserRole::SysOp) {
+    if (!cmd.UsedAllowed && userInfo.Role != SSH::UserRole::SysOp) {
       rsp["error"] = "403: command can only be used by sysops, but you are just a random user";
 
       ESP_LOGW(TAG, "try to call privileged command '%s' from '%s' w/o permissions", cmdName.cbegin(), userInfo.ClientIP.c_str());
