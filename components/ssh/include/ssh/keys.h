@@ -7,12 +7,6 @@
 #include <blob/bytes.h>
 #include "common.h"
 
-#define RSAKEY_DEFAULT_SIZE 2048
-#define RSAKEY_DEFAULT_E    65537
-#define ECDSAKEY_PRIME256   256
-#define ECDSAKEY_PRIME384   384
-#define ECDSAKEY_PRIME521   521
-
 
 namespace SSH
 {
@@ -27,31 +21,23 @@ namespace SSH
   class PrivateKey
   {
   public:
-    Error ImportPem(const std::string& pem);
-    std::expected<std::string, Error> ExportPem() const;
+    Error Generate(KeyType keyType, uint32_t bits);
 
-    Error ImportDer(KeyType keyType, Blob::Bytes& blob);
-    std::expected<Blob::Bytes, Error> ExportDer() const;
+    Error Wrap(ssh_key keyPtr);
+    Error Load(const std::string& blob, const std::string& passphrase = std::string());
+    std::expected<std::string, Error> Marshal(const std::string& passphrase = std::string()) const;
 
-    const Blob::Bytes& Ref() const
-    {
-      return keyDer;
+    bool Empty() const {
+      return keyType == KeyType::None || keyPtr == nullptr;
     }
 
-    KeyType Type() const
-    {
-      return keyType;
-    }
+    ssh_key Get() const;
+    ssh_key Copy() const;
 
-    bool IsEmpty() const {
-      return keyType == KeyType::None || keyDer.empty();
-    }
+    ~PrivateKey();
 
   private:
-    KeyType keyType;
-    Blob::Bytes keyDer;
+    KeyType keyType = KeyType::None;
+    ssh_key keyPtr = nullptr;
   };
-
-  std::expected<std::string, Error> KeyFingerprint(const Blob::Bytes& pubKey);
-  std::expected<PrivateKey, Error> KeyGen(KeyType keyType, uint32_t bits);
 }

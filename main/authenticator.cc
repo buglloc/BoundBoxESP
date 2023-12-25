@@ -105,7 +105,7 @@ void Authenticator::OnPinVerified(bool ok)
 
 std::expected<Blob::Bytes, Error> Authenticator::makeAssertion(const Blob::Bytes& salt)
 {
-  std::expected<Blob::Bytes, Blob::Error> ret = Blob::HMACSum(credential, salt, Blob::HashType::SHA256);
+  std::expected<Blob::Bytes, Blob::Error> ret = Blob::HMAC::Sum(credential, salt, Blob::HashType::SHA256);
   if (!ret) {
     ESP_LOGE(TAG, "hamc fail: %d",(int)ret.error());
     return std::unexpected<Error>{Error::ShitHappens};

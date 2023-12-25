@@ -13,7 +13,7 @@ menu "BoundBox UI"
   config UI_SCENE_IDLE_TTL_MS
     int "Scene idle state TTL (ms)"
     range 500 50000
-    default 1000
+    default 5000
 
   config UI_UPDATE_INFO_PERIOD_MS
     int "How ofen update very dynamic info (e.g. core temp) in ms"

@@ -5,6 +5,6 @@ SRCS
   "src/hex.cc"
 INCLUDE_DIRS
   "include"
-REQUIRES
-  wolfssl
+PRIV_REQUIRES
+  mbedtls
 )

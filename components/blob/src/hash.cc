@@ -1,124 +1,111 @@
 #include "blob/hash.h"
-#include "blob/wolfssl_init.h"
 
 #include <expected>
 
 
-namespace Blob
+#include <mbedtls/md.h>
+
+
+using namespace Blob;
+
+HMAC::HMAC(const Bytes& key, HashType hashType)
 {
-  std::expected<Bytes, Error> HMACSum(const Bytes& key, const Bytes& msg, HashType type)
-  {
-    HMAC hmac(key, type);
-    Error err = hmac.Write(msg);
-    if (err != Error::None) {
-      return std::unexpected<Error>(err);
-    }
-
-    return hmac.Sum();
+  const mbedtls_md_info_t* mdInfo = nullptr;
+  switch (hashType) {
+  case HashType::SHA1:
+    mdInfo = mbedtls_md_info_from_type(MBEDTLS_MD_SHA1);
+    break;
+  case HashType::SHA256:
+    mdInfo = mbedtls_md_info_from_type(MBEDTLS_MD_SHA256);
+    break;
+  case HashType::SHA512:
+    mdInfo = mbedtls_md_info_from_type(MBEDTLS_MD_SHA512);
+    break;
+  default:
+    err = Error::Unsupported;
+    return;
   }
 
-  std::expected<Bytes, Error> HKDF(const Bytes& key, const Bytes& salt, const Bytes& info, size_t outLen, HashType hashType = HashType::SHA256)
-  {
-    int wcType;
-    switch (hashType)
-    {
-    case HashType::SHA1:
-      wcType = WC_SHA;
-      break;
-    case HashType::SHA256:
-      wcType = WC_SHA256;
-      break;
-    case HashType::SHA512:
-      wcType = WC_SHA512;
-      break;
-
-    default:
-      return std::unexpected<Error>{Error::Unsupported};
-    }
-
-    Bytes out(outLen, '\xff');
-    int ret = wc_HKDF(wcType, key.c_str(), key.size(), salt.c_str(), salt.size(), info.c_str(), info.size(), out.data(), outLen);
-    if (ret != 0) {
-      return std::unexpected<Error>{Error::ShitHappens};
-    }
-
-    return out;
+  if (mdInfo == nullptr) {
+    err = Error::Unsupported;
+    return;
   }
 
-  HMAC::HMAC(const Bytes& key, HashType hashType)
-  {
-    int wcType;
-    switch (hashType)
-    {
-    case HashType::SHA1:
-      wcType = WC_SHA;
-      break;
-    case HashType::SHA256:
-      wcType = WC_SHA256;
-      break;
-    case HashType::SHA512:
-      wcType = WC_SHA512;
-      break;
-
-    default:
-      err = Error::Unsupported;
-      return;
-    }
-
-    int ret = wc_HmacInit(&ctx, nullptr, INVALID_DEVID);
-    if (ret != 0) {
-      err = Error::InitFailed;
-      return;
-    }
-
-    ret = wc_HmacSetKey(&ctx, wcType, key.c_str(), key.size());
-    if (ret != 0) {
-      err = Error::InvalidKey;
-      wc_HmacFree(&ctx);
-      return;
-    }
+  ctx = static_cast<mbedtls_md_context_t*>(malloc(sizeof(mbedtls_md_context_t)));
+  if (ctx == nullptr) {
+    err = Error::ShitHappens;
+    return;
   }
 
-  Error HMAC::Write(const Bytes& data)
-  {
-    if (err != Error::None) {
-      return err;
-    }
-
-    int ret = wc_HmacUpdate(&ctx, data.c_str(), data.size());
-    if (ret != 0) {
-      return Error::ShitHappens;
-    }
-
-    return Error::None;
+  mbedtls_md_init(ctx);
+  int rc = mbedtls_md_setup(ctx, mdInfo, 1);
+  if (rc != 0) {
+    mbedtls_md_free(ctx);
+    free(ctx);
+    err = Error::InitFailed;
+    return;
   }
 
-  std::expected<Bytes, Error> HMAC::Sum()
-  {
-    if (err != Error::None) {
-      return std::unexpected<Error>{err};
-    }
+  rc = mbedtls_md_hmac_starts(ctx, key.c_str(), key.size());
+  if (rc != 0) {
+    mbedtls_md_free(ctx);
+    free(ctx);
+    err = Error::InitFailed;
+    return;
+  }
+}
 
-    size_t hashLen = wc_HmacSizeByType(ctx.macType);
-    if (hashLen <= 0) {
-      return std::unexpected<Error>{Error::ShitHappens};
-    }
-
-    Bytes out(hashLen, '\xff');
-    int ret = wc_HmacFinal(&ctx, out.data());
-    if (ret != 0) {
-      return std::unexpected<Error>{Error::ShitHappens};
-    }
-
-    return out;
+Error HMAC::Write(const Bytes& data)
+{
+  if (err != Error::None) {
+    return err;
   }
 
-  HMAC::~HMAC()
-  {
-    if (err != Error::None) {
-      return;
-    }
-
-    wc_HmacFree(&ctx);
+  if (mbedtls_md_hmac_update(ctx, data.c_str(), data.length())) {
+    return Error::ShitHappens;
   }
+
+  return Error::None;
+}
+
+std::expected<Bytes, Error> HMAC::Sum()
+{
+  if (err != Error::None) {
+    return std::unexpected<Error>{err};
+  }
+
+  size_t hashLen = static_cast<size_t>(mbedtls_md_get_size(mbedtls_md_info_from_ctx(ctx)));
+  if (hashLen == 0) {
+    return std::unexpected<Error>{Error::ShitHappens};
+  }
+
+  Bytes out(hashLen, '\xff');
+  int ret = mbedtls_md_hmac_finish(ctx, out.data());
+  if (ret != 0) {
+    return std::unexpected<Error>{Error::ShitHappens};
+  }
+
+  return out;
+}
+
+HMAC::~HMAC()
+{
+  if (ctx == nullptr) {
+    return;
+  }
+
+  mbedtls_md_free(ctx);
+  free(ctx);
+  ctx = nullptr;
+}
+
+std::expected<Bytes, Error> HMAC::Sum(const Bytes& key, const Bytes& msg, HashType type)
+{
+  HMAC hmac(key, type);
+  Error err = hmac.Write(msg);
+  if (err != Error::None) {
+    return std::unexpected<Error>(err);
+  }
+
+  return hmac.Sum();
 }

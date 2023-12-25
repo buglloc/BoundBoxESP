@@ -2,6 +2,9 @@
 
 #include <stdint.h>
 
+#include "libssh_esp.h"
+
+
 
 namespace SSH
 {
@@ -10,6 +13,7 @@ namespace SSH
     None = 0,
     MalformedKey,
     Unsupported,
+    InvalidState,
     Internal,
     ShitHappens
   };
@@ -17,9 +21,11 @@ namespace SSH
   enum class ListenError: uint8_t
   {
     None = 0,
-    Sock,
     Bind,
+    Listen,
     Accept,
+    Auth,
+    Internal,
     Unsupported,
     ShitHappens
   };

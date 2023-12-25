@@ -1,9 +1,7 @@
+#include <sdkconfig.h>
 #include "ssh/stream.h"
 
 #include <freertos/FreeRTOS.h>
-
-#include <wolfssh/ssh.h>
-#include <lwip/sockets.h>
 
 #include <esp_log.h>
 
@@ -17,9 +15,13 @@ namespace
 
 int Stream::read()
 {
-  char b;
-  if (readBytes(&b, 1) == 1) {
-    return b;
+  if (ssh_channel_is_eof(chan)) {
+    return -1;
+  }
+
+  char buf;
+  if (readBytes(&buf, 1) == 1) {
+    return buf;
   }
 
   return -1;
@@ -27,43 +29,20 @@ int Stream::read()
 
 size_t Stream::readBytes(char* buffer, size_t length)
 {
-  int rc;
-  int sshFd = wolfSSH_get_fd(ssh);
+  if (ssh_channel_is_eof(chan)) {
+    return 0;
+  }
+
+  int rc = ssh_channel_poll_timeout(chan, CONFIG_SSH_STREAM_POLL_TIMEOUT, 0);
+  if (rc <= 0) {
+    // err or timeout or no data
+    return 0;
+  }
+
   do {
-    int error = 0;
-    socklen_t len = sizeof(error);
-    rc = getsockopt(sshFd, SOL_SOCKET, SO_ERROR, &error, &len);
-    if (rc != 0) {
-        // if we can't even call getsockopt, give up
-        ESP_LOGE(TAG, "unable to query socket fd: %d", rc);
-        return 0;
-    }
-
-    if (error != 0) {
-        // socket has a non zero error status
-        ESP_LOGE(TAG, "getsockopt returned error: %d", rc);
-        return 0;
-    }
-
-    rc = wolfSSH_stream_read(ssh, (uint8_t *)buffer, length);
-    if (rc == WS_EOF) {
-      return 0;
-    }
-
-    if (rc < 0) {
-      rc = wolfSSH_get_error(ssh);
-      if (rc == WS_WANT_READ || rc == WS_WANT_WRITE) {
-        // no data, just wait
-        rc = 0;
-        taskYIELD();
-        continue;
-      }
-
-      ESP_LOGE(TAG, "stream read error: %d", rc);
-    }
-  } while (nonBlock && rc == 0);
-
-  return static_cast<size_t>(rc);
+    rc = ssh_channel_read_timeout(chan, buffer, length, 0, CONFIG_SSH_STREAM_READ_TIMEOUT);
+  } while (rc == SSH_AGAIN);
+  return rc < 0 ? 0 : rc;
 }
 
 size_t Stream::write(uint8_t b)
@@ -78,6 +57,10 @@ size_t Stream::write(uint8_t b)
 
 size_t Stream::write(const uint8_t *buffer, size_t length)
 {
+  if (!ssh_channel_is_open(chan)) {
+    return 0;
+  }
+
   for (size_t i = 0; i < length; ++i) {
     if (write(buffer[i]) != 1) {
       return i;
@@ -93,7 +76,11 @@ bool Stream::flush()
     return true;
   }
 
-  int rc = wolfSSH_stream_send(ssh, writeBuf, writeSize);
+  if (!ssh_channel_is_open(chan)) {
+    return false;
+  }
+
+  int rc = ssh_channel_write(chan, writeBuf, writeSize);
   if (rc > 0) {
     writeSize = 0;
     return true;

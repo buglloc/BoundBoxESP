@@ -5,7 +5,10 @@
 #include <expected>
 
 #include <blob/bytes.h>
+
 #include "common.h"
+#include "keyring.h"
+
 
 namespace SSH
 {
@@ -31,11 +34,11 @@ namespace SSH
   public:
     AuthProvider() = default;
     Error Initialize(const ServerConfig& cfg);
-    bool Authenticate(const std::string_view user, const Blob::Bytes& key) const;
+    bool Authenticate(const std::string_view user, const ssh_key key) const;
     UserRole Role(const std::string_view user) const;
 
   private:
     std::string rootUser;
-    std::vector<std::string> rootFingerprints;
+    Keyring rootKeyring;
   };
 }
