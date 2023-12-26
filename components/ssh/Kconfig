@@ -18,6 +18,14 @@ menu "SSH"
     int "Stream buf size"
     default 4096
 
+  config SSH_STREAM_POLL_TIMEOUT
+    int "Stream buf size"
+    default 100
+
+  config SSH_STREAM_READ_TIMEOUT
+    int "Stream buf size"
+    default 5000
+
   config SSH_CHANNEL_INITIAL_WINDOW
     int "Channel initial window"
     default 1024
@@ -25,5 +33,9 @@ menu "SSH"
   config SSH_CHANNEL_MAX_PACKET_SIZE
     int "Channel max packet size"
     default 32768
+
+  config SSH_AUTH_RETRIES
+    int "Auth retries"
+    default 10
 
 endmenu

@@ -25,6 +25,12 @@
   #define CONFIG_HOST_KEY_TYPE SSH::KeyType::ECDSA
   #define CONFIG_HOST_KEY_BITS CONFIG_HOSTKEY_ECDSA_BITS
 #endif
+#ifdef CONFIG_HOSTKEY_TYPE_ED25519
+  #undef CONFIG_HOST_KEY_TYPE
+  #undef CONFIG_HOST_KEY_BITS
+  #define CONFIG_HOST_KEY_TYPE SSH::KeyType::ED25519
+  #define CONFIG_HOST_KEY_BITS 0
+#endif
 
 namespace {
   static const char *TAG = "main::secrets";
@@ -50,7 +56,7 @@ Error Secrets::Initalize()
 
   std::expected<std::string, Preferences::Error> storedHostKey = prefs.GetString(HOST_KEY_KEY);
   if (storedHostKey) {
-    SSH::Error sshErr = hostKey.ImportPem(std::move(storedHostKey.value()));
+    SSH::Error sshErr = hostKey.Load(std::move(storedHostKey.value()));
     if (sshErr != SSH::Error::None) {
       ESP_LOGE(TAG, "unable to import host key: %d", (int)sshErr);
       return Error::ShitHappens;
@@ -74,8 +80,8 @@ Error Secrets::Initalize()
 
 Error Secrets::Store()
 {
-  if (!hostKey.IsEmpty()) {
-    std::expected<std::string, SSH::Error> hostPem = hostKey.ExportPem();
+  if (!hostKey.Empty()) {
+    std::expected<std::string, SSH::Error> hostPem = hostKey.Marshal();
     if (!hostPem) {
       ESP_LOGE(TAG,  "unable to export generated host key: %d", (int)hostPem.error());
       return Error::ShitHappens;
@@ -129,24 +135,27 @@ Error Secrets::FromJson(const JsonObjectConst& obj) noexcept
     return Error::ShitHappens;
   }
 
-  SSH::Error sshErr = hostKey.ImportPem(obj["host_key"].as<std::string>());
+  SSH::PrivateKey newHostKey;
+  SSH::Error sshErr = newHostKey.Load(obj["host_key"].as<std::string>());
   if (sshErr != SSH::Error::None) {
     ESP_LOGE(TAG, "unable to parse host key: %d", (int)sshErr);
     return Error::ShitHappens;
   }
 
-  secretKey = Blob::Base64Decode(obj["secret_key"].as<std::string_view>());
-  if (secretKey.empty()) {
+  Blob::Bytes newSecretKey = Blob::Base64Decode(obj["secret_key"].as<std::string_view>());
+  if (newSecretKey.empty()) {
     ESP_LOGE(TAG, "unable to secret key");
     return Error::ShitHappens;
   }
 
+  this->hostKey = std::move(newHostKey);
+  this->secretKey = std::move(newSecretKey);
   return Error::None;
 }
 
 Error Secrets::ToJson(JsonObject& out) const noexcept
 {
-  std::expected<std::string, SSH::Error> hostPem = hostKey.ExportPem();
+  std::expected<std::string, SSH::Error> hostPem = hostKey.Marshal();
   if (!hostPem) {
     ESP_LOGE(TAG,  "unable to export generated host key: %d", (int)hostPem.error());
     return Error::ShitHappens;
@@ -160,16 +169,13 @@ Error Secrets::ToJson(JsonObject& out) const noexcept
 Error Secrets::migrate()
 {
   bool restore = false;
-  if (hostKey.IsEmpty()) {
+  if (hostKey.Empty()) {
     ESP_LOGW(TAG, "no %s found: generate new one", HOST_KEY_KEY);
-    std::expected<SSH::PrivateKey, SSH::Error> newKey = SSH::KeyGen(CONFIG_HOST_KEY_TYPE, CONFIG_HOST_KEY_BITS);
-    if (!newKey) {
-      ESP_LOGE(TAG,  "unable to generate new host key: %d", (int)newKey.error());
+    SSH::Error err = hostKey.Generate(CONFIG_HOST_KEY_TYPE, CONFIG_HOST_KEY_BITS);
+    if (err != SSH::Error::None) {
+      ESP_LOGE(TAG,  "unable to generate new host key: %d", (int)err);
       return Error::ShitHappens;
     }
-
-
-    hostKey = std::move(newKey.value());
 
     ESP_LOGI(TAG, "new host key generated");
     restore = true;

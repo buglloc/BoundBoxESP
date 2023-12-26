@@ -1,6 +1,3 @@
-[submodule "components/wolfssl"]
-	path = components/wolfssl
-	url = https://github.com/buglloc/wolfssl-idf.git
-[submodule "components/wolfssh"]
-	path = components/wolfssh
-	url = https://github.com/buglloc/wolfssh-idf.git
+[submodule "components/LibSSH-ESP32"]
+	path = components/LibSSH-ESP32
+	url = https://github.com/buglloc/LibSSH-ESP32.git

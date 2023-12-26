@@ -53,7 +53,7 @@ namespace
       return false;
     }
     Blob::Bytes key = Blob::Bytes(userInfo.KeyFingerprint.begin(), userInfo.KeyFingerprint.end());
-    std::expected<Blob::Bytes, Blob::Error> bindedSalt = Blob::HMACSum(
+    std::expected<Blob::Bytes, Blob::Error> bindedSalt = Blob::HMAC::Sum(
       key, salt, Blob::HashType::SHA256
     );
     if (!bindedSalt) {

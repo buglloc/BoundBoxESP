@@ -2,11 +2,13 @@
 
 #include <expected>
 
-#include "wolfssl_init.h"
-#include <wolfssl/wolfcrypt/hmac.h>
 
 #include "bytes.h"
 #include "errors.h"
+
+// fwd
+struct mbedtls_md_context_t;
+
 
 namespace Blob
 {
@@ -18,26 +20,19 @@ namespace Blob
     SHA512,
   };
 
-  struct HKDFConfig
-  {
-    const Blob::Bytes& Key;
-    const Blob::Bytes& Salt;
-    Blob::HashType HashType = HashType::SHA256;
-  };
-
-  std::expected<Bytes, Error> HMACSum(const Blob::Bytes& key, const Blob::Bytes& msg, HashType hashType = HashType::SHA256);
-  std::expected<Bytes, Error> HKDF(const Blob::Bytes& info, size_t outLen, const HKDFConfig& cfg);
-
   class HMAC
   {
   public:
     explicit HMAC(const Blob::Bytes& key, HashType type = HashType::SHA256);
     Error Write(const Blob::Bytes& data);
     std::expected<Blob::Bytes, Error> Sum();
-
     ~HMAC();
+
+  public:
+    static std::expected<Bytes, Error> Sum(const Blob::Bytes& key, const Blob::Bytes& msg, HashType hashType = HashType::SHA256);
+
   private:
     Error err = Error::None;
-    Hmac ctx;
+    mbedtls_md_context_t* ctx = nullptr;
   };
 }

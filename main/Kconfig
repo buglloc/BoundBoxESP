@@ -17,6 +17,9 @@ menu "BoundBox"
 
     config HOSTKEY_TYPE_ECDSA
       bool "ECDSA"
+    
+    config HOSTKEY_TYPE_ED25519
+      bool "ED25519"
 
   endchoice
 

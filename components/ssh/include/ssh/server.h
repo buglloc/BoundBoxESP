@@ -11,9 +11,6 @@
 #include "auth_provider.h"
 
 
-struct WOLFSSH_CTX;
-struct WOLFSSH;
-
 namespace SSH
 {
   struct ServerConfig
@@ -30,14 +27,11 @@ namespace SSH
     Error Initialize(const ServerConfig& cfg);
     ListenError Listen(const HandlerCallback& handler);
 
-    ~Server();
   private:
-    Error SetupWolfSSH(const ServerConfig& cfg);
-    std::expected<int, ListenError> HandleConnection(WOLFSSH* ssh, const UserInfo& userInfo, const HandlerCallback& handler);
-    std::expected<int, ListenError> DoExec(WOLFSSH* ssh, const UserInfo& userInfo, const HandlerCallback& handler);
+    std::expected<UserInfo, ListenError> authenticate(ssh_session session);
 
   private:
-    WOLFSSH_CTX* wolfCtx = nullptr;
+    PrivateKey hostKey;
     AuthProvider auth;
   };
 }

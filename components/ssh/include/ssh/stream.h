@@ -8,17 +8,13 @@
 #include "common.h"
 
 
-// fwd
-struct WOLFSSH;
-
 namespace SSH
 {
   class Stream
   {
   public:
-    Stream(WOLFSSH* ssh, bool nonBlock = true)
-      : ssh(ssh)
-      , nonBlock(nonBlock)
+    Stream(ssh_channel chan)
+      : chan(chan)
       , writeSize(0)
     {};
 
@@ -42,8 +38,7 @@ namespace SSH
     size_t write(const uint8_t *buffer, size_t length);
 
   private:
-    WOLFSSH* ssh = nullptr;
-    bool nonBlock;
+    ssh_channel chan;
     size_t writeSize;
     uint8_t writeBuf[CONFIG_SSH_STREAM_BUFFER_SIZE];
   };
