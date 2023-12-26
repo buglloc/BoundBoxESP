@@ -1,4 +1,6 @@
 # Name,   Type, SubType, Offset,  Size, Flags
-nvs,      data, nvs,     0x9000,  24K,
-phy_init, data, phy,     0xf000,  4K,
-factory,  app,  factory, 0x10000, 0x640000,
+nvs,      data, nvs,     0xd000,  24K,
+phy_init, data, phy,     0x13000,  4K,
+factory,  app,  factory, 0x20000,  4M,
+ota_0,    app,  ota_0,          ,  4M,
+nvs_key,  data, nvs_keys,       ,  4K,
