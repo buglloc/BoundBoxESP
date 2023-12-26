@@ -10,14 +10,14 @@ menu "BoundBox"
 
   choice HOSTKEY_TYPE
     prompt "Default host key type"
-    default HOSTKEY_TYPE_ECDSA
+    default HOSTKEY_TYPE_ED25519
 
     config HOSTKEY_TYPE_RSA
-      bool "RSA"
+      bool "RSA (may be broken, not tested)"
 
     config HOSTKEY_TYPE_ECDSA
-      bool "ECDSA"
-    
+      bool "ECDSA (may be broken, not tested)"
+
     config HOSTKEY_TYPE_ED25519
       bool "ED25519"
 
