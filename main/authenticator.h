@@ -15,14 +15,14 @@ public:
 
   void BuildCredential();
   bool HasCredential();
-  std::expected<Blob::Bytes, Error> MakeAssertion(const Blob::Bytes& salt, const std::string& client);
+  std::expected<Blob::Bytes, Error> MakeHmacSecret(const Blob::Bytes& salt, const std::string& client);
 
   void OnPinEnter(uint8_t ch);
   void OnPinEntered(bool ok);
   void OnPinVerified(bool ok);
 
 private:
-  std::expected<Blob::Bytes, Error> makeAssertion(const Blob::Bytes& salt);
+  std::expected<Blob::Bytes, Error> makeHmacSecret(const Blob::Bytes& salt);
 
 private:
   Blob::Bytes credential;
