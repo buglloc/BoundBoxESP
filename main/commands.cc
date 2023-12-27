@@ -17,9 +17,9 @@
 
 
 #define CMD_ERR_CODE_HMAC_SECRET_INVALID_SALT 1001
-#define CMD_ERR_CODE_GET_SECRETS_FAILED 1002
-#define CMD_ERR_CODE_SET_SECRETS_INVALID_HOST_KEY 1003
-#define CMD_ERR_CODE_SET_SECRETS_INVALID_SECRET_KEY 1004
+#define CMD_ERR_CODE_SECRETS_GET_FAILED 1002
+#define CMD_ERR_CODE_SECRETS_STORE_INVALID_HOST_KEY 1003
+#define CMD_ERR_CODE_SECRETS_STORE_INVALID_SECRET_KEY 1004
 
 #define STR(X) #X
 #define ASSTR(X) STR(X)
@@ -86,19 +86,19 @@ namespace
     return true;
   }
 
-  bool HandleGetStatus(const SSH::UserInfo& userInfo, const JsonObjectConst& req, JsonObject& rsp)
+  bool HandleStatus(const SSH::UserInfo& userInfo, const JsonObjectConst& req, JsonObject& rsp)
   {
     // TODO(buglloc): show something usefull
     return true;
   }
 
 #if CONFIG_DUMPABLE_SECRETS
-  bool HandleGetSecrets(Secrets* secrets, const SSH::UserInfo& userInfo, const JsonObjectConst& req, JsonObject& rsp)
+  bool HandleSecretsGet(Secrets* secrets, const SSH::UserInfo& userInfo, const JsonObjectConst& req, JsonObject& rsp)
   {
     JsonObject secretsObj = rsp.createNestedObject("secrets");
     Error err = secrets->ToJson(secretsObj);
     if (err != Error::None) {
-      rsp["error_code"] = CMD_ERR_CODE_GET_SECRETS_FAILED;
+      rsp["error_code"] = CMD_ERR_CODE_SECRETS_GET_FAILED;
       return false;
     }
 
@@ -106,17 +106,17 @@ namespace
   }
 #endif
 
-  bool HandleSetSecrets(Secrets* secrets, const SSH::UserInfo& userInfo, const JsonObjectConst& req, JsonObject& rsp)
+  bool HandleSecretsStore(Secrets* secrets, const SSH::UserInfo& userInfo, const JsonObjectConst& req, JsonObject& rsp)
   {
     JsonObjectConst secretsJson = req["secrets"].as<JsonObjectConst>();
     if (!secretsJson.containsKey("host_key")) {
-      rsp["error_code"] = CMD_ERR_CODE_SET_SECRETS_INVALID_HOST_KEY;
+      rsp["error_code"] = CMD_ERR_CODE_SECRETS_STORE_INVALID_HOST_KEY;
       rsp["error_msg"] = "empty host key";
       return false;
     }
 
     if (!secretsJson.containsKey("secret_key")) {
-      rsp["error_code"] = CMD_ERR_CODE_SET_SECRETS_INVALID_SECRET_KEY;
+      rsp["error_code"] = CMD_ERR_CODE_SECRETS_STORE_INVALID_SECRET_KEY;
       rsp["error_msg"] = "empty host key";
       return false;
     }
@@ -138,7 +138,7 @@ namespace
     return true;
   }
 
-  bool HandleResetSecrets(Secrets* secrets, const SSH::UserInfo& userInfo, const JsonObjectConst& req, JsonObject& rsp)
+  bool HandleSecretsReset(Secrets* secrets, const SSH::UserInfo& userInfo, const JsonObjectConst& req, JsonObject& rsp)
   {
     Error err = secrets->Erase();
     if (err != Error::None) {
@@ -213,31 +213,31 @@ bool Commands::Handle(const SSH::UserInfo& userInfo, std::string_view cmdName, c
       .Handle = nullptr
     },
     {
-      .Name = "/get/status",
+      .Name = "/status",
       .UsedAllowed = false,
       .Help = "Returns BoundBoxESP status",
-      .Handle = HandleGetStatus,
+      .Handle = HandleStatus,
     },
+    #if CONFIG_DUMPABLE_SECRETS
     {
-      .Name = "/set/secrets",
-      .UsedAllowed = false,
-      .Help = "Store runtime secrets from req[\"secrets\"]",
-      .Handle = std::bind(HandleSetSecrets, secrets, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)
-    },
-    {
-      .Name = "/reset/secrets",
-      .UsedAllowed = false,
-      .Help = "Reset secrets to it's default values",
-      .Handle = std::bind(HandleResetSecrets, secrets, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)
-    },
-#if CONFIG_DUMPABLE_SECRETS
-    {
-      .Name = "/get/secrets",
+      .Name = "/secrets/get",
       .UsedAllowed = false,
       .Help = "Returns runtime secrets in rsp[\"secrets\"]",
-      .Handle = std::bind(HandleGetSecrets, secrets, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)
+      .Handle = std::bind(HandleSecretsGet, secrets, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)
     },
-#endif
+    #endif
+    {
+      .Name = "/secrets/store",
+      .UsedAllowed = false,
+      .Help = "Store runtime secrets from req[\"secrets\"]",
+      .Handle = std::bind(HandleSecretsStore, secrets, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)
+    },
+    {
+      .Name = "/secrets/reset",
+      .UsedAllowed = false,
+      .Help = "Reset secrets to it's default values",
+      .Handle = std::bind(HandleSecretsReset, secrets, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)
+    },
     {
       .Name = "/restart",
       .UsedAllowed = false,
