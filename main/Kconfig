@@ -58,4 +58,9 @@ menu "BoundBox"
     bool "Allow to read secrets by sysops"
     default false
 
+  config HMAC_MIN_SALT_LEN
+    int "Minimum salt len for HMAC secrets"
+    range 1 256
+    default 16
+
 endmenu

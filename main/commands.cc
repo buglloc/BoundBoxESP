@@ -16,10 +16,14 @@
 #include <blob/hash.h>
 
 
-#define CMD_ERR_CODE_INVALID_ASSERTATION_SALT 1001
+#define CMD_ERR_CODE_HMAC_SECRET_INVALID_SALT 1001
 #define CMD_ERR_CODE_GET_SECRETS_FAILED 1002
 #define CMD_ERR_CODE_SET_SECRETS_INVALID_HOST_KEY 1003
 #define CMD_ERR_CODE_SET_SECRETS_INVALID_SECRET_KEY 1004
+
+#define STR(X) #X
+#define ASSTR(X) STR(X)
+
 
 namespace
 {
@@ -37,21 +41,28 @@ namespace
     HandleFn Handle;
   };
 
-  bool HandleMakeAssertion(Authenticator* auth, const SSH::UserInfo& userInfo, const JsonObjectConst& req, JsonObject& rsp)
+  bool HandleHmacSecret(Authenticator* auth, const SSH::UserInfo& userInfo, const JsonObjectConst& req, JsonObject& rsp)
   {
     std::string_view encodedSalt = req["salt"].as<std::string_view>();
     if (encodedSalt.empty()) {
-      rsp["error_code"] = CMD_ERR_CODE_INVALID_ASSERTATION_SALT;
+      rsp["error_code"] = CMD_ERR_CODE_HMAC_SECRET_INVALID_SALT;
       rsp["error_msg"] = "no salt provided";
       return false;
     }
 
     Blob::Bytes salt = Blob::Base64Decode(encodedSalt);
     if (salt.empty()) {
-      rsp["error_code"] = CMD_ERR_CODE_INVALID_ASSERTATION_SALT;
-      rsp["error_msg"] = "invalid salst";
+      rsp["error_code"] = CMD_ERR_CODE_HMAC_SECRET_INVALID_SALT;
+      rsp["error_msg"] = "empty salt";
       return false;
     }
+
+    if (salt.size() < CONFIG_HMAC_MIN_SALT_LEN) {
+      rsp["error_code"] = CMD_ERR_CODE_HMAC_SECRET_INVALID_SALT;
+      rsp["error_msg"] = "salt is too short: required at least " ASSTR(CONFIG_HMAC_MIN_SALT_LEN) " bytes";
+      return false;
+    }
+
     Blob::Bytes key = Blob::Bytes(userInfo.KeyFingerprint.begin(), userInfo.KeyFingerprint.end());
     std::expected<Blob::Bytes, Blob::Error> bindedSalt = Blob::HMAC::Sum(
       key, salt, Blob::HashType::SHA256
@@ -71,7 +82,7 @@ namespace
       return false;
     }
 
-    rsp["assertion"] = Blob::Base64Encode(assert.value());
+    rsp["secret"] = Blob::Base64Encode(assert.value());
     return true;
   }
 
@@ -190,10 +201,10 @@ bool Commands::Handle(const SSH::UserInfo& userInfo, std::string_view cmdName, c
 {
   static const std::vector<Command> commands = {
     {
-      .Name = "/make/assertation",
+      .Name = "/hmac/secret",
       .UsedAllowed = true,
-      .Help = "Generate assertion for req[\"salt\"] into rsp[\"assertion\"]",
-      .Handle = std::bind(HandleMakeAssertion, auth, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)
+      .Help = "Generate HMAC secret for req[\"salt\"] into rsp[\"secret\"]",
+      .Handle = std::bind(HandleHmacSecret, auth, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)
     },
     {
       .Name = "/help",
