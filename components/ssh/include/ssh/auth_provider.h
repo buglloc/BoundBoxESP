@@ -21,6 +21,7 @@ namespace SSH
   struct UserInfo
   {
     std::string Name;
+    Blob::Bytes Key;
     std::string KeyFingerprint;
     std::string ClientIP;
     UserRole Role;

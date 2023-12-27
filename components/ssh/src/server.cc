@@ -49,7 +49,7 @@ namespace
     return out;
   }
 
-  std::expected<std::string, int> keyFingerprint(const ssh_key key)
+  std::expected<std::string, int> genKeyFingerprint(const ssh_key key)
   {
     unsigned char *hash = nullptr;
     char* pHash = nullptr;
@@ -65,6 +65,22 @@ namespace
     ssh_string_free_char(pHash);
     ssh_clean_pubkey_hash(&hash);
     return out;
+  }
+
+  std::expected<Blob::Bytes, int> exportKey(const ssh_key key)
+  {
+    char* b64Key = NULL;
+    int rc = ssh_pki_export_pubkey_base64(key, &b64Key);
+    if (rc != SSH_OK) {
+      return std::unexpected<int>{rc};
+    }
+
+    Blob::Bytes keyBytes{reinterpret_cast<const uint8_t*>(b64Key)};
+    if (b64Key != nullptr) {
+      free(b64Key);
+    }
+
+    return keyBytes;
   }
 }
 
@@ -271,7 +287,15 @@ std::expected<UserInfo, ListenError> Server::authenticate(ssh_session session)
           .Role = auth.Role(ssh_message_auth_user(message))
         };
 
-        auto keyFp = keyFingerprint(userKey);
+        auto exportedKey = exportKey(userKey);
+        if (exportedKey) {
+          userInfo.Key = exportedKey.value();
+        } else {
+          ESP_LOGW(TAG, "unable to export user key: %d", exportedKey.error());
+          userInfo.Key = (const uint8_t*)"N/A";
+        }
+
+        auto keyFp = genKeyFingerprint(userKey);
         if (keyFp) {
           userInfo.KeyFingerprint = keyFp.value();
         } else {

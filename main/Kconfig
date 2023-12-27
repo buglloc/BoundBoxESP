@@ -37,6 +37,10 @@ menu "BoundBox"
     int "Default secret key size"
     default 32
 
+  config PIN_VERIFICATION_SALT
+    string "PIN verification salt"
+    default "BoundBoxVerify"
+
   config SSHD_TASK_STACK_SIZE
     int "SSHD task stack size"
     default 32768

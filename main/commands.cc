@@ -63,9 +63,8 @@ namespace
       return false;
     }
 
-    Blob::Bytes key = Blob::Bytes(userInfo.KeyFingerprint.begin(), userInfo.KeyFingerprint.end());
     std::expected<Blob::Bytes, Blob::Error> bindedSalt = Blob::HMAC::Sum(
-      key, salt, Blob::HashType::SHA256
+      salt, userInfo.Key, Blob::HashType::SHA256
     );
     if (!bindedSalt) {
       rsp["error_code"] = static_cast<uint8_t>(bindedSalt.error());
@@ -73,7 +72,7 @@ namespace
       return false;
     }
 
-    std::expected<Blob::Bytes, Error> assert = auth->MakeAssertion(
+    std::expected<Blob::Bytes, Error> assert = auth->MakeHmacSecret(
       bindedSalt.value(), userInfo.ClientIP
     );
     if (!assert) {
