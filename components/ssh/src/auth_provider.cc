@@ -19,12 +19,14 @@ namespace
   {
     size_t typePos = in.find(' ');
     if (typePos == std::string::npos) {
+      ESP_LOGE(TAG, "unable to parse authorized key: no type pos");
       return std::unexpected<Error>{Error::MalformedKey};
     }
 
-    std::string_view keyTypeName = in.substr(0, typePos);
-    ssh_keytypes_e keyType = ssh_key_type_from_name(std::string(keyTypeName).c_str());
+    std::string keyTypeName = in.substr(0, typePos);
+    ssh_keytypes_e keyType = ssh_key_type_from_name(keyTypeName.c_str());
     if (keyType == SSH_KEYTYPE_UNKNOWN) {
+      ESP_LOGE(TAG, "unable to parse authorized key: unsupported key type %s", keyTypeName.c_str());
       return std::unexpected<Error>{Error::Unsupported};
     }
 
@@ -34,10 +36,11 @@ namespace
       keyPos = in.length();
     }
 
-    std::string_view rawKeyBody = in.substr(typePos, keyPos - typePos);
+    std::string rawKeyBody = in.substr(typePos, keyPos - typePos);
     ssh_key keyPtr;
-    int rc = ssh_pki_import_pubkey_base64(std::string(rawKeyBody).c_str(), keyType, &keyPtr);
+    int rc = ssh_pki_import_pubkey_base64(rawKeyBody.c_str(), keyType, &keyPtr);
     if (rc != SSH_OK) {
+      ESP_LOGE(TAG, "pki import failed for key type: %s", keyTypeName.c_str());
       return std::unexpected<Error>{Error::Unsupported};
     }
 

@@ -234,8 +234,8 @@ std::expected<UserInfo, ListenError> Server::authenticate(ssh_session session)
   for (int patience = 0; patience < CONFIG_SSH_AUTH_RETRIES; ++patience) {
     message = ssh_message_get(session);
     if (!message) {
-      ESP_LOGE(TAG, "no auth message");
-      return std::unexpected<ListenError>{ListenError::ShitHappens};
+      ESP_LOGW(TAG, "no more auth");
+      return std::unexpected<ListenError>{ListenError::Auth};
     }
 
     ESP_LOGD(TAG, "[%d] trying %d:%d...", patience, ssh_message_type(message), ssh_message_subtype(message));
