@@ -3,8 +3,6 @@
 
 #include <algorithm>
 
-#include <esp_log.h>
-
 
 using namespace SSH;
 
@@ -31,11 +29,9 @@ bool Keyring::Empty() const
 bool Keyring::Contains(const ssh_key targetKey) const
 {
   for (const auto &key : keys) {
-    if (ssh_key_cmp(targetKey, key, SSH_KEY_CMP_PUBLIC) != 0) {
-      continue;
+    if (ssh_key_cmp(targetKey, key, SSH_KEY_CMP_PUBLIC) == 0) {
+      return true;
     }
-
-    return true;
   }
 
   return false;
