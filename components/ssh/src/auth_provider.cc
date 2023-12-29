@@ -52,6 +52,10 @@ Error AuthProvider::Initialize(const ServerConfig& cfg)
 {
   rootUser = cfg.RootUser;
   for (const auto& key : cfg.RootKeys) {
+    if (key.empty()) {
+      continue;
+    }
+
     std::expected<ssh_key, Error> parsedKey = ParseAuthorizedKey(key);
     if (!parsedKey) {
       ESP_LOGW(TAG, "skip invalid key (%d): %s", (int)parsedKey.error(), key.c_str());
