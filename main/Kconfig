@@ -2,11 +2,11 @@ menu "BoundBox"
 
   config ROOT_USERNAME
     string "Root username"
-    default "buglloc"
+    default "root"
 
   config ROOT_KEY
     string "Root user authorized key"
-    default "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEa0shQISF2GdAgQrFyY6XsvdbVK33cdbYTVR4pldLUC4548mMDWiqXm4V67yFtcxbHaCtKbzYRXXaCraZkTgbU="
+    default ""
 
   choice HOSTKEY_TYPE
     prompt "Default host key type"
