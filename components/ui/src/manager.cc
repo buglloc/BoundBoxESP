@@ -54,7 +54,7 @@ esp_err_t Manager::Initialize(Handler* handler)
     this->handler
   );
 
-  ShowIdle();
+  ShowBoot();
   hw.Board().Display().SetBrightness(CONFIG_UI_DEFAULT_BRIGHTNESS);
   return ESP_OK;
 }
@@ -68,6 +68,11 @@ void Manager::SetBoardState(UI::BoardState newState)
 UI::BoardState Manager::BoardState()
 {
   return boardState.load();
+}
+
+void Manager::ShowBoot()
+{
+  sceneManager.SwitchTo(SceneId::Boot);
 }
 
 void Manager::ShowRequestPin()
@@ -90,7 +95,7 @@ void Manager::ShowAssertation(const std::string& client)
   sceneManager.SwitchTo(SceneId::Notify);
 }
 
-void Manager::ShowIdle()
+void Manager::ShowInfo()
 {
   sceneManager.SwitchTo(SceneId::Idle);
 }
@@ -110,6 +115,10 @@ void Manager::tickHomeButton()
   }
 
   switch (sceneManager.Id()) {
+  case SceneId::Boot:
+    // do nothing
+    break;
+
   case SceneId::PinRequest:
     if (handler != nullptr) {
       handler->OnPinEntered(homeButton.State() == ButtonState::Short);
@@ -123,7 +132,7 @@ void Manager::tickHomeButton()
     break;
 
   case SceneId::Notify:
-    ShowIdle();
+    ShowInfo();
     break;
 
   case SceneId::Idle:
@@ -175,19 +184,25 @@ void Manager::tickStateTransition()
   switch (sceneManager.Id()) {
   case SceneId::PinRequest:
     ESP_LOGI(TAG, "switch to pin request screen");
+    hw.Board().Display().SetBrightness(CONFIG_UI_DEFAULT_BRIGHTNESS);
     gui->ShowScreenPinEnter();
     break;
   case SceneId::PinVerify:
     ESP_LOGI(TAG, "switch to pin verify screen");
+    hw.Board().Display().SetBrightness(CONFIG_UI_DEFAULT_BRIGHTNESS);
     gui->ShowScreenPinVerify(pinVerification);
     break;
   case SceneId::Notify:
-    ESP_LOGI(TAG, "switch to pin notify screen");
+    ESP_LOGI(TAG, "switch to notify screen");
+    hw.Board().Display().SetBrightness(CONFIG_UI_DEFAULT_BRIGHTNESS);
     gui->ShowScreenNotification(notifyMsg);
     break;
+  case SceneId::Boot:
+    hw.Board().Display().SetBrightness(CONFIG_UI_DEFAULT_BRIGHTNESS);
+    [[fallthrough]];
   case SceneId::Idle:
-    ESP_LOGI(TAG, "switch to pin idle screen");
-    gui->ShowScreenIdle();
+    ESP_LOGI(TAG, "switch to info screen");
+    gui->ShowInfoScreen();
     break;
   default:
     ESP_LOGE(TAG, "unexpected scene: %d", (int)sceneManager.Id());

@@ -43,10 +43,11 @@ namespace UI
 
     void SetBoardState(UI::BoardState newState);
     UI::BoardState BoardState();
+    void ShowBoot();
     void ShowRequestPin();
     void ShowVerifyPin(const std::string& verification);
     void ShowAssertation(const std::string& client);
-    void ShowIdle();
+    void ShowInfo();
 
     void Tick();
 

@@ -321,15 +321,15 @@ void GUI::ShowScreenNotification(const std::string& msg)
   lv_msg_subsribe_obj(GUI_MESSAGE_NOTIFY, msgLabel, nullptr);
 }
 
-void GUI::ShowScreenIdle()
+void GUI::ShowInfoScreen()
 {
-  if (idleScreen != nullptr) {
-    switchScreen(idleScreen);
+  if (infoScreen != nullptr) {
+    switchScreen(infoScreen);
     return;
   }
 
-  idleScreen = switchScreen(nullptr);
-  lv_obj_t* cont = createPage(idleScreen);
+  infoScreen = switchScreen(nullptr);
+  lv_obj_t* cont = createPage(infoScreen);
 
   lv_obj_t* stateLabel = lv_label_create(cont);
   lv_obj_center(stateLabel);
@@ -448,9 +448,9 @@ GUI::~GUI()
     lv_obj_del(notifyScreen);
   }
 
-  if (idleScreen != nullptr) {
-    lv_obj_clean(idleScreen);
-    lv_obj_del(idleScreen);
+  if (infoScreen != nullptr) {
+    lv_obj_clean(infoScreen);
+    lv_obj_del(infoScreen);
   }
 }
 
@@ -492,5 +492,5 @@ lv_obj_t* GUI::switchScreen(lv_obj_t *targetScreen)
 
 bool GUI::isPersistentScreen(lv_obj_t* scr)
 {
-  return scr == notifyScreen || scr == idleScreen;
+  return scr == notifyScreen || scr == infoScreen;
 }
