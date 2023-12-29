@@ -1,10 +1,6 @@
 #pragma once
 
 #include <string>
-#include <vector>
-#include <expected>
-
-#include <blob/bytes.h>
 
 #include "common.h"
 #include "keyring.h"
@@ -12,21 +8,6 @@
 
 namespace SSH
 {
-  enum class UserRole: uint8_t
-  {
-    User = 0,
-    SysOp
-  };
-
-  struct UserInfo
-  {
-    std::string Name;
-    Blob::Bytes Key;
-    std::string KeyFingerprint;
-    std::string ClientIP;
-    UserRole Role;
-  };
-
   // fwd
   struct ServerConfig;
 

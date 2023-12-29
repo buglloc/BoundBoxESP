@@ -7,7 +7,6 @@
 
 #include "common.h"
 #include "keys.h"
-#include "handler.h"
 #include "auth_provider.h"
 
 
@@ -28,7 +27,7 @@ namespace SSH
     ListenError Listen(const HandlerCallback& handler);
 
   private:
-    std::expected<UserInfo, ListenError> authenticate(ssh_session session);
+    std::expected<UserInfo, ListenError> authenticate(ssh_session session, const SessionInfo& sessInfo);
 
   private:
     PrivateKey hostKey;
