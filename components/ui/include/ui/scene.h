@@ -14,6 +14,7 @@ namespace UI
   enum class SceneId: uint8_t
   {
     None,
+    Boot,
     PinRequest,
     PinVerify,
     Notify,

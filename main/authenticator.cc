@@ -95,7 +95,7 @@ void Authenticator::OnPinVerified(bool ok)
   }
 
   if (ok) {
-    ui.ShowIdle();
+    ui.ShowInfo();
     credBuilding = false;
     return;
   }

@@ -26,7 +26,7 @@ namespace UI
     void ShowScreenPinEnter();
     void ShowScreenPinVerify(const std::string& verification);
     void ShowScreenNotification(const std::string& msg);
-    void ShowScreenIdle();
+    void ShowInfoScreen();
 
     ~GUI();
   private:
@@ -36,6 +36,6 @@ namespace UI
 
   private:
     lv_obj_t* notifyScreen = nullptr;
-    lv_obj_t* idleScreen = nullptr;
+    lv_obj_t* infoScreen = nullptr;
   };
 }
