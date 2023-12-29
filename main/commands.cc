@@ -31,7 +31,7 @@ namespace
   Hardware::Manager& hw = Hardware::Manager::Instance();
   UI::Manager& ui = UI::Manager::Instance();
 
-  using HandleFn = std::function<bool(const SSH::UserInfo& userInfo, const JsonObjectConst& req, JsonObject& rsp)>;
+  using HandleFn = std::function<bool(const SSH::SessionInfo& sessInfo, const JsonObjectConst& req, JsonObject& rsp)>;
 
   struct Command
   {
@@ -41,7 +41,7 @@ namespace
     HandleFn Handle;
   };
 
-  bool HandleHmacSecret(Authenticator* auth, const SSH::UserInfo& userInfo, const JsonObjectConst& req, JsonObject& rsp)
+  bool HandleHmacSecret(Authenticator* auth, const SSH::SessionInfo& sessInfo, const JsonObjectConst& req, JsonObject& rsp)
   {
     std::string_view encodedSalt = req["salt"].as<std::string_view>();
     if (encodedSalt.empty()) {
@@ -64,7 +64,7 @@ namespace
     }
 
     std::expected<Blob::Bytes, Blob::Error> bindedSalt = Blob::HMAC::Sum(
-      salt, userInfo.Key, Blob::HashType::SHA256
+      salt, sessInfo.User.Key, Blob::HashType::SHA256
     );
     if (!bindedSalt) {
       rsp["error_code"] = static_cast<uint8_t>(bindedSalt.error());
@@ -73,7 +73,7 @@ namespace
     }
 
     std::expected<Blob::Bytes, Error> assert = auth->MakeHmacSecret(
-      bindedSalt.value(), userInfo.ClientIP
+      bindedSalt.value(), sessInfo.ClientIP
     );
     if (!assert) {
       rsp["error_code"] = static_cast<uint8_t>(assert.error());
@@ -85,14 +85,14 @@ namespace
     return true;
   }
 
-  bool HandleStatus(const SSH::UserInfo& userInfo, const JsonObjectConst& req, JsonObject& rsp)
+  bool HandleStatus(const SSH::SessionInfo& sessInfo, const JsonObjectConst& req, JsonObject& rsp)
   {
     // TODO(buglloc): show something usefull
     return true;
   }
 
 #if CONFIG_DUMPABLE_SECRETS
-  bool HandleSecretsGet(Secrets* secrets, const SSH::UserInfo& userInfo, const JsonObjectConst& req, JsonObject& rsp)
+  bool HandleSecretsGet(Secrets* secrets, const SSH::SessionInfo& sessInfo, const JsonObjectConst& req, JsonObject& rsp)
   {
     JsonObject secretsObj = rsp.createNestedObject("secrets");
     Error err = secrets->ToJson(secretsObj);
@@ -105,7 +105,7 @@ namespace
   }
 #endif
 
-  bool HandleSecretsStore(Secrets* secrets, const SSH::UserInfo& userInfo, const JsonObjectConst& req, JsonObject& rsp)
+  bool HandleSecretsStore(Secrets* secrets, const SSH::SessionInfo& sessInfo, const JsonObjectConst& req, JsonObject& rsp)
   {
     JsonObjectConst secretsJson = req["secrets"].as<JsonObjectConst>();
     if (!secretsJson.containsKey("host_key")) {
@@ -137,7 +137,7 @@ namespace
     return true;
   }
 
-  bool HandleSecretsReset(Secrets* secrets, const SSH::UserInfo& userInfo, const JsonObjectConst& req, JsonObject& rsp)
+  bool HandleSecretsReset(Secrets* secrets, const SSH::SessionInfo& sessInfo, const JsonObjectConst& req, JsonObject& rsp)
   {
     Error err = secrets->Erase();
     if (err != Error::None) {
@@ -149,12 +149,12 @@ namespace
     return true;
   }
 
-  bool HandleRestart(const SSH::UserInfo& userInfo, const JsonObjectConst& req, JsonObject& rsp)
+  bool HandleRestart(const SSH::SessionInfo& sessInfo, const JsonObjectConst& req, JsonObject& rsp)
   {
     ui.SetBoardState(UI::BoardState::Restart);
     esp_err_t err = hw.ScheduleRestart(req["delay_ms"] | CONFIG_DEFAULT_RESTART_DELAY_MS);
     if (err != ESP_OK) {
-      ESP_LOGE(TAG, "schecule restart failed: %s", esp_err_to_name(err));
+      ESP_LOGE(TAG, "[%s] schedule restart failed: %s", sessInfo.Id.c_str(), esp_err_to_name(err));
       return false;
     }
 
@@ -169,24 +169,25 @@ Error Commands::Initialize(Authenticator* auth, Secrets* secrets)
   return Error::None;
 }
 
-Error Commands::Dispatch(const SSH::UserInfo& userInfo, std::string_view cmdName, SSH::Stream& stream)
+Error Commands::Dispatch(const SSH::SessionInfo& sessInfo, std::string_view cmdName, SSH::Stream& stream)
 {
-  ESP_LOGI(TAG, "client %s called command: %s", userInfo.ClientIP.c_str(), cmdName.cbegin());
+  ESP_LOGI(TAG, "[%s] called command: %s", sessInfo.Id.c_str(), cmdName.cbegin());
   DynamicJsonDocument req(CONFIG_COMMAND_BUFFER_SIZE);
   DeserializationError jsonErr = deserializeJson(req, stream);
   if (jsonErr && jsonErr != DeserializationError::Code::EmptyInput) {
-    ESP_LOGE(TAG, "unable to read request from client %s: %s", userInfo.ClientIP.c_str(), jsonErr.c_str());
+    ESP_LOGE(TAG, "[%s] unable to read request: %s", sessInfo.Id.c_str(), jsonErr.c_str());
     return Error::CommandFailed;
   }
 
   DynamicJsonDocument rspDoc(CONFIG_COMMAND_BUFFER_SIZE);
   JsonObject rsp = rspDoc.to<JsonObject>();
 
-  bool ok = Handle(userInfo, cmdName, req.as<JsonObjectConst>(), rsp);
+  bool ok = Handle(sessInfo, cmdName, req.as<JsonObjectConst>(), rsp);
   rspDoc["ok"] = ok;
+  rspDoc["id"] = sessInfo.Id;
 
   if (serializeJson(rspDoc, stream) == 0) {
-    ESP_LOGE(TAG, "unable to write response for client %s: %s", userInfo.ClientIP.c_str(), jsonErr.c_str());
+    ESP_LOGE(TAG, "[%s] unable to write response: %s", sessInfo.Id.c_str(), jsonErr.c_str());
     return Error::CommandFailed;
   }
 
@@ -196,7 +197,7 @@ Error Commands::Dispatch(const SSH::UserInfo& userInfo, std::string_view cmdName
   return ok ? Error::None : Error::ShitHappens;
 }
 
-bool Commands::Handle(const SSH::UserInfo& userInfo, std::string_view cmdName, const JsonObjectConst& req, JsonObject& rsp)
+bool Commands::Handle(const SSH::SessionInfo& sessInfo, std::string_view cmdName, const JsonObjectConst& req, JsonObject& rsp)
 {
   static const std::vector<Command> commands = {
     {
@@ -248,7 +249,7 @@ bool Commands::Handle(const SSH::UserInfo& userInfo, std::string_view cmdName, c
   if (cmdName == "/help") {
     JsonArray jsonCommands = rsp.createNestedArray("commands");
     for (const auto& cmd : commands) {
-      if (!cmd.UsedAllowed && userInfo.Role != SSH::UserRole::SysOp) {
+      if (!cmd.UsedAllowed && sessInfo.User.Role != SSH::UserRole::SysOp) {
         continue;
       }
 
@@ -265,17 +266,17 @@ bool Commands::Handle(const SSH::UserInfo& userInfo, std::string_view cmdName, c
       continue;
     }
 
-    if (!cmd.UsedAllowed && userInfo.Role != SSH::UserRole::SysOp) {
+    if (!cmd.UsedAllowed && sessInfo.User.Role != SSH::UserRole::SysOp) {
       rsp["error"] = "403: command can only be used by sysops, but you are just a random user";
 
-      ESP_LOGW(TAG, "try to call privileged command '%s' from '%s' w/o permissions", cmdName.cbegin(), userInfo.ClientIP.c_str());
+      ESP_LOGW(TAG, "[%s] try to call privileged command '%s' from '%s' w/o permissions", sessInfo.Id.c_str(), cmdName.cbegin(), sessInfo.ClientIP.c_str());
       return false;
     }
 
-    return cmd.Handle(userInfo, req, rsp);
+    return cmd.Handle(sessInfo, req, rsp);
   }
 
   rsp["error"] = "404: command not found";
-  ESP_LOGW(TAG, "called unknown command '%s' from '%s'", cmdName.cbegin(), userInfo.ClientIP.c_str());
+  ESP_LOGW(TAG, "[%s] called unknown command '%s' from '%s'", sessInfo.Id.c_str(), cmdName.cbegin(), sessInfo.ClientIP.c_str());
   return false;
 }

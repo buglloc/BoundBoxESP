@@ -46,12 +46,12 @@ namespace {
     const TickType_t sshDelay = 500 / portTICK_PERIOD_MS;
     SSH::ListenError listenErr;
     for (;;) {
-      listenErr = ctx->Srv.Listen([ctx](const SSH::UserInfo& userInfo, const std::string_view cmd, SSH::Stream& stream) -> int {
+      listenErr = ctx->Srv.Listen([ctx](const SSH::SessionInfo& sessInfo, const std::string_view cmd, SSH::Stream& stream) -> int {
         ui.SetBoardState(UI::BoardState::Process);
 
-        Error err = ctx->Handler.Dispatch(userInfo, cmd, stream);
+        Error err = ctx->Handler.Dispatch(sessInfo, cmd, stream);
         if (err != Error::None) {
-          ESP_LOGE(TAG, "command '%s' process failed: %d", cmd.cbegin(), (int)err);
+          ESP_LOGE(TAG, "[%s] command '%s' process failed: %d", sessInfo.Id.c_str(), cmd.cbegin(), (int)err);
         }
 
         if (ui.BoardState() == UI::BoardState::Process) {

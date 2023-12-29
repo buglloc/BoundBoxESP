@@ -63,7 +63,7 @@ namespace Blob
   std::string Base64Encode(const Bytes& bytes)
   {
     size_t fullSets = bytes.size()/3;
-    std::string out("\xff", encodeBase64Length(bytes.size()));
+    std::string out(encodeBase64Length(bytes.size()), '\xff');
 
     const uint8_t* inPtr = bytes.data();
     char* outPtr = &out[0];

@@ -5,7 +5,7 @@
 #include <cstddef>
 #include <stdint.h>
 
-#include "common.h"
+#include "libssh_esp.h"
 
 
 namespace SSH

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <ssh/handler.h>
+#include <ssh/common.h>
 
 #include <ArduinoJson.h>
 
@@ -13,10 +13,10 @@ class Commands
 {
 public:
   Error Initialize(Authenticator* auth, Secrets* secrets);
-  Error Dispatch(const SSH::UserInfo& userInfo, std::string_view cmdName, SSH::Stream& stream);
+  Error Dispatch(const SSH::SessionInfo& sessInfo, std::string_view cmdName, SSH::Stream& stream);
 
 private:
-  bool Handle(const SSH::UserInfo& userInfo, std::string_view cmdName, const JsonObjectConst& req, JsonObject& rsp);
+  bool Handle(const SSH::SessionInfo& sessInfo, std::string_view cmdName, const JsonObjectConst& req, JsonObject& rsp);
 
 private:
   Authenticator* auth;

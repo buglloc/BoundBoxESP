@@ -36,6 +36,16 @@ namespace
     }
   }
 
+  std::string genSessionId()
+  {
+    uint8_t raw[6];
+    esp_fill_random(raw, sizeof(raw));
+
+    std::string out(13, '\xff');
+		sprintf(out.data(), "%02x%02x%02x-%02x%02x%02x", raw[0], raw[1], raw[2], raw[3], raw[4], raw[5]);
+		return out;
+  }
+
   std::string getClientIp(ssh_session session)
   {
     struct sockaddr_storage tmp;
@@ -143,33 +153,39 @@ ListenError Server::Listen(const HandlerCallback& handler)
     return ListenError::Accept;
   }
 
-  ESP_LOGI(TAG, "new connection");
+  SessionInfo sessInfo = {
+    .Id = genSessionId(),
+    .ClientIP = getClientIp(sshSession),
+  };
 
-  ESP_LOGD(TAG, "starts key exchange...");
+  ESP_LOGI(TAG, "[%s] new connection from: %s", sessInfo.Id.c_str(), sessInfo.ClientIP.c_str());
+
+  ESP_LOGD(TAG, "[%s] starts key exchange...", sessInfo.Id.c_str());
   rc = ssh_handle_key_exchange(sshSession);
   if (rc != SSH_OK) {
-    ESP_LOGD(TAG, "key exchange failed: %s", ssh_get_error(sshSession));
+    ESP_LOGW(TAG, "[%s] key exchange failed: %s", sessInfo.Id.c_str(), ssh_get_error(sshSession));
     return ListenError::Accept;
   }
 
-  ESP_LOGD(TAG, "auth client...");
-  auto userInfo = authenticate(sshSession);
+  ESP_LOGD(TAG, "[%s] auth client...", sessInfo.Id.c_str());
+  auto userInfo = authenticate(sshSession, sessInfo);
   if (!userInfo) {
-    ESP_LOGD(TAG, "auth failed, abort");
+    ESP_LOGW(TAG, "[%s] auth failed, abort", sessInfo.Id.c_str());
     return ListenError::Auth;
   }
+  sessInfo.User = std::move(userInfo.value());
 
-  ESP_LOGD(TAG, "wait for a channel session...");
+  ESP_LOGD(TAG, "[%s] wait for a channel session...", sessInfo.Id.c_str());
   ssh_message message = nullptr;
   ssh_channel chan = nullptr;
   do {
     message = ssh_message_get(sshSession);
     if (!message) {
-      ESP_LOGE(TAG, "no message received: %s", ssh_get_error(sshSession));
+      ESP_LOGW(TAG, "[%s] no message received: %s", sessInfo.Id.c_str(), ssh_get_error(sshSession));
       return ListenError::Accept;
     }
 
-    ESP_LOGD(TAG, "requested channel %d:%d", ssh_message_type(message), ssh_message_subtype(message));
+    ESP_LOGD(TAG, "[%s] requested channel %d:%d", sessInfo.Id.c_str(), ssh_message_type(message), ssh_message_subtype(message));
 
     if (ssh_message_type(message) != SSH_REQUEST_CHANNEL_OPEN) {
       ssh_message_reply_default(message);
@@ -189,20 +205,20 @@ ListenError Server::Listen(const HandlerCallback& handler)
   } while(!chan);
 
   if (!chan) {
-    ESP_LOGW(TAG, "client did not ask for a channel session: %s", ssh_get_error(sshSession));
+    ESP_LOGW(TAG, "[%s] client did not ask for a channel session: %s", sessInfo.Id.c_str(), ssh_get_error(sshSession));
     return ListenError::Accept;
   }
   REF_DEFER(ssh_channel_send_eof(chan); ssh_channel_close(chan));
 
-  ESP_LOGD(TAG, "wait for a exec request...");
+  ESP_LOGD(TAG, "[%s] wait for a exec request...", sessInfo.Id.c_str());
   while (true) {
     message = ssh_message_get(sshSession);
     if (!message) {
-      ESP_LOGE(TAG, "no message received: %s", ssh_get_error(sshSession));
+      ESP_LOGW(TAG, "[%s] no message received: %s", sessInfo.Id.c_str(), ssh_get_error(sshSession));
       return ListenError::Accept;
     }
 
-    ESP_LOGD(TAG, "requested channel %d:%d", ssh_message_type(message), ssh_message_subtype(message));
+    ESP_LOGD(TAG, "[%s] requested channel %d:%d", sessInfo.Id.c_str(), ssh_message_type(message), ssh_message_subtype(message));
 
     if (ssh_message_type(message) != SSH_REQUEST_CHANNEL) {
       ssh_message_reply_default(message);
@@ -222,9 +238,9 @@ ListenError Server::Listen(const HandlerCallback& handler)
     Stream stream(chan);
     std::string cmd = ssh_message_channel_request_command(message);
 
-    int status = handler(std::move(userInfo.value()), cmd, stream);
+    int status = handler(sessInfo, cmd, stream);
     if (status) {
-      ESP_LOGW(TAG,  "failed to execute action [%d]: %s", status, cmd.c_str());
+      ESP_LOGW(TAG,  "[%s] failed to execute action [%d]: %s", sessInfo.Id.c_str(), status, cmd.c_str());
     }
 
     ssh_message_free(message);
@@ -235,7 +251,7 @@ ListenError Server::Listen(const HandlerCallback& handler)
   return ListenError::None;
 }
 
-std::expected<UserInfo, ListenError> Server::authenticate(ssh_session session)
+std::expected<UserInfo, ListenError> Server::authenticate(ssh_session session, const SessionInfo& sessInfo)
 {
   #define REPLY_AGAIN(m) { \
     ssh_message_auth_set_methods(m, SSH_AUTH_METHOD_PUBLICKEY); \
@@ -250,11 +266,11 @@ std::expected<UserInfo, ListenError> Server::authenticate(ssh_session session)
   for (int patience = 0; patience < CONFIG_SSH_AUTH_RETRIES; ++patience) {
     message = ssh_message_get(session);
     if (!message) {
-      ESP_LOGW(TAG, "no more auth");
+      ESP_LOGW(TAG, "[%s] no more auth", sessInfo.Id.c_str());
       return std::unexpected<ListenError>{ListenError::Auth};
     }
 
-    ESP_LOGD(TAG, "[%d] trying %d:%d...", patience, ssh_message_type(message), ssh_message_subtype(message));
+    ESP_LOGD(TAG, "[%s] [%d] trying %d:%d...", sessInfo.Id.c_str(), patience, ssh_message_type(message), ssh_message_subtype(message));
     // only pubkey auth support
     if (ssh_message_type(message) != SSH_REQUEST_AUTH) {
       ssh_message_reply_default(message);
@@ -269,7 +285,7 @@ std::expected<UserInfo, ListenError> Server::authenticate(ssh_session session)
 
     userKey = ssh_message_auth_pubkey(message);
     if (!userKey) {
-      ESP_LOGE(TAG, "no ssh key provided while auth");
+      ESP_LOGE(TAG, "[%s] no ssh key provided while auth", sessInfo.Id.c_str());
       REPLY_AGAIN(message);
       continue;
     }
@@ -283,7 +299,6 @@ std::expected<UserInfo, ListenError> Server::authenticate(ssh_session session)
       case 0: {
         UserInfo userInfo = {
           .Name = ssh_message_auth_user(message),
-          .ClientIP = getClientIp(session),
           .Role = auth.Role(ssh_message_auth_user(message))
         };
 
@@ -291,7 +306,7 @@ std::expected<UserInfo, ListenError> Server::authenticate(ssh_session session)
         if (exportedKey) {
           userInfo.Key = exportedKey.value();
         } else {
-          ESP_LOGW(TAG, "unable to export user key: %d", exportedKey.error());
+          ESP_LOGW(TAG, "[%s] unable to export user key: %d", sessInfo.Id.c_str(), exportedKey.error());
           userInfo.Key = (const uint8_t*)"N/A";
         }
 
@@ -299,19 +314,19 @@ std::expected<UserInfo, ListenError> Server::authenticate(ssh_session session)
         if (keyFp) {
           userInfo.KeyFingerprint = keyFp.value();
         } else {
-          ESP_LOGW(TAG, "unable to make user key fingerprint: %d", keyFp.error());
+          ESP_LOGW(TAG, "[%s] unable to make user key fingerprint: %d", sessInfo.Id.c_str(), keyFp.error());
           userInfo.KeyFingerprint = "N/A";
         }
 
         ESP_LOGI(TAG,
-          "user '%s' was authenticated by key '%s' from %s",
-          userInfo.Name.c_str(), userInfo.KeyFingerprint.c_str(), userInfo.ClientIP.c_str()
+          "[%s] user '%s' was authenticated by key '%s' from %s",
+          sessInfo.Id.c_str(), userInfo.Name.c_str(), userInfo.KeyFingerprint.c_str(), sessInfo.ClientIP.c_str()
         );
         ssh_message_free(message);
         return userInfo;
       }
       case 1: {
-        ESP_LOGD(TAG, "pubkey accepted");
+        ESP_LOGD(TAG, "[%s] pubkey accepted", sessInfo.Id.c_str());
         ssh_message_free(message);
         continue;
       }
@@ -320,6 +335,6 @@ std::expected<UserInfo, ListenError> Server::authenticate(ssh_session session)
     REPLY_AGAIN(message);
   }
 
-  ESP_LOGW(TAG, "too much auth failures, aborting");
+  ESP_LOGW(TAG, "[%s] too much auth failures, aborting", sessInfo.Id.c_str());
   return std::unexpected<ListenError>{ListenError::Auth};
 }
