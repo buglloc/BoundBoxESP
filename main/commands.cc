@@ -218,6 +218,12 @@ bool Commands::Handle(const SSH::SessionInfo& sessInfo, std::string_view cmdName
       .Help = "Returns BoundBoxESP status",
       .Handle = HandleStatus,
     },
+    {
+      .Name = "/restart",
+      .UsedAllowed = false,
+      .Help = R"(Restart BoundBoxESP in req["delay_ms"])",
+      .Handle = HandleRestart
+    },
     #if CONFIG_DUMPABLE_SECRETS
     {
       .Name = "/secrets/get",
@@ -237,12 +243,6 @@ bool Commands::Handle(const SSH::SessionInfo& sessInfo, std::string_view cmdName
       .UsedAllowed = false,
       .Help = "Reset secrets to it's default values",
       .Handle = std::bind(HandleSecretsReset, secrets, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)
-    },
-    {
-      .Name = "/restart",
-      .UsedAllowed = false,
-      .Help = R"(Restart BoundBoxESP in req["delay_ms"])",
-      .Handle = HandleRestart
     }
   };
 
