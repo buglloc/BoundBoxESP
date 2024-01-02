@@ -50,13 +50,13 @@ menu "BoundBox Hardware"
   config BBHW_ETH_INT_GPIO
     int "Ethernet INT gpio"
     range 1 46
-    default 1
+    default 14
     depends on BBHW_HAS_ETH
 
   config BBHW_ETH_RST_GPIO
     int "Ethernet RST gpio"
     range 1 46
-    default 14
+    default 15
     depends on BBHW_HAS_ETH
 
   config BBHW_HAS_WIFI
