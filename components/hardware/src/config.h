@@ -7,7 +7,7 @@
 #define BBHW_SPI_HOSTID NeedTooChooseSpiHost
 #ifdef CONFIG_BBHW_USE_SPI2_HOST
   #undef BBHW_SPI_HOSTID
-  #define BBHW_SPI_HOSTID SPI3_HOST
+  #define BBHW_SPI_HOSTID SPI2_HOST
 #endif
 #ifdef CONFIG_BBHW_USE_SPI3_HOST
   #undef BBHW_SPI_HOSTID
