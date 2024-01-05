@@ -1,4 +1,4 @@
-#include "t_amoled/board.h"
+#include "lilygo/board.h"
 #include "board_config.h"
 
 #include <functional>
@@ -17,12 +17,12 @@
 #include <lvgl.h>
 
 
-using namespace Amoled;
+using namespace LilyGo;
 
 namespace
 {
-  static const char* TAG = "amoled::board";
-  static const char* LV_TAG = "amoled::lvgl";
+  static const char* TAG = "lilygo::board";
+  static const char* LV_TAG = "lilygo::lvgl";
 
   static bool initialized = false;
   static lv_disp_draw_buf_t dispBuf; // Internal graphic buffer(s) called draw buffer(s)
@@ -121,7 +121,7 @@ esp_err_t Board::InitializeLVGL()
   dispDrv.flush_cb = [](lv_disp_drv_t* dispDrv, const lv_area_t* area, lv_color_t* colorP) -> void {
     uint32_t w = ( area->x2 - area->x1 + 1 );
     uint32_t h = ( area->y2 - area->y1 + 1 );
-    static_cast<Amoled::Display *>(dispDrv->user_data)->PushColors(area->x1, area->y1, w, h, reinterpret_cast<uint16_t *>(colorP));
+    static_cast<LilyGo::Display *>(dispDrv->user_data)->PushColors(area->x1, area->y1, w, h, reinterpret_cast<uint16_t *>(colorP));
     lv_disp_flush_ready(dispDrv);
   };
 
@@ -152,7 +152,7 @@ esp_err_t Board::InitializeLVGL()
   inDevDrv.user_data = &touchSensor;
   inDevDrv.read_cb = [](lv_indev_drv_t *drv, lv_indev_data_t *data) -> void {
     uint16_t x, y = 0;
-    bool pressed = static_cast<Amoled::TouchSensor *>(drv->user_data)->GetPoint(x, y);
+    bool pressed = static_cast<LilyGo::TouchSensor *>(drv->user_data)->GetPoint(x, y);
 
     data->point.x = x;
     data->point.y = y;

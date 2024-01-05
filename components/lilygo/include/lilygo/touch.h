@@ -13,7 +13,7 @@ typedef esp_lcd_touch_s* esp_lcd_touch_handle_t;
 struct esp_lcd_panel_io_t;
 typedef esp_lcd_panel_io_t* esp_lcd_panel_io_handle_t;
 
-namespace Amoled
+namespace LilyGo
 {
   class TouchSensor
   {

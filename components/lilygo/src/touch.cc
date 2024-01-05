@@ -1,4 +1,4 @@
-#include "t_amoled/touch.h"
+#include "lilygo/touch.h"
 #include "board_config.h"
 
 #include <functional>
@@ -17,11 +17,11 @@
 #include <esp_timer.h>
 
 
-using namespace Amoled;
+using namespace LilyGo;
 
 namespace
 {
-  static const char* TAG = "amoled::touch";
+  static const char* TAG = "lilygo::touch";
   static SemaphoreHandle_t xTouchMu;
 }
 

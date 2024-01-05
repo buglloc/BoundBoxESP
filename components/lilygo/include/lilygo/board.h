@@ -9,7 +9,7 @@
 #include "temp.h"
 #include "batt.h"
 
-namespace Amoled
+namespace LilyGo
 {
   class Board
   {
@@ -34,22 +34,22 @@ namespace Amoled
       return tempSensor.CoreTemp();
     }
 
-    Amoled::Display& Display()
+    LilyGo::Display& Display()
     {
       return display;
     }
 
-    Amoled::TouchSensor& TouchSensor()
+    LilyGo::TouchSensor& TouchSensor()
     {
       return touchSensor;
     }
 
-    Amoled::TempSensor& TempSensor()
+    LilyGo::TempSensor& TempSensor()
     {
       return tempSensor;
     }
 
-    Amoled::BatteryController& BatteryController()
+    LilyGo::BatteryController& BatteryController()
     {
       return batteryController;
     }
@@ -59,9 +59,9 @@ namespace Amoled
 
   private:
     SemaphoreHandle_t guiMu;
-    Amoled::Display display;
-    Amoled::TouchSensor touchSensor;
-    Amoled::TempSensor tempSensor;
-    Amoled::BatteryController batteryController;
+    LilyGo::Display display;
+    LilyGo::TouchSensor touchSensor;
+    LilyGo::TempSensor tempSensor;
+    LilyGo::BatteryController batteryController;
   };
 }

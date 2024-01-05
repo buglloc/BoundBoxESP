@@ -80,7 +80,7 @@ esp_err_t Manager::Initialize()
   ESP_RETURN_ON_ERROR(esp_event_loop_create_default(), TAG, "failed to initialize default event loop");
 
   ESP_LOGI(TAG, "setup board");
-  ESP_RETURN_ON_ERROR(board.Initialize(), TAG, "failed to initialize T-Amoled board");
+  ESP_RETURN_ON_ERROR(board.Initialize(), TAG, "failed to initialize T-LilyGo board");
 
   ESP_LOGI(TAG, "setup SPI");
   ESP_RETURN_ON_ERROR(initSPI(), TAG, "failed to initialize SPI");
@@ -96,7 +96,7 @@ esp_err_t Manager::ScheduleRestart(uint16_t delayMs)
 {
   const esp_timer_create_args_t timerArgs = {
     .callback = [](void* arg) -> void {
-      reinterpret_cast<Amoled::Board *>(arg)->Restart();
+      reinterpret_cast<LilyGo::Board *>(arg)->Restart();
     },
     .arg = &board,
     .name = "restart"

@@ -1,4 +1,4 @@
-#include "t_amoled/batt.h"
+#include "lilygo/batt.h"
 #include "board_config.h"
 
 #include "esp_adc/adc_oneshot.h"
@@ -9,11 +9,11 @@
 #include <esp_check.h>
 #include <esp_log.h>
 
-using namespace Amoled;
+using namespace LilyGo;
 
 namespace
 {
-  static const char* TAG = "amoled::batt";
+  static const char* TAG = "lilygo::batt";
 
   bool iniAdcCalibration(adc_unit_t unit, adc_channel_t channel, adc_atten_t atten, adc_cali_handle_t *outHandle)
   {

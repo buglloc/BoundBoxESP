@@ -7,7 +7,7 @@ SRCS
 INCLUDE_DIRS
   "include"
 REQUIRES
-  esp_netif t_amoled
+  esp_netif lilygo
 PRIV_REQUIRES
   driver esp_eth esp_wifi esp_timer nvs_flash
 )

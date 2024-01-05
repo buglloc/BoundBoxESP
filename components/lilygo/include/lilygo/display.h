@@ -9,7 +9,7 @@
 #define AMOLED_DEFAULT_BRIGHTNESS 50
 
 
-namespace Amoled
+namespace LilyGo
 {
   struct LCDCommand
   {

@@ -1,4 +1,4 @@
-#include "t_amoled/temp.h"
+#include "lilygo/temp.h"
 #include "board_config.h"
 
 #include <driver/temperature_sensor.h>
@@ -7,11 +7,11 @@
 #include <esp_check.h>
 #include <esp_log.h>
 
-using namespace Amoled;
+using namespace LilyGo;
 
 namespace
 {
-  static const char* TAG = "amoled::temp";
+  static const char* TAG = "lilygo::temp";
 }
 
 esp_err_t TempSensor::Initialize()

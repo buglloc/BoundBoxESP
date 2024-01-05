@@ -2,7 +2,7 @@
 
 #include <esp_err.h>
 
-#include <t_amoled/board.h>
+#include <lilygo/board.h>
 
 #include "net.h"
 
@@ -19,7 +19,7 @@ namespace Hardware
     void Restart();
     void Shutdown();
 
-    Amoled::Board& Board()
+    LilyGo::Board& Board()
     {
       return board;
     }
@@ -34,7 +34,7 @@ namespace Hardware
 
   private:
     bool initialized;
-    Amoled::Board board;
+    LilyGo::Board board;
     Hardware::Net net;
   };
 }
