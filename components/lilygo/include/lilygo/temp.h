@@ -5,7 +5,7 @@
 #include <esp_err.h>
 
 
-namespace Amoled
+namespace LilyGo
 {
   class TempSensor
   {

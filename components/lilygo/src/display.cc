@@ -1,4 +1,4 @@
-#include "t_amoled/display.h"
+#include "lilygo/display.h"
 #include "board_config.h"
 
 #include <cstring>
@@ -26,11 +26,11 @@
 #define SET_TFT_DC(level)  SET_PIN_LEVEL(TFT_PIN_DC, level)
 #define SET_TFT_CS(level)  SET_PIN_LEVEL(TFT_PIN_CS, level)
 
-using namespace Amoled;
+using namespace LilyGo;
 
 namespace
 {
-  static const char* TAG = "amoled::display";
+  static const char* TAG = "lilygo::display";
 
   const static LCDCommand kRM67162Init[] = {
     {0x11, {0x00}, 0x00}, // Sleep Out

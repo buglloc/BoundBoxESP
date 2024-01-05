@@ -11,7 +11,7 @@ struct adc_cali_scheme_t;
 typedef struct adc_cali_scheme_t *adc_cali_handle_t;
 
 
-namespace Amoled
+namespace LilyGo
 {
   class BatteryController
   {
