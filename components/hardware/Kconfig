@@ -59,21 +59,19 @@ menu "BoundBox Hardware"
     default 15
     depends on BBHW_HAS_ETH
 
-  config BBHW_HAS_WIFI
-    bool "Has WiFi"
-    default y
-
   choice BBHW_NETKIND
-    prompt "Default network implementation"
-    default BBHW_NETKIND_ETH
+    prompt "Network implementation"
+    default BBHW_NETKIND_USB
+
+    config BBHW_NETKIND_USB
+      bool "USB"
+
+    config BBHW_NETKIND_WIFI_STA
+      bool "WiFi"
 
     config BBHW_NETKIND_ETH
       bool "Ethernet"
       depends on BBHW_HAS_ETH
-
-    config BBHW_NETKIND_WIFI_STA
-      bool "WiFi"
-      depends on BBHW_HAS_WIFI
   endchoice
 
   config BBHW_HOSTNAME
@@ -86,14 +84,17 @@ menu "BoundBox Hardware"
 
   config BBHW_NET_IP
     string "Static IP to use"
+    default "192.168.8.1"
     depends on BBHW_NET_USE_STATIC_IP
 
   config BBHW_NET_SUBNET
     string "Static Subnet to use"
+    default "255.255.255.0"
     depends on BBHW_NET_USE_STATIC_IP
 
   config BBHW_NET_GW
     string "Static Gateway to use"
+    default "0.0.0.0"
     depends on BBHW_NET_USE_STATIC_IP
 
   config BBHW_NET_DNS

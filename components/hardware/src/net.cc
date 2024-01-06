@@ -1,11 +1,10 @@
 #include "hardware/net.h"
 #include "config.h"
 
+#include "net_usb.h"
+#include "net_wifi.h"
 #if CONFIG_BBHW_HAS_ETH
 #include "net_eth.h"
-#endif
-#if CONFIG_BBHW_HAS_WIFI
-#include "net_wifi.h"
 #endif
 
 #include <esp_netif.h>
@@ -38,13 +37,36 @@ namespace
         netReady = true;
         localIP = ip_info->ip;
 
-        ESP_LOGI(TAG, "%s IP Address", event_id == IP_EVENT_ETH_GOT_IP ? "Ethernet" : "WiFi");
+        switch (event_id) {
+        case IP_EVENT_ETH_GOT_IP:
+          ESP_LOGI(TAG, "Ethernet connected");
+          break;
+        case IP_EVENT_STA_GOT_IP:
+          ESP_LOGI(TAG, "Wifi connected");
+          break;
+        default:
+          ESP_LOGI(TAG, "Something connected");
+        }
+
         ESP_LOGI(TAG, "~~~~~~~~~~~");
-        ESP_LOGI(TAG, "IP: " IPSTR, IP2STR(&ip_info->ip));
-        ESP_LOGI(TAG, "Mask: " IPSTR, IP2STR(&ip_info->netmask));
-        ESP_LOGI(TAG, "Gateway: " IPSTR, IP2STR(&ip_info->gw));
+
+        if (!ip4_addr_isany_val(ip_info->ip)) {
+          ESP_LOGI(TAG, "IP: " IPSTR, IP2STR(&ip_info->ip));
+        }
+
+        if (!ip4_addr_isany_val(ip_info->netmask)) {
+          ESP_LOGI(TAG, "Mask: " IPSTR, IP2STR(&ip_info->netmask));
+        }
+
+        if (!ip4_addr_isany_val(ip_info->gw)) {
+          ESP_LOGI(TAG, "Gateway: " IPSTR, IP2STR(&ip_info->gw));
+        }
+
         ESP_LOGI(TAG, "~~~~~~~~~~~");
         break;
+      case IP_EVENT_AP_STAIPASSIGNED:
+        ESP_LOGI(TAG, "New client connected");
+        ESP_LOGI(TAG, "IP: " IPSTR, IP2STR(&ip_info->ip));
       default:
         return;
     }
@@ -53,7 +75,11 @@ namespace
 
 esp_err_t Net::Initialize()
 {
-#if CONFIG_BBHW_NETKIND_ETH
+#if CONFIG_BBHW_NETKIND_USB
+  impl = std::make_unique<NetUsb>();
+  ESP_RETURN_ON_ERROR(impl->Initialize(), TAG, "failed to initialize usb network");
+
+#elif CONFIG_BBHW_NETKIND_ETH
   impl = std::make_unique<NetEth>();
   ESP_RETURN_ON_ERROR(impl->Initialize(), TAG, "failed to initialize ethernet network");
 
@@ -62,8 +88,7 @@ esp_err_t Net::Initialize()
   ESP_RETURN_ON_ERROR(impl->Initialize(), TAG, "failed to initialize wifi network");
 
 #else
-  ESP_LOGE(TAG, "no network configured");
-  return ESP_FAIL;
+  #error No network configured
 #endif
 
   ESP_RETURN_ON_ERROR(esp_netif_init(), TAG, "failed to initialize netif");

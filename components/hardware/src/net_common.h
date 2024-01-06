@@ -30,6 +30,23 @@ namespace Hardware
   #endif
   }
 
+  inline void BuildIPInfo(esp_netif_ip_info_t *ip, bool force)
+  {
+  #if !CONFIG_BBHW_NET_USE_STATIC_IP
+    if (!force) {
+      // doesn't use static IP - nothing to do
+      return;
+    }
+  #else
+    assert(ip);
+
+    memset(ip, 0 , sizeof(esp_netif_ip_info_t));
+    ip->ip.addr = ipaddr_addr(CONFIG_BBHW_NET_IP);
+    ip->netmask.addr = ipaddr_addr(CONFIG_BBHW_NET_SUBNET);
+    ip->gw.addr = ipaddr_addr(CONFIG_BBHW_NET_GW);
+  #endif
+  }
+
   inline void SetIPInfo(esp_netif_t *netif)
   {
   #if !CONFIG_BBHW_NET_USE_STATIC_IP
@@ -40,9 +57,7 @@ namespace Hardware
 
     esp_netif_ip_info_t ip;
     memset(&ip, 0 , sizeof(esp_netif_ip_info_t));
-    ip.ip.addr = ipaddr_addr(CONFIG_BBHW_NET_IP);
-    ip.netmask.addr = ipaddr_addr(CONFIG_BBHW_NET_SUBNET);
-    ip.gw.addr = ipaddr_addr(CONFIG_BBHW_NET_GW);
+    BuildIPInfo(&ip, false);
     ESP_ERROR_CHECK(esp_netif_set_ip_info(netif, &ip));
 
     SetDnsServer(netif, ESP_NETIF_DNS_MAIN);

@@ -4,30 +4,32 @@
 
 #include <string.h>
 
-#include <esp_eth_driver.h>
+#include <tinyusb.h>
+#include <lwip/esp_netif_net_stack.h>
+
 #include <esp_err.h>
 
 
 namespace Hardware
 {
-  class NetEth final: public NetImpl
+  class NetUsb final: public NetImpl
   {
   public:
-    NetEth() = default;
+    NetUsb() = default;
     esp_err_t Initialize() override;
     esp_netif_config_t NetifConfig() const override;
     esp_err_t Attach(esp_netif_t* netif) override;
 
-    ~NetEth()
+    ~NetUsb()
     {
-      if (ethHandle != nullptr) {
-        esp_eth_stop(ethHandle);
-        esp_eth_driver_uninstall(ethHandle);
-      }
+      tinyusb_driver_uninstall();
     }
 
   private:
-    esp_eth_handle_t ethHandle = nullptr;
+    esp_netif_t* netif = nullptr;
+    esp_netif_ip_info_t ipInfo;
     esp_netif_inherent_config_t netifCfg;
+    esp_netif_driver_ifconfig_t driverCfg;
+    struct esp_netif_netstack_config stackCfg;
   };
 }
