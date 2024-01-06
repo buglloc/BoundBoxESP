@@ -130,14 +130,8 @@ esp_err_t NetEth::Initialize()
     .phy_addr = CONFIG_BBHW_ETH_PHY_ADDR,
   };
 
-  // The SPI Ethernet module(s) might not have a burned factory MAC address, hence use manually configured address(es).
-  // In this example, Locally Administered MAC address derived from ESP32x base MAC address is used.
-  // Note that Locally Administered OUI range should be used only when testing on a LAN under your control!
-  uint8_t base_mac_addr[ETH_ADDR_LEN];
-  ESP_RETURN_ON_ERROR(esp_efuse_mac_get_default(base_mac_addr), TAG, "get EFUSE MAC failed");
-  uint8_t local_mac_1[ETH_ADDR_LEN];
-  esp_derive_local_mac(local_mac_1, base_mac_addr);
-  spi_eth_module_config.mac_addr = local_mac_1;
+  esp_err_t err = esp_read_mac(spi_eth_module_config.mac_addr, ESP_MAC_WIFI_STA);
+  ESP_RETURN_ON_ERROR(err, TAG, "read sta mac");
 
   ethHandle = ethInitSpi(spi_eth_module_config, nullptr, nullptr);
   ESP_RETURN_ON_FALSE(ethHandle, ESP_FAIL, TAG, "SPI Ethernet init failed");
