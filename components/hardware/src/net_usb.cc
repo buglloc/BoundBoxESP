@@ -58,22 +58,18 @@ namespace
 
 esp_err_t NetUsb::Initialize()
 {
-#if !CONFIG_BBHW_NET_USE_STATIC_IP
-  #error No static ip configured
-#endif
-
   const tinyusb_config_t usbCfg = {
       .external_phy = false,
   };
   esp_err_t err = tinyusb_driver_install(&usbCfg);
   ESP_RETURN_ON_ERROR(err, TAG, "install TinyUSB driver");
 
-  BuildIPInfo(&this->ipInfo);
+  BuildIPInfo(&this->ipInfo, true);
   this->netifCfg = {
     .flags = static_cast<esp_netif_flags_t>(ESP_NETIF_DHCP_SERVER | ESP_NETIF_FLAG_AUTOUP | ESP_NETIF_FLAG_EVENT_IP_MODIFIED),
     .ip_info = &this->ipInfo,
-    .get_ip_event = IP_EVENT_STA_GOT_IP,
-    .lost_ip_event = IP_EVENT_STA_LOST_IP,
+    .get_ip_event = IP_EVENT_ETH_GOT_IP,
+    .lost_ip_event = IP_EVENT_ETH_LOST_IP,
     .if_key = "wired",
     .if_desc = "usb ncm config device",
   };
@@ -130,8 +126,8 @@ esp_err_t NetUsb::Attach(esp_netif_t* netif)
     .esp_netif = netif,
     .ip_changed = true,
   };
-  BuildIPInfo(&evt.ip_info);
-  esp_event_post(IP_EVENT, IP_EVENT_STA_GOT_IP, &evt, sizeof(evt), 0);
+  BuildIPInfo(&evt.ip_info, true);
+  esp_event_post(IP_EVENT, IP_EVENT_ETH_GOT_IP, &evt, sizeof(evt), 0);
 
   return ESP_OK;
 }

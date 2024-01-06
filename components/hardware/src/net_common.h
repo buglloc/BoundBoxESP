@@ -30,11 +30,13 @@ namespace Hardware
   #endif
   }
 
-  inline void BuildIPInfo(esp_netif_ip_info_t *ip)
+  inline void BuildIPInfo(esp_netif_ip_info_t *ip, bool force)
   {
   #if !CONFIG_BBHW_NET_USE_STATIC_IP
-    // doesn't use static IP - nothing to do
-    return;
+    if (!force) {
+      // doesn't use static IP - nothing to do
+      return;
+    }
   #else
     assert(ip);
 
@@ -55,7 +57,7 @@ namespace Hardware
 
     esp_netif_ip_info_t ip;
     memset(&ip, 0 , sizeof(esp_netif_ip_info_t));
-    BuildIPInfo(&ip);
+    BuildIPInfo(&ip, false);
     ESP_ERROR_CHECK(esp_netif_set_ip_info(netif, &ip));
 
     SetDnsServer(netif, ESP_NETIF_DNS_MAIN);
