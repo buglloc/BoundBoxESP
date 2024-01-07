@@ -123,15 +123,17 @@ esp_err_t NetEth::Initialize()
   memcpy(&netifCfg, ESP_NETIF_BASE_DEFAULT_ETH, sizeof(netifCfg));
   PatchNetifCfg(netifCfg);
 
+  uint8_t mac[ETH_ADDR_LEN];
+  esp_err_t err = esp_read_mac(mac, ESP_MAC_WIFI_STA);
+  ESP_RETURN_ON_ERROR(err, TAG, "read sta mac");
+
   spi_eth_module_config_t spi_eth_module_config = {
     .spi_cs_gpio = CONFIG_BBHW_ETH_CS_GPIO,
     .int_gpio = CONFIG_BBHW_ETH_INT_GPIO,
     .phy_reset_gpio = CONFIG_BBHW_ETH_RST_GPIO,
     .phy_addr = CONFIG_BBHW_ETH_PHY_ADDR,
+    .mac_addr = mac,
   };
-
-  esp_err_t err = esp_read_mac(spi_eth_module_config.mac_addr, ESP_MAC_WIFI_STA);
-  ESP_RETURN_ON_ERROR(err, TAG, "read sta mac");
 
   ethHandle = ethInitSpi(spi_eth_module_config, nullptr, nullptr);
   ESP_RETURN_ON_FALSE(ethHandle, ESP_FAIL, TAG, "SPI Ethernet init failed");
