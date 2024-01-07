@@ -4,12 +4,15 @@
 
 
 #define ESP_INTR_FLAG_DEFAULT 0
-#define BBHW_SPI_HOSTID NeedTooChooseSpiHost
-#ifdef CONFIG_BBHW_USE_SPI2_HOST
-  #undef BBHW_SPI_HOSTID
+
+#if CONFIG_BBHW_USE_SPI2_HOST
   #define BBHW_SPI_HOSTID SPI2_HOST
-#endif
-#ifdef CONFIG_BBHW_USE_SPI3_HOST
-  #undef BBHW_SPI_HOSTID
+#elif CONFIG_BBHW_USE_SPI3_HOST
   #define BBHW_SPI_HOSTID SPI3_HOST
+#else
+  #error SPI host not configured
+#endif
+
+#if CONFIG_BBHW_NETKIND_ETH
+  #define BBHW_SETUP_SPI
 #endif

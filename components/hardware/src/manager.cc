@@ -69,21 +69,22 @@ esp_err_t Manager::Initialize()
     return ESP_OK;
   }
 
-  // required for gpio, spi interrupts and so on
-  ESP_LOGI(TAG, "setup ISR service");
-  ESP_RETURN_ON_ERROR(initISR(), TAG, "failed to initialize ISR");
-
   ESP_LOGI(TAG, "setup NVS");
   ESP_RETURN_ON_ERROR(initNVS(), TAG, "failed to initialize NVS");
 
   ESP_LOGI(TAG, "create event loop");
   ESP_RETURN_ON_ERROR(esp_event_loop_create_default(), TAG, "failed to initialize default event loop");
 
-  ESP_LOGI(TAG, "setup board");
-  ESP_RETURN_ON_ERROR(board.Initialize(), TAG, "failed to initialize T-LilyGo board");
+#if BBHW_SETUP_SPI
+  ESP_LOGI(TAG, "setup ISR service");
+  ESP_RETURN_ON_ERROR(initISR(), TAG, "failed to initialize ISR");
 
   ESP_LOGI(TAG, "setup SPI");
   ESP_RETURN_ON_ERROR(initSPI(), TAG, "failed to initialize SPI");
+#endif
+
+  ESP_LOGI(TAG, "setup board");
+  ESP_RETURN_ON_ERROR(board.Initialize(), TAG, "failed to initialize T-LilyGo board");
 
   ESP_LOGI(TAG, "setup network");
   ESP_RETURN_ON_ERROR(net.Initialize(), TAG, "failed to initialize Network");
