@@ -88,7 +88,7 @@ esp_err_t Net::Initialize()
   ESP_RETURN_ON_ERROR(impl->Initialize(), TAG, "failed to initialize wifi network");
 
 #else
-  #error No network configured
+  #error Network is not configured
 #endif
 
   ESP_RETURN_ON_ERROR(esp_netif_init(), TAG, "failed to initialize netif");
