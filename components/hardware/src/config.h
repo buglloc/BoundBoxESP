@@ -14,5 +14,5 @@
 #endif
 
 #if CONFIG_BBHW_NETKIND_ETH
-  #define BBHW_SETUP_SPI
+  #define BBHW_SETUP_SPI 1
 #endif
