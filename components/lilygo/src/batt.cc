@@ -1,13 +1,16 @@
 #include "lilygo/batt.h"
 #include "board_config.h"
 
-#include "esp_adc/adc_oneshot.h"
-#include "esp_adc/adc_cali.h"
-#include "esp_adc/adc_cali_scheme.h"
+#include <driver/gpio.h>
+
+#include <esp_adc/adc_oneshot.h>
+#include <esp_adc/adc_cali.h>
+#include <esp_adc/adc_cali_scheme.h>
 
 #include <esp_err.h>
 #include <esp_check.h>
 #include <esp_log.h>
+
 
 using namespace LilyGo;
 
@@ -67,20 +70,24 @@ namespace
 
 esp_err_t BatteryController::Initialize()
 {
+  esp_err_t err = adc_oneshot_io_to_channel(BATT_ADC_PIN, &adcUnit, &adcChannel);
+  ESP_RETURN_ON_ERROR(err, TAG, "find channel by GPIO #%d", BATT_ADC_PIN);
+  ESP_LOGI(TAG, "channel found: GPIO#%d = %d (unit) / %d (channel)", BATT_ADC_PIN, (int)adcUnit, (int)adcChannel);
+
   adc_oneshot_unit_init_cfg_t initCfg = {
-      .unit_id = BATT_ADC_UNIT,
+      .unit_id = adcUnit,
   };
-  esp_err_t err = adc_oneshot_new_unit(&initCfg, &adcHandle);
+  err = adc_oneshot_new_unit(&initCfg, &adcHandle);
   ESP_RETURN_ON_ERROR(err, TAG, "create one shot unit");
 
   adc_oneshot_chan_cfg_t chanCfg = {
     .atten = BATT_ADC_ATTEN,
     .bitwidth = BATT_ADC_WIDTH_BIT,
   };
-  err = adc_oneshot_config_channel(adcHandle, BATT_ADC_CHANNEL, &chanCfg);
+  err = adc_oneshot_config_channel(adcHandle, adcChannel, &chanCfg);
   ESP_RETURN_ON_ERROR(err, TAG, "configure channel");
 
-  doCalibration = iniAdcCalibration(BATT_ADC_UNIT, BATT_ADC_CHANNEL, BATT_ADC_ATTEN, &caliHandle);
+  doCalibration = iniAdcCalibration(adcUnit, adcChannel, BATT_ADC_ATTEN, &caliHandle);
 
   return ESP_OK;
 }
@@ -93,7 +100,7 @@ uint32_t BatteryController::BattVoltage()
 
   int adcRaw = 0;
   int voltage = 0;
-  esp_err_t err = adc_oneshot_read(adcHandle, BATT_ADC_CHANNEL, &adcRaw);
+  esp_err_t err = adc_oneshot_read(adcHandle, adcChannel, &adcRaw);
   if (err != ESP_OK) {
     ESP_LOGE(TAG, "adc read fail: %d", err);
     return 0;
