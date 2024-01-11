@@ -1,4 +1,4 @@
-#include "config.h"
+#include <sdkconfig.h>
 #include "net_usb.h"
 #include "net_common.h"
 
@@ -64,10 +64,9 @@ esp_err_t NetUsb::Initialize()
   esp_err_t err = tinyusb_driver_install(&usbCfg);
   ESP_RETURN_ON_ERROR(err, TAG, "install TinyUSB driver");
 
-  BuildIPInfo(&this->ipInfo, true);
   this->netifCfg = {
-    .flags = static_cast<esp_netif_flags_t>(ESP_NETIF_DHCP_SERVER | ESP_NETIF_FLAG_AUTOUP | ESP_NETIF_FLAG_EVENT_IP_MODIFIED),
-    .ip_info = &this->ipInfo,
+    .flags = static_cast<esp_netif_flags_t>(ESP_NETIF_FLAG_AUTOUP | ESP_NETIF_FLAG_EVENT_IP_MODIFIED),
+    .ip_info = StaticIP(),
     .get_ip_event = IP_EVENT_ETH_GOT_IP,
     .lost_ip_event = IP_EVENT_ETH_LOST_IP,
     .if_key = "wired",
@@ -111,7 +110,7 @@ esp_err_t NetUsb::Attach(esp_netif_t* netif)
 
   esp_err_t err = esp_read_mac(netCfg.mac_addr, ESP_MAC_WIFI_SOFTAP);
   ESP_RETURN_ON_ERROR(err, TAG, "read softap mac");
-  
+
   err = tinyusb_net_init(TINYUSB_USBDEV_0, &netCfg);
   ESP_RETURN_ON_ERROR(err, TAG, "initialize USB Net device");
 
@@ -120,14 +119,7 @@ esp_err_t NetUsb::Attach(esp_netif_t* netif)
 
   // start the interface manually (as the driver has been started already)
   esp_netif_action_start(netif, 0, 0, 0);
-
-  // TODO(buglloc): do smth better plz
-  ip_event_got_ip_t evt = {
-    .esp_netif = netif,
-    .ip_changed = true,
-  };
-  BuildIPInfo(&evt.ip_info, true);
-  esp_event_post(IP_EVENT, IP_EVENT_ETH_GOT_IP, &evt, sizeof(evt), 0);
+  SendGotIP(netif, StaticIP());
 
   return ESP_OK;
 }

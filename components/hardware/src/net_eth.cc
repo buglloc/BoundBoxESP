@@ -1,4 +1,4 @@
-#include "config.h"
+#include <sdkconfig.h>
 #include "net_eth.h"
 #include "net_common.h"
 
@@ -18,6 +18,7 @@
 
 using namespace Hardware;
 
+#if BBHW_SETUP_ETH
 namespace
 {
   static const char* TAG = "hardware::net::eth";
@@ -51,7 +52,7 @@ namespace
       .queue_size = 20,
     };
 
-    eth_w5500_config_t w5500_config = ETH_W5500_DEFAULT_CONFIG(BBHW_SPI_HOSTID, &spi_devcfg);
+    eth_w5500_config_t w5500_config = ETH_W5500_DEFAULT_CONFIG(CONFIG_BBHW_SPI_HOST_ID, &spi_devcfg);
     w5500_config.int_gpio_num = cfg.int_gpio;
     esp_eth_mac_t* mac = esp_eth_mac_new_w5500(&w5500_config, &mac_config);
     esp_eth_phy_t* phy = esp_eth_phy_new_w5500(&phy_config);
@@ -163,3 +164,5 @@ esp_err_t NetEth::Attach(esp_netif_t* netif)
   ESP_RETURN_ON_ERROR(esp_eth_start(ethHandle), TAG, "eth start");
   return ESP_OK;
 }
+
+#endif

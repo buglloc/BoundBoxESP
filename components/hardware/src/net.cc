@@ -1,11 +1,10 @@
+#include <sdkconfig.h>
 #include "hardware/net.h"
-#include "config.h"
 
+#include "net_common.h"
 #include "net_usb.h"
 #include "net_wifi.h"
-#if CONFIG_BBHW_HAS_ETH
 #include "net_eth.h"
-#endif
 
 #include <esp_netif.h>
 #include <esp_event.h>
@@ -105,8 +104,13 @@ esp_err_t Net::Attach()
   esp_netif_t* netif = esp_netif_new(&netifCfg);
   esp_netif_set_hostname(netif, CONFIG_BBHW_HOSTNAME);
 
-  ESP_RETURN_ON_ERROR(esp_event_handler_register(IP_EVENT, ESP_EVENT_ANY_ID, &ipEventHandler, nullptr), TAG, "attach got ip handler");
-  return impl->Attach(netif);
+  esp_err_t err = esp_event_handler_register(IP_EVENT, ESP_EVENT_ANY_ID, &ipEventHandler, nullptr);
+  ESP_RETURN_ON_ERROR(err, TAG, "attach got ip handler");
+
+  err = impl->Attach(netif);
+  ESP_RETURN_ON_ERROR(err, TAG, "attach");
+
+  return ESP_OK;
 }
 
 esp_ip4_addr_t Net::LocalIP()
