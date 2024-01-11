@@ -1,10 +1,12 @@
 #pragma once
 
-#include "config.h"
+#include <sdkconfig.h>
 
 #include <lwip/inet.h>
 
+#include <esp_err.h>
 #include <esp_check.h>
+#include <esp_event.h>
 #include <esp_netif.h>
 
 
@@ -12,9 +14,46 @@ namespace Hardware
 {
   inline void PatchNetifCfg(esp_netif_inherent_config_t& netifCfg)
   {
-  #if CONFIG_BBHW_NET_USE_STATIC_IP
-    netifCfg.flags = static_cast<esp_netif_flags_t>(netifCfg.flags & ~ESP_NETIF_DHCP_CLIENT);
+  #if CONFIG_BBHW_NET_DHCP_CLIENT
+    netifCfg.flags = static_cast<esp_netif_flags_t>((netifCfg.flags & ~ESP_NETIF_DHCP_SERVER) | ESP_NETIF_DHCP_CLIENT);
+  #elif CONFIG_BBHW_NET_DHCP_SERVER
+    netifCfg.flags = static_cast<esp_netif_flags_t>((netifCfg.flags & ~ESP_NETIF_DHCP_CLIENT) | ESP_NETIF_DHCP_SERVER);
+  #else
+    netifCfg.flags = static_cast<esp_netif_flags_t>(netifCfg.flags & ~(ESP_NETIF_DHCP_CLIENT|ESP_NETIF_DHCP_SERVER));
   #endif
+  }
+
+  inline const esp_netif_ip_info_t* StaticIP()
+  {
+    #if !CONFIG_BBHW_NET_USE_STATIC_IP
+      return nullptr;
+    #else
+      static esp_netif_ip_info_t ip = {};
+      if (ip.ip.addr == 0) {
+        ip.ip.addr = ipaddr_addr(CONFIG_BBHW_NET_IP);
+        ip.netmask.addr = ipaddr_addr(CONFIG_BBHW_NET_SUBNET);
+        ip.gw.addr = ipaddr_addr(CONFIG_BBHW_NET_GW);
+      }
+
+      return &ip;
+    #endif
+  }
+
+  inline void SendGotIP(esp_netif_t *netif, const esp_netif_ip_info_t* ip)
+  {
+    if (ip == nullptr) {
+      // no static IP - that's fine
+      return;
+    }
+
+    ip_event_got_ip_t evt = {
+      .esp_netif = netif,
+      .ip_info = *ip,
+      .ip_changed = true,
+    };
+
+    esp_err_t err = esp_event_post(IP_EVENT, IP_EVENT_STA_GOT_IP, &evt, sizeof(evt), 0);
+    ESP_ERROR_CHECK(err);
   }
 
   inline void SetDnsServer(esp_netif_t *netif, esp_netif_dns_type_t type)
@@ -30,37 +69,20 @@ namespace Hardware
   #endif
   }
 
-  inline void BuildIPInfo(esp_netif_ip_info_t *ip, bool force)
-  {
-  #if !CONFIG_BBHW_NET_USE_STATIC_IP
-    if (!force) {
-      // doesn't use static IP - nothing to do
-      return;
-    }
-  #else
-    assert(ip);
-
-    memset(ip, 0 , sizeof(esp_netif_ip_info_t));
-    ip->ip.addr = ipaddr_addr(CONFIG_BBHW_NET_IP);
-    ip->netmask.addr = ipaddr_addr(CONFIG_BBHW_NET_SUBNET);
-    ip->gw.addr = ipaddr_addr(CONFIG_BBHW_NET_GW);
-  #endif
-  }
-
   inline void SetIPInfo(esp_netif_t *netif)
   {
-  #if !CONFIG_BBHW_NET_USE_STATIC_IP
-    // doesn't use static IP - nothing to do
-    return;
-  #else
     assert(netif);
 
-    esp_netif_ip_info_t ip;
-    memset(&ip, 0 , sizeof(esp_netif_ip_info_t));
-    BuildIPInfo(&ip, false);
-    ESP_ERROR_CHECK(esp_netif_set_ip_info(netif, &ip));
+    const esp_netif_ip_info_t* ip = StaticIP();
+    if (ip == nullptr) {
+      // no static IP - that's fine
+      return;
+    }
+
+    esp_err_t err = esp_netif_set_ip_info(netif, ip);
+    ESP_ERROR_CHECK(err);
 
     SetDnsServer(netif, ESP_NETIF_DNS_MAIN);
-  #endif
+    SendGotIP(netif, ip);
   }
 }

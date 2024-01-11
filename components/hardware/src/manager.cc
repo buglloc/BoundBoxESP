@@ -1,4 +1,4 @@
-#include "config.h"
+#include <sdkconfig.h>
 #include "hardware/manager.h"
 
 #include <freertos/FreeRTOS.h>
@@ -20,11 +20,6 @@ namespace
 {
   static const char* TAG = "hardware";
 
-  esp_err_t initISR()
-  {
-    return gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
-  }
-
   esp_err_t initNVS()
   {
     // Initialize NVS partition
@@ -38,9 +33,14 @@ namespace
     return ret;
   }
 
+#if CONFIG_BBHW_SPI_SETUP_SPI
+  esp_err_t initISR()
+  {
+    return gpio_install_isr_service(0);
+  }
+
   esp_err_t initSPI()
   {
-    // Init SPI bus
     spi_bus_config_t buscfg = {
       .mosi_io_num = CONFIG_BBHW_SPI_MOSI_GPIO,
       .miso_io_num = CONFIG_BBHW_SPI_MISO_GPIO,
@@ -49,11 +49,13 @@ namespace
       .quadhd_io_num = -1,
     };
 
-    esp_err_t ret = spi_bus_initialize(BBHW_SPI_HOSTID, &buscfg, SPI_DMA_CH_AUTO);
-    ESP_RETURN_ON_ERROR(ret, TAG, "SPI host #%d init failed", BBHW_SPI_HOSTID);
+    esp_err_t ret = spi_bus_initialize(static_cast<spi_host_device_t>(CONFIG_BBHW_SPI_HOST_ID), &buscfg, SPI_DMA_CH_AUTO);
+    ESP_RETURN_ON_ERROR(ret, TAG, "SPI host #%d init failed", CONFIG_BBHW_SPI_HOST_ID);
 
     return ESP_OK;
   }
+#endif
+
 }
 
 Manager& Manager::Instance()
@@ -75,7 +77,7 @@ esp_err_t Manager::Initialize()
   ESP_LOGI(TAG, "create event loop");
   ESP_RETURN_ON_ERROR(esp_event_loop_create_default(), TAG, "failed to initialize default event loop");
 
-#if BBHW_SETUP_SPI
+#if CONFIG_BBHW_SPI_SETUP_SPI
   ESP_LOGI(TAG, "setup ISR service");
   ESP_RETURN_ON_ERROR(initISR(), TAG, "failed to initialize ISR");
 
