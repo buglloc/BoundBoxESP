@@ -102,15 +102,7 @@ extern "C" void app_main(void)
   }
 
   ESP_LOGI(TAG, "attach network");
-  {
-    ui.SetBoardState(UI::BoardState::WaitNet);
-    ESP_SHUTDOWN_ON_ERROR(hw.Net().Attach(), TAG, "network attach");
-
-    do {
-      taskYIELD();
-      vTaskDelay(xWaitDelay);
-    } while (!hw.Net().Ready());
-  }
+  ESP_SHUTDOWN_ON_ERROR(hw.Net().Attach(), TAG, "network attach");
 
   ESP_LOGI(TAG, "wait credentials");
   {
@@ -121,6 +113,16 @@ extern "C" void app_main(void)
       taskYIELD();
       vTaskDelay(xWaitDelay);
     } while (!auth.HasCredential());
+  }
+
+  ESP_LOGI(TAG, "wait network");
+  {
+    ui.SetBoardState(UI::BoardState::WaitNet);
+
+    do {
+      taskYIELD();
+      vTaskDelay(xWaitDelay);
+    } while (!hw.Net().Ready());
   }
 
   ui.SetBoardState(UI::BoardState::Idle);
