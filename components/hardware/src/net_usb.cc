@@ -34,10 +34,11 @@ namespace
 
   static esp_err_t netif_transmit (void *h, void *buffer, size_t len)
   {
-    if (wired_send(buffer, len, NULL) != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to send buffer to USB!");
+    esp_err_t err = wired_send(buffer, len, NULL);
+    if (err != ESP_OK) {
+      ESP_LOGE(TAG, "failed to send buffer to USB: %s", esp_err_to_name(err));
     }
-    return ESP_OK;
+    return err;
   }
 
   esp_err_t netif_recv_callback(void *buffer, uint16_t len, void *ctx)
