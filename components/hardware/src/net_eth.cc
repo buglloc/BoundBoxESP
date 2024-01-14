@@ -103,20 +103,20 @@ namespace
     esp_err_t ret = ESP_OK;
     switch (event_id) {
     case ETHERNET_EVENT_CONNECTED:
-      ESP_LOGI(TAG, "Ethernet Link Up");
+      ESP_LOGI(TAG, "ethernet Link Up");
       ESP_GOTO_ON_ERROR(SetIPInfo(ctx->Netif, ctx->NetCfg), err, TAG, "set ip");
       break;
 
     case ETHERNET_EVENT_DISCONNECTED:
-      ESP_LOGI(TAG, "Ethernet Link Down");
+      ESP_LOGI(TAG, "ethernet Link Down");
       break;
 
     case ETHERNET_EVENT_START:
-      ESP_LOGI(TAG, "Ethernet Started");
+      ESP_LOGI(TAG, "ethernet Started");
       break;
 
     case ETHERNET_EVENT_STOP:
-      ESP_LOGI(TAG, "Ethernet Stopped");
+      ESP_LOGI(TAG, "ethernet Stopped");
       break;
 
     default:

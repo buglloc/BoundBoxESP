@@ -50,7 +50,7 @@ namespace
 
 esp_err_t Display::Initialize()
 {
-  ESP_LOGD(TAG, "Initializing");
+  ESP_LOGD(TAG, "initializing");
   gpio_set_direction(TFT_PIN_CS, GPIO_MODE_OUTPUT);
   gpio_set_direction(TFT_PIN_RST, GPIO_MODE_OUTPUT);
   gpio_set_direction(TFT_PIN_TE, GPIO_MODE_INPUT);
