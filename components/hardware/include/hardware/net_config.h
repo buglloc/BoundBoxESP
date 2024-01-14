@@ -11,8 +11,8 @@ namespace Hardware
   {
     None = 0,
     USB,
-    Ethernet,
     WiFiSTA,
+    Ethernet,
   };
 
   enum class DhcpKind: uint8_t

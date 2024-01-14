@@ -1,11 +1,18 @@
-idf_component_register(
-SRCS
+set(HW_SRCS
   "src/manager.cc"
   "src/net_common.cc"
-  "src/net_eth.cc"
   "src/net_usb.cc"
   "src/net_wifi.cc"
   "src/net.cc"
+)
+
+if(CONFIG_BBHW_HAS_ETH)
+  list(APPEND HW_SRCS "src/net_eth.cc")
+endif(CONFIG_BBHW_HAS_ETH)
+
+idf_component_register(
+SRCS
+  ${HW_SRCS}
 INCLUDE_DIRS
   "include"
 REQUIRES
