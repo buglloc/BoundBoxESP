@@ -8,12 +8,17 @@
 
 namespace Hardware
 {
+  struct Config
+  {
+    NetConfig Net;
+  };
+
   class Manager
   {
   public:
     static Manager& Instance();
 
-    esp_err_t Initialize();
+    esp_err_t Initialize(const Config cfg);
 
     esp_err_t ScheduleRestart(uint16_t delayMs);
     void Restart();

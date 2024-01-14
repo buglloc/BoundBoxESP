@@ -1,6 +1,7 @@
 idf_component_register(
 SRCS
   "src/manager.cc"
+  "src/net_common.cc"
   "src/net_eth.cc"
   "src/net_usb.cc"
   "src/net_wifi.cc"

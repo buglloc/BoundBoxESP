@@ -64,7 +64,7 @@ Manager& Manager::Instance()
   return instance;
 }
 
-esp_err_t Manager::Initialize()
+esp_err_t Manager::Initialize(const Config cfg)
 {
   if (initialized) {
     ESP_LOGW(TAG, "already initialized");
@@ -89,7 +89,7 @@ esp_err_t Manager::Initialize()
   ESP_RETURN_ON_ERROR(board.Initialize(), TAG, "failed to initialize T-LilyGo board");
 
   ESP_LOGI(TAG, "setup network");
-  ESP_RETURN_ON_ERROR(net.Initialize(), TAG, "failed to initialize Network");
+  ESP_RETURN_ON_ERROR(net.Initialize(cfg.Net), TAG, "failed to initialize Network");
 
   initialized = true;
   return ESP_OK;

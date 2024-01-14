@@ -66,13 +66,14 @@ esp_err_t NetUsb::Initialize()
 
   this->netifCfg = {
     .flags = static_cast<esp_netif_flags_t>(ESP_NETIF_FLAG_AUTOUP | ESP_NETIF_FLAG_EVENT_IP_MODIFIED),
-    .ip_info = StaticIP(),
+    .ip_info = NetifIP(netCfg),
     .get_ip_event = IP_EVENT_ETH_GOT_IP,
     .lost_ip_event = IP_EVENT_ETH_LOST_IP,
     .if_key = "wired",
     .if_desc = "usb ncm config device",
   };
-  PatchNetifCfg(this->netifCfg);
+  err = PatchNetifCfg(netifCfg, netCfg);
+  ESP_RETURN_ON_ERROR(err, TAG, "patch netif cfg");
 
   this->driverCfg = {
     .handle = (void *)1,                // not using an instance, USB-NCM is a static singleton (must be != NULL)
@@ -103,23 +104,23 @@ esp_err_t NetUsb::Attach(esp_netif_t* netif)
 {
   assert(netif);
 
-  tinyusb_net_config_t netCfg = {
+  tinyusb_net_config_t tinyNetCfg = {
     .on_recv_callback = netif_recv_callback,
     .user_context = netif,
   };
 
-  esp_err_t err = esp_read_mac(netCfg.mac_addr, ESP_MAC_WIFI_SOFTAP);
+  esp_err_t err = esp_read_mac(tinyNetCfg.mac_addr, ESP_MAC_WIFI_SOFTAP);
   ESP_RETURN_ON_ERROR(err, TAG, "read softap mac");
 
-  err = tinyusb_net_init(TINYUSB_USBDEV_0, &netCfg);
+  err = tinyusb_net_init(TINYUSB_USBDEV_0, &tinyNetCfg);
   ESP_RETURN_ON_ERROR(err, TAG, "initialize USB Net device");
 
-  err = esp_netif_set_mac(netif, netCfg.mac_addr);
+  err = esp_netif_set_mac(netif, tinyNetCfg.mac_addr);
   ESP_RETURN_ON_ERROR(err, TAG, "set netif mac");
 
   // start the interface manually (as the driver has been started already)
   esp_netif_action_start(netif, 0, 0, 0);
-  SendGotIP(netif, StaticIP());
+  SendGotIP(netif, NetifIP(netCfg));
 
   return ESP_OK;
 }
