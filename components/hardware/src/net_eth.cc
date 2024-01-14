@@ -15,7 +15,6 @@
 #include <esp_check.h>
 #include <esp_event.h>
 
-#ifdef BBHW_HAS_ETH
 
 using namespace Hardware;
 
@@ -178,5 +177,3 @@ esp_err_t NetEth::Attach(esp_netif_t* netif)
   ESP_RETURN_ON_ERROR(esp_eth_start(ethHandle), TAG, "eth start");
   return ESP_OK;
 }
-
-#endif

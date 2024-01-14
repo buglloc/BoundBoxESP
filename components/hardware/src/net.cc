@@ -80,19 +80,20 @@ esp_err_t Net::Initialize(NetConfig cfg)
   switch (this->cfg.Kind)
   {
   case NetKind::USB:
-    ESP_LOGI(TAG, "Will use USB CBC network");
+    ESP_LOGI(TAG, "will use USB CBC network");
     impl = std::make_unique<NetUsb>(this->cfg);
     break;
 
   case NetKind::WiFiSTA:
-    ESP_LOGI(TAG, "Will use WiFi Station network");
+    ESP_LOGI(TAG, "will use WiFi Station network");
     impl = std::make_unique<NetWiFiSta>(this->cfg);
     break;
 
-#ifdef BBHW_HAS_ETH
+#ifdef CONFIG_BBHW_HAS_ETH
   case NetKind::Ethernet:
-    ESP_LOGI(TAG, "Will use Ethernet network");
+    ESP_LOGI(TAG, "will use Ethernet network");
     impl = std::make_unique<NetEth>(this->cfg);
+    break;
 #endif
 
   default:
