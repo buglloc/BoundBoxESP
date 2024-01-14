@@ -15,7 +15,8 @@ namespace Hardware
   class NetUsb final: public NetImpl
   {
   public:
-    NetUsb() = default;
+    explicit NetUsb(const NetConfig& cfg) : netCfg(cfg) {};
+
     esp_err_t Initialize() override;
     esp_netif_config_t NetifConfig() const override;
     esp_err_t Attach(esp_netif_t* netif) override;
@@ -26,6 +27,7 @@ namespace Hardware
     }
 
   private:
+    const NetConfig& netCfg;
     esp_netif_t* netif = nullptr;
     esp_netif_ip_info_t ipInfo;
     esp_netif_inherent_config_t netifCfg;

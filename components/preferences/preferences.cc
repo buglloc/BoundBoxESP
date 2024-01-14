@@ -20,6 +20,7 @@
 namespace
 {
   static const char* TAG = "preferences";
+  static const char* DEFAULT_NAMESPACE = "bb_preferences";
 }
 
 Preferences::Error Preferences::Open(const std::string& name)
@@ -29,7 +30,7 @@ Preferences::Error Preferences::Open(const std::string& name)
     return Error::InvalidState;
   }
 
-  const char* nvsName = name.empty() ? CONFIG_BB_PREF_NAMESPACE : name.c_str();
+  const char* nvsName = name.empty() ? DEFAULT_NAMESPACE : name.c_str();
   ESP_LOGI(TAG, "open NVS flash: %s", nvsName);
 
   esp_err_t err = nvs_flash_init();

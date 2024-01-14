@@ -1,12 +1,4 @@
-menu "BoundBox"
-
-  config ROOT_USERNAME
-    string "Root username"
-    default "root"
-
-  config ROOT_KEY
-    string "Root user authorized key"
-    default ""
+menu "BoundBox Runtime"
 
   choice HOSTKEY_TYPE
     prompt "Default host key type"
@@ -37,10 +29,6 @@ menu "BoundBox"
     int "Default secret key size"
     default 32
 
-  config PIN_VERIFICATION_SALT
-    string "PIN verification salt"
-    default "BoundBoxVerify"
-
   config SSHD_TASK_STACK_SIZE
     int "SSHD task stack size"
     default 32768
@@ -57,14 +45,5 @@ menu "BoundBox"
     int "Default restart delay (ms)"
     range 0 100000
     default 2000
-
-  config DUMPABLE_SECRETS
-    bool "Allow to read secrets by sysops"
-    default false
-
-  config HMAC_MIN_SALT_LEN
-    int "Minimum salt len for HMAC secrets"
-    range 1 256
-    default 16
 
 endmenu

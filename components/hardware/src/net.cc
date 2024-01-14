@@ -25,6 +25,7 @@ namespace
     ip_event_got_ip_t* event = reinterpret_cast<ip_event_got_ip_t *>(event_data);
     const esp_netif_ip_info_t* ip_info = &event->ip_info;
 
+    ESP_LOGI(TAG, "got event %s:%ld", event_base, event_id);
     switch (event_id) {
       case IP_EVENT_ETH_LOST_IP:
       case IP_EVENT_STA_LOST_IP:
@@ -72,24 +73,34 @@ namespace
   }
 }
 
-esp_err_t Net::Initialize()
+esp_err_t Net::Initialize(NetConfig cfg)
 {
-#if CONFIG_BBHW_NETKIND_USB
-  impl = std::make_unique<NetUsb>();
-  ESP_RETURN_ON_ERROR(impl->Initialize(), TAG, "failed to initialize usb network");
+  this->cfg = std::move(cfg);
 
-#elif CONFIG_BBHW_NETKIND_ETH
-  impl = std::make_unique<NetEth>();
-  ESP_RETURN_ON_ERROR(impl->Initialize(), TAG, "failed to initialize ethernet network");
+  switch (this->cfg.Kind)
+  {
+  case NetKind::USB:
+    ESP_LOGI(TAG, "Will use USB CBC network");
+    impl = std::make_unique<NetUsb>(this->cfg);
+    break;
 
-#elif CONFIG_BBHW_NETKIND_WIFI_STA
-  impl = std::make_unique<NetWiFiSta>();
-  ESP_RETURN_ON_ERROR(impl->Initialize(), TAG, "failed to initialize wifi network");
+  case NetKind::WiFiSTA:
+    ESP_LOGI(TAG, "Will use WiFi Station network");
+    impl = std::make_unique<NetWiFiSta>(this->cfg);
+    break;
 
-#else
-  #error Network is not configured
+#ifdef BBHW_HAS_ETH
+  case NetKind::Ethernet:
+    ESP_LOGI(TAG, "Will use Ethernet network");
+    impl = std::make_unique<NetEth>(this->cfg);
 #endif
 
+  default:
+    ESP_LOGE(TAG, "unsupported network kind: %d", (int)this->cfg.Kind);
+    return ESP_ERR_INVALID_ARG;
+  }
+
+  ESP_RETURN_ON_ERROR(impl->Initialize(), TAG, "failed to initialize network impl");
   ESP_RETURN_ON_ERROR(esp_netif_init(), TAG, "failed to initialize netif");
   return ESP_OK;
 }
@@ -102,7 +113,7 @@ esp_err_t Net::Attach()
 
   esp_netif_config_t netifCfg = impl->NetifConfig();
   esp_netif_t* netif = esp_netif_new(&netifCfg);
-  esp_netif_set_hostname(netif, CONFIG_BBHW_HOSTNAME);
+  esp_netif_set_hostname(netif, cfg.Hostname.c_str());
 
   esp_err_t err = esp_event_handler_register(IP_EVENT, ESP_EVENT_ANY_ID, &ipEventHandler, nullptr);
   ESP_RETURN_ON_ERROR(err, TAG, "attach got ip handler");

@@ -1,0 +1,102 @@
+menu "BoundBox"
+
+  config ROOT_USERNAME
+    string "Root username"
+    default "root"
+
+  config ROOT_KEY
+    string "Root user authorized key"
+    default ""
+
+  config HOSTNAME
+    string "Hostname"
+    default "BoundBoxESP"
+
+  choice NET_KIND
+    prompt "Network implementation"
+    default NET_KIND_USB
+
+    config NET_KIND_USB
+      bool "USB"
+
+    config NET_KIND_WIFI_STA
+      bool "WiFi"
+
+    config NET_KIND_ETH
+      bool "Ethernet"
+      depends on BBHW_HAS_ETH
+  endchoice
+
+  choice NET_DHCP_KIND
+    prompt "DHCP"
+    default NET_DHCP_KIND_SERVER if NET_KIND_USB
+    default NET_DHCP_KIND_CLIENT if NET_KIND_WIFI_STA
+    default NET_DHCP_KIND_CLIENT if NET_KIND_ETH
+
+    config NET_DHCP_KIND_NONE
+      bool "None"
+
+    config NET_DHCP_KIND_CLIENT
+      bool "Client"
+
+    config NET_DHCP_KIND_SERVER
+      depends on !NET_KIND_WIFI_STA
+      bool "Server (will use static IP)"
+  endchoice
+
+  menu "Static IP"
+    depends on NET_DHCP_KIND_NONE || NET_DHCP_KIND_SERVER
+
+    config NET_USE_STATIC_IP
+      bool
+      depends on NET_DHCP_KIND_NONE || NET_DHCP_KIND_SERVER
+      default y
+
+    config NET_IP
+      string "IP"
+      depends on NET_USE_STATIC_IP
+      default "192.168.8.1"
+
+    config NET_SUBNET
+      string "Subnet"
+      depends on NET_USE_STATIC_IP
+      default "255.255.255.0"
+
+    config NET_GW
+      string "Gateway"
+      depends on NET_USE_STATIC_IP
+      default "192.168.8.1"
+
+    config NET_DNS
+      depends on NET_USE_STATIC_IP
+      string "Primary DNS"
+
+  endmenu
+
+  menu "WiFi"
+    depends on NET_KIND_WIFI_STA
+
+    config WIFI_SSID
+      depends on NET_KIND_WIFI_STA
+      string "SSID"
+
+    config WIFI_PASSWORD
+      depends on NET_KIND_WIFI_STA
+      string "Password"
+
+  endmenu
+
+  config PIN_VERIFICATION_SALT
+    string "PIN verification salt"
+    default "BoundBoxVerify"
+
+  config DUMPABLE_SECRETS
+    bool "Allow to read secrets by sysops"
+    default false
+
+  config HMAC_MIN_SALT_LEN
+    int "Minimum salt len for HMAC secrets"
+    range 1 256
+    default 16
+
+endmenu

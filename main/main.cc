@@ -18,6 +18,7 @@
 #include "secrets.h"
 #include "authenticator.h"
 #include "commands.h"
+#include "hardware.h"
 
 
 namespace {
@@ -69,7 +70,10 @@ namespace {
 extern "C" void app_main(void)
 {
   ESP_LOGI(TAG, "initialize hardware");
-  ESP_SHUTDOWN_ON_ERROR(hw.Initialize(), TAG, "initialize hardware");
+  {
+    Hardware::Config hwCfg = HwConfig();
+    ESP_SHUTDOWN_ON_ERROR(hw.Initialize(hwCfg), TAG, "initialize hardware");
+  }
 
   ESP_LOGI(TAG, "initialize secrets");
   Secrets secrets;

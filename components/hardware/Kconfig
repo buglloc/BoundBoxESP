@@ -1,127 +1,46 @@
 menu "BoundBox Hardware"
 
-  menu "Net"
-
-    config BBHW_HOSTNAME
-      string "Hostname"
-      default "BoundBoxESP"
-
-    choice BBHW_NETKIND
-      prompt "Network implementation"
-      default BBHW_NETKIND_USB
-
-      config BBHW_NETKIND_USB
-        bool "USB"
-
-      config BBHW_NETKIND_WIFI_STA
-        bool "WiFi"
-
-      config BBHW_NETKIND_ETH
-        bool "Ethernet"
-        depends on BBHW_SETUP_ETH
-    endchoice
-
-    choice BBHW_NET_DHCP
-      prompt "DHCP"
-      default BBHW_NET_DHCP_SERVER if BBHW_NETKIND_USB
-      default BBHW_NET_DHCP_CLIENT if BBHW_NETKIND_WIFI_STA
-      default BBHW_NET_DHCP_CLIENT if BBHW_NETKIND_ETH
-
-      config BBHW_NET_DHCP_NONE
-        bool "None"
-
-      config BBHW_NET_DHCP_CLIENT
-        bool "Client"
-
-      config BBHW_NET_DHCP_SERVER
-        depends on !BBHW_NETKIND_WIFI_STA
-        bool "Server (will use static IP)"
-    endchoice
-
-    menu "Static IP"
-      depends on BBHW_NET_DHCP_NONE || BBHW_NET_DHCP_SERVER
-
-      config BBHW_NET_USE_STATIC_IP
-        bool "Use Static IP"
-        depends on BBHW_NET_DHCP_NONE || BBHW_NET_DHCP_SERVER
-        default y
-
-      config BBHW_NET_IP
-        string "IP"
-        depends on BBHW_NET_USE_STATIC_IP
-        default "192.168.8.1"
-
-      config BBHW_NET_SUBNET
-        string "Subnet"
-        depends on BBHW_NET_USE_STATIC_IP
-        default "255.255.255.0"
-
-      config BBHW_NET_GW
-        string "Gateway"
-        depends on BBHW_NET_USE_STATIC_IP
-        default "0.0.0.0"
-
-      config BBHW_NET_DNS
-        depends on BBHW_NET_USE_STATIC_IP
-        string "Primary DNS"
-
-    endmenu
-
-    menu "WiFi"
-      depends on BBHW_NETKIND_WIFI_STA
-
-      config BBHW_WIFI_SSID
-        depends on BBHW_NETKIND_WIFI_STA
-        string "SSID"
-
-      config BBHW_WIFI_PASSWORD
-        depends on BBHW_NETKIND_WIFI_STA
-        string "Password"
-
-    endmenu
-  endmenu
-
-  menuconfig BBHW_SETUP_ETH
+  menuconfig BBHW_HAS_ETH
     bool "Setup Ethernet"
     default y
+
+  if BBHW_HAS_ETH
 
   config BBHW_ETH_PHY_ADDR
     int "Ethernet phy addr"
     range 0 46
     default 1
-    depends on BBHW_SETUP_ETH
 
   config BBHW_ETH_SPI_CLOCK_MHZ
     int "Ethernet spi clock (MHz)"
     default 36
-    depends on BBHW_SETUP_ETH
 
   config BBHW_ETH_CS_GPIO
     int "Ethernet CS gpio"
     range 0 46
     default 10
-    depends on BBHW_SETUP_ETH
 
   config BBHW_ETH_INT_GPIO
     int "Ethernet INT gpio"
     range 1 46
     default 14
-    depends on BBHW_SETUP_ETH
 
   config BBHW_ETH_RST_GPIO
     int "Ethernet RST gpio"
     range 1 46
     default 15
-    depends on BBHW_SETUP_ETH
+
+  endif # BBHW_HAS_ETH
 
   menuconfig BBHW_SPI_SETUP_SPI
     bool "Setup SPI"
-    default y if BBHW_SETUP_ETH
+    default y if BBHW_HAS_ETH
+
+  if BBHW_SPI_SETUP_SPI
 
   choice BBHW_SPI_HOST
     prompt "SPI Host id to use"
     default BBHW_USE_SPI3_HOST
-    depends on BBHW_SPI_SETUP_SPI
 
     config BBHW_USE_SPI2_HOST
       bool "SPI2_HOST"
@@ -132,26 +51,24 @@ menu "BoundBox Hardware"
 
   config BBHW_SPI_HOST_ID
     int
-    depends on BBHW_SPI_SETUP_SPI
     default 1 if BBHW_USE_SPI2_HOST
     default 2 if BBHW_USE_SPI3_HOST
 
   config BBHW_SPI_MOSI_GPIO
     int "Peripheral MOSI gpio"
-    depends on BBHW_SPI_SETUP_SPI
     range 0 46
     default 11
 
   config BBHW_SPI_MISO_GPIO
     int "Peripheral MISO gpio"
-    depends on BBHW_SPI_SETUP_SPI
     range 0 46
     default 13
 
   config BBHW_SPI_SCLK_GPIO
     int "Peripheral SCLK gpio"
-    depends on BBHW_SPI_SETUP_SPI
     range 0 46
     default 12
+
+  endif # BBHW_SPI_SETUP_SPI
 
 endmenu
