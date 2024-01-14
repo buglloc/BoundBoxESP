@@ -26,7 +26,7 @@ namespace
 
   #if ADC_CALI_SCHEME_CURVE_FITTING_SUPPORTED
     if (!calibrated) {
-      ESP_LOGI(TAG, "calibration scheme version is %s", "Curve Fitting");
+      ESP_LOGI(TAG, "calibration scheme version is: Curve Fitting");
       adc_cali_curve_fitting_config_t cali_config = {
         .unit_id = unit,
         .chan = channel,
@@ -42,7 +42,7 @@ namespace
 
   #if ADC_CALI_SCHEME_LINE_FITTING_SUPPORTED
     if (!calibrated) {
-      ESP_LOGI(TAG, "calibration scheme version is %s", "Line Fitting");
+      ESP_LOGI(TAG, "calibration scheme version is: Line Fitting");
       adc_cali_line_fitting_config_t cali_config = {
         .unit_id = unit,
         .atten = atten,
@@ -57,11 +57,11 @@ namespace
 
     *outHandle = handle;
     if (ret == ESP_OK) {
-      ESP_LOGI(TAG, "Calibration Success");
+      ESP_LOGI(TAG, "calibration Success");
     } else if (ret == ESP_ERR_NOT_SUPPORTED || !calibrated) {
       ESP_LOGW(TAG, "eFuse not burnt, skip software calibration");
     } else {
-      ESP_LOGE(TAG, "Invalid arg or no memory");
+      ESP_LOGE(TAG, "invalid arg or no memory");
     }
 
     return calibrated;

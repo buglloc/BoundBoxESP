@@ -39,13 +39,13 @@ namespace
 
         switch (event_id) {
         case IP_EVENT_ETH_GOT_IP:
-          ESP_LOGI(TAG, "Ethernet connected");
+          ESP_LOGI(TAG, "ethernet connected");
           break;
         case IP_EVENT_STA_GOT_IP:
-          ESP_LOGI(TAG, "Wifi connected");
+          ESP_LOGI(TAG, "wifi connected");
           break;
         default:
-          ESP_LOGI(TAG, "Something connected");
+          ESP_LOGI(TAG, "something connected");
         }
 
         ESP_LOGI(TAG, "~~~~~~~~~~~");
@@ -65,7 +65,7 @@ namespace
         ESP_LOGI(TAG, "~~~~~~~~~~~");
         break;
       case IP_EVENT_AP_STAIPASSIGNED:
-        ESP_LOGI(TAG, "New client connected");
+        ESP_LOGI(TAG, "new client connected");
         ESP_LOGI(TAG, "IP: " IPSTR, IP2STR(&ip_info->ip));
       default:
         return;

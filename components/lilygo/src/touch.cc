@@ -35,7 +35,7 @@ esp_err_t TouchSensor::Initialize()
     ESP_RETURN_ON_ERROR(ret, TAG, "no mutex allocated");
   }
 
-  ESP_LOGD(TAG, "Initializing");
+  ESP_LOGD(TAG, "initializing");
   i2c_config_t i2c_conf = {
     .mode = I2C_MODE_MASTER,
     .sda_io_num = TOUCH_PIN_SDA,

@@ -31,7 +31,7 @@ namespace
 
   void lvGuiTask(void *arg)
   {
-    ESP_LOGI(LV_TAG, "Starting LVGL task");
+    ESP_LOGI(LV_TAG, "starting LVGL task");
     uint32_t taskDelayMS = 0;
     Board* board = reinterpret_cast<Board *>(arg);
     for (;;)
