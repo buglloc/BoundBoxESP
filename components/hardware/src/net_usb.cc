@@ -67,8 +67,8 @@ esp_err_t NetUsb::Initialize()
   this->netifCfg = {
     .flags = static_cast<esp_netif_flags_t>(ESP_NETIF_FLAG_AUTOUP | ESP_NETIF_FLAG_EVENT_IP_MODIFIED),
     .ip_info = NetifIP(netCfg),
-    .get_ip_event = IP_EVENT_ETH_GOT_IP,
-    .lost_ip_event = IP_EVENT_ETH_LOST_IP,
+    .get_ip_event = IP_EVENT_STA_GOT_IP,
+    .lost_ip_event = IP_EVENT_STA_LOST_IP,
     .if_key = "wired",
     .if_desc = "usb ncm config device",
   };
