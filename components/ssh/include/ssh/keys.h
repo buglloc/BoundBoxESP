@@ -24,6 +24,7 @@ namespace SSH
     Error Generate(KeyType keyType, uint32_t bits);
 
     Error Wrap(ssh_key keyPtr);
+    Error Own(ssh_key keyPtr);
     Error Load(const std::string& blob, const std::string& passphrase = std::string());
     std::expected<std::string, Error> Marshal(const std::string& passphrase = std::string()) const;
 

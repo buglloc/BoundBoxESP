@@ -17,6 +17,7 @@ namespace SSH
   {
     None = 0,
     MalformedKey,
+    UnexpectedKey,
     Unsupported,
     InvalidState,
     Internal,
