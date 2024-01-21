@@ -155,11 +155,8 @@ void Manager::tickBoardInfo()
     return;
   }
 
-  uint32_t newLocalAddr = hw.Net().LocalIP().addr;
-  if (newLocalAddr != lastLocalAddr) {
-    lastLocalAddr = newLocalAddr;
-    lv_msg_send(GUI_MESSAGE_NEW_ADDR, &lastLocalAddr);
-  }
+  uint32_t lastLocalAddr = hw.Net().LocalIP().addr;
+  lv_msg_send(GUI_MESSAGE_NEW_ADDR, &lastLocalAddr);
 
   uint32_t battVoltage = hw.Board().BattVoltage();
   if (battVoltage > 0) {
