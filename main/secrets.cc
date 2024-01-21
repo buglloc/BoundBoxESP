@@ -104,7 +104,7 @@ Error Secrets::Store()
       ESP_LOGE(TAG, "unable to store new secret key '%s': %d", SECRET_KEY_KEY, (int)err);
       return Error::InvalidSecretKey;
     }
-    ESP_LOGI(TAG, "host key stored in: %s",  SECRET_KEY_KEY);
+    ESP_LOGI(TAG, "secret key stored in: %s",  SECRET_KEY_KEY);
   } else {
     ESP_LOGW(TAG, "ignore empty secret key storing");
   }
@@ -144,12 +144,12 @@ Error Secrets::FromJson(const JsonObjectConst& obj) noexcept
 
   Blob::Bytes newSecretKey = Blob::Base64Decode(obj["secret_key"].as<std::string_view>());
   if (newSecretKey.empty()) {
-    ESP_LOGE(TAG, "unable to secret key");
+    ESP_LOGE(TAG, "unable to parse secret key");
     return Error::ShitHappens;
   }
 
-  this->hostKey = std::move(newHostKey);
-  this->secretKey = std::move(newSecretKey);
+  this->hostKey.Own(newHostKey.Copy());
+  this->secretKey = newSecretKey;
   return Error::None;
 }
 

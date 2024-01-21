@@ -94,6 +94,12 @@ Error PrivateKey::Load(const std::string& blob, const std::string& passphrase)
     return Error::MalformedKey;
   }
 
+  rc = ssh_key_is_private(keyPtr);
+  if (rc != 1) {
+    ESP_LOGE(TAG, "tries to load not a priv key into priv key");
+    return Error::UnexpectedKey;
+  };
+
   ssh_keytypes_e targetType = ssh_key_type(keyPtr);
   this->keyType = sshKeyType(targetType);
   if (this->keyType == KeyType::None) {
@@ -112,11 +118,21 @@ Error PrivateKey::Wrap(ssh_key keyPtr)
     return Error::InvalidState;
   }
 
+  return Own(keyPtr);
+}
+
+Error PrivateKey::Own(ssh_key keyPtr)
+{
   ssh_keytypes_e targetType = ssh_key_type(keyPtr);
   this->keyType = sshKeyType(targetType);
   if (this->keyType == KeyType::None) {
     ESP_LOGE(TAG, "unsupported key type: %s", ssh_key_type_to_char(targetType));
     return Error::Unsupported;
+  }
+
+  if (this->keyPtr != nullptr) {
+    ssh_key_free(this->keyPtr);
+    this->keyPtr = nullptr;
   }
 
   this->keyPtr = keyPtr;
