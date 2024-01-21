@@ -72,7 +72,9 @@ esp_err_t NetUsb::Initialize()
     .lost_ip_event = IP_EVENT_STA_LOST_IP,
     .if_key = "wired",
     .if_desc = "usb ncm config device",
+    .route_prio = 10
   };
+
   err = PatchNetifCfg(netifCfg, netCfg);
   ESP_RETURN_ON_ERROR(err, TAG, "patch netif cfg");
 
@@ -110,17 +112,25 @@ esp_err_t NetUsb::Attach(esp_netif_t* netif)
     .user_context = netif,
   };
 
-  esp_err_t err = esp_read_mac(tinyNetCfg.mac_addr, ESP_MAC_WIFI_SOFTAP);
-  ESP_RETURN_ON_ERROR(err, TAG, "read softap mac");
+  uint8_t efuseMac[6];
+  esp_err_t err = esp_efuse_mac_get_default(efuseMac);
+  ESP_RETURN_ON_ERROR(err, TAG, "get EFUSE MAC");
+  err = esp_derive_local_mac(tinyNetCfg.mac_addr, efuseMac);
+  ESP_RETURN_ON_ERROR(err, TAG, "derive local MAC");
 
   err = tinyusb_net_init(TINYUSB_USBDEV_0, &tinyNetCfg);
   ESP_RETURN_ON_ERROR(err, TAG, "initialize USB Net device");
 
-  err = esp_netif_set_mac(netif, tinyNetCfg.mac_addr);
+  uint8_t netifMac[6];
+  err = esp_read_mac(netifMac, ESP_MAC_WIFI_SOFTAP);
+  ESP_RETURN_ON_ERROR(err, TAG, "read softap mac");
+
+  err = esp_netif_set_mac(netif, netifMac);
   ESP_RETURN_ON_ERROR(err, TAG, "set netif mac");
 
   // start the interface manually (as the driver has been started already)
   esp_netif_action_start(netif, 0, 0, 0);
+  esp_netif_action_connected(netif, NULL, 0, NULL);
   SendGotIP(netif, NetifIP(netCfg));
 
   return ESP_OK;
