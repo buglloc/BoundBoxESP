@@ -123,6 +123,10 @@ uint8_t Display::Brightness() const
 
 esp_err_t Display::SetBrightness(uint8_t level)
 {
+  if (lastBrightness == level) {
+    return ESP_OK;
+  }
+
   lastBrightness = level;
   return WriteCommand({0x51, {level}, 0x01});
 }

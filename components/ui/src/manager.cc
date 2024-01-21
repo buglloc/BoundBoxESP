@@ -55,6 +55,7 @@ esp_err_t Manager::Initialize(Handler* handler)
   );
 
   ShowBoot();
+  Tick();
   hw.Board().Display().SetBrightness(CONFIG_UI_DEFAULT_BRIGHTNESS);
   return ESP_OK;
 }
@@ -62,7 +63,7 @@ esp_err_t Manager::Initialize(Handler* handler)
 void Manager::SetBoardState(UI::BoardState newState)
 {
   boardState = newState;
-  lv_msg_send(GUI_MESSAGE_NEW_BOARD_STATE, &boardState);
+  lv_msg_send(GUI_MESSAGE_NEW_BOARD_STATE, &newState);
 }
 
 UI::BoardState Manager::BoardState()
@@ -103,8 +104,8 @@ void Manager::ShowInfo()
 void Manager::Tick()
 {
   tickHomeButton();
-  tickBoardInfo();
   tickStateTransition();
+  tickBoardInfo();
 }
 
 void Manager::tickHomeButton()
