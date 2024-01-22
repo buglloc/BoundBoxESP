@@ -12,4 +12,4 @@ Posts:
   - [Homemade FDE: BoundBoxESP](https://ut.buglloc.com/home-infra/hmfde-boundboxesp/)
 
 TL;DR:
-![](https://raw.githubusercontent.com/buglloc/BoundBoxESP/main/assets/logic.png)
+![](https://raw.githubusercontent.com/buglloc/BoundBoxESP/main/assets/logic.png?1)
