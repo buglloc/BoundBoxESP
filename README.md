@@ -8,8 +8,8 @@ SSH/HMAC-based network boundary for your secrets.
 
 ## How it works?
 Posts:
-  - [Homemade FDE: Part Zero](https://ut.buglloc.com/home-infra/hmfde-part-zero/)
-  - [Homemade FDE: BoundBoxESP](https://ut.buglloc.com/home-infra/hmfde-boundboxesp/)
+  - [Homemade FDE: Part Zero](https://ut.buglloc.com/2023/12/hmfde-part-zero/)
+  - [Homemade FDE: BoundBoxESP](https://ut.buglloc.com/2024/01/hmfde-boundboxesp/)
 
 TL;DR:
 ![](https://raw.githubusercontent.com/buglloc/BoundBoxESP/main/assets/logic.png?1)
