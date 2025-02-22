@@ -1,4 +1,4 @@
 dependencies:
-  idf: "^5.1.0"
+  idf: "^5.4.0"
   lvgl/lvgl: "^8.3.11"
-  bblanchon/arduinojson: "^6.21.4"
+  bblanchon/arduinojson: "^7.3.0"

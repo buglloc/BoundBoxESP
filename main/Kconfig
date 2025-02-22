@@ -33,10 +33,6 @@ menu "BoundBox Runtime"
     int "SSHD task stack size"
     default 32768
 
-  config COMMAND_BUFFER_SIZE
-    int "Command buffer size"
-    default 16384
-
   config SHUTDOWN_ON_ASSERT
     bool "Use shutdown instead of assert (board will be available after manual rst)"
     default false
