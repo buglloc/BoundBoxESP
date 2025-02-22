@@ -1,51 +1,91 @@
 dependencies:
   bblanchon/arduinojson:
-    component_hash: 463812931f99cb7a554d64311288f537b43daaca3eed2427557b907af393447c
+    component_hash: 21b41e6cce335cefc142c457ceb50eb45621ff9ea6fd0a0ee349a642e48a47a3
+    dependencies: []
     source:
-      service_url: https://api.components.espressif.com/
+      registry_url: https://components.espressif.com/
       type: service
-    version: 6.21.5
+    version: 7.3.0
   espressif/esp_lcd_touch:
-    component_hash: d4d8f2dc33205797169a97a02e0d89a8982f59fe0509129b54422052b8522f59
+    component_hash: 779b4ba2464a3ae85681e4b860caa5fdc35801458c23f3039ee761bae7f442a4
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=4.4.2'
     source:
-      service_url: https://api.components.espressif.com/
+      registry_url: https://components.espressif.com
       type: service
-    version: 1.1.1
+    version: 1.1.2
   espressif/esp_lcd_touch_cst816s:
     component_hash: 270bd7df3a2a5cffa3a626c4709fc03237d83fd9daa6fb70c833a2f1875f0f68
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=4.4.2'
+    - name: espressif/esp_lcd_touch
+      registry_url: https://components.espressif.com
+      require: public
+      version: ^1.0.4
     source:
-      service_url: https://api.components.espressif.com/
+      registry_url: https://components.espressif.com/
       type: service
     version: 1.0.3
   espressif/esp_tinyusb:
-    component_hash: 43d73c626724054db083ad2a537e8af223e3bca7a915fc38a9d9c6c7f2920a69
+    component_hash: fe1135e7a419b0c6034117aea46d4ad8048618de50f3ae774b1526ae571f1ec6
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=5.0'
+    - name: espressif/tinyusb
+      registry_url: https://components.espressif.com
+      require: public
+      version: '>=0.14.2'
     source:
-      service_url: https://api.components.espressif.com/
+      registry_url: https://components.espressif.com/
       type: service
-    version: 1.4.3
+    version: 1.7.1
   espressif/libsodium:
-    component_hash: f6e982479a2389cb6868e8fb761cf23aba6c355a8090b3e906299807775f58a3
+    component_hash: 25b968723c584a2742ca36cebe5a7ef049c6767e059f7b1e1eec69946019025d
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=4.2'
     source:
-      service_url: https://api.components.espressif.com/
+      registry_url: https://components.espressif.com/
       type: service
-    version: 1.0.20~1
+    version: 1.0.20~2
   espressif/tinyusb:
-    component_hash: a11195d4c7c385aa2b1430009486dd4007920307d13b7db474a62ff040907d8f
+    component_hash: 0f96faa5e29d5a04553ba7050b9051c1f6b549b9340681eb7afdda419a8dff2e
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=5.0'
     source:
-      service_url: https://api.components.espressif.com/
+      registry_url: https://components.espressif.com
       type: service
-    version: 0.15.0~4
+    targets:
+    - esp32s2
+    - esp32s3
+    - esp32p4
+    version: 0.18.0~1
   idf:
-    component_hash: null
     source:
       type: idf
-    version: 5.1.2
+    version: 5.4.0
   lvgl/lvgl:
-    component_hash: 948bff879a345149b83065535bbc4a026ce9f47498a22881e432a264b9098015
+    component_hash: d7c1ac037ae6e85d94897f807d6e7ba0946a83e720074fc95a4f6241da9f9f53
+    dependencies: []
     source:
-      service_url: https://api.components.espressif.com/
+      registry_url: https://components.espressif.com/
       type: service
-    version: 8.3.11
-manifest_hash: 274d2cea5a7bbaa200ff3e38c33582d8878030d2b62013f54b7efa6c84f1440c
+    version: 8.4.0
+direct_dependencies:
+- bblanchon/arduinojson
+- espressif/esp_lcd_touch_cst816s
+- espressif/esp_tinyusb
+- espressif/libsodium
+- idf
+- lvgl/lvgl
+manifest_hash: 86a1bbad848f6e431c9b1d1fc6f00c1fa63de16ee067779dc86b801507d06fab
 target: esp32s3
-version: 1.0.0
+version: 2.0.0

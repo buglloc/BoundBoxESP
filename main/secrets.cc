@@ -131,7 +131,7 @@ Error Secrets::Erase()
 
 Error Secrets::FromJson(const JsonObjectConst& obj) noexcept
 {
-  if (!obj.containsKey("host_key") || !obj.containsKey("secret_key")) {
+  if (!obj["host_key"].is<std::string>() || !obj["secret_key"].is<std::string>()) {
     return Error::ShitHappens;
   }
 

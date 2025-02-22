@@ -160,14 +160,14 @@ ListenError Server::Listen(const HandlerCallback& handler)
 
   ESP_LOGI(TAG, "[%s] new connection from: %s", sessInfo.Id.c_str(), sessInfo.ClientIP.c_str());
 
-  ESP_LOGD(TAG, "[%s] starts key exchange...", sessInfo.Id.c_str());
+  ESP_LOGI(TAG, "[%s] starts key exchange...", sessInfo.Id.c_str());
   rc = ssh_handle_key_exchange(sshSession);
   if (rc != SSH_OK) {
     ESP_LOGW(TAG, "[%s] key exchange failed: %s", sessInfo.Id.c_str(), ssh_get_error(sshSession));
     return ListenError::Accept;
   }
 
-  ESP_LOGD(TAG, "[%s] auth client...", sessInfo.Id.c_str());
+  ESP_LOGI(TAG, "[%s] auth client...", sessInfo.Id.c_str());
   auto userInfo = authenticate(sshSession, sessInfo);
   if (!userInfo) {
     ESP_LOGW(TAG, "[%s] auth failed, abort", sessInfo.Id.c_str());
@@ -175,7 +175,7 @@ ListenError Server::Listen(const HandlerCallback& handler)
   }
   sessInfo.User = std::move(userInfo.value());
 
-  ESP_LOGD(TAG, "[%s] wait for a channel session...", sessInfo.Id.c_str());
+  ESP_LOGI(TAG, "[%s] wait for a channel session...", sessInfo.Id.c_str());
   ssh_message message = nullptr;
   ssh_channel chan = nullptr;
   do {
@@ -227,6 +227,10 @@ ListenError Server::Listen(const HandlerCallback& handler)
     }
 
     if (ssh_message_subtype(message) != SSH_CHANNEL_REQUEST_EXEC) {
+      if (ssh_message_subtype(message) != SSH_CHANNEL_REQUEST_ENV) {
+        ESP_LOGW(TAG, "[%s] requested invalid channel %d:%d", sessInfo.Id.c_str(), ssh_message_type(message), ssh_message_subtype(message));
+      };
+
       ssh_message_reply_default(message);
       ssh_message_free(message);
       continue;

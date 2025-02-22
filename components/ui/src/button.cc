@@ -1,6 +1,5 @@
 #include <sdkconfig.h>
 #include "ui/button.h"
-#include "config.h"
 
 
 using namespace UI;

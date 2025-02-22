@@ -108,13 +108,13 @@ namespace
   bool HandleSecretsStore(Secrets* secrets, const SSH::SessionInfo& sessInfo, const JsonObjectConst& req, JsonObject& rsp)
   {
     JsonObjectConst secretsJson = req["secrets"].as<JsonObjectConst>();
-    if (!secretsJson.containsKey("host_key")) {
+    if (!secretsJson["host_key"].is<std::string>()) {
       rsp["error_code"] = CMD_ERR_CODE_SECRETS_STORE_INVALID_HOST_KEY;
-      rsp["error_msg"] = "empty host key";
+      rsp["error_msg"] = "invalid or empty host key";
       return false;
     }
 
-    if (!secretsJson.containsKey("secret_key")) {
+    if (!secretsJson["secret_key"].is<std::string>()) {
       rsp["error_code"] = CMD_ERR_CODE_SECRETS_STORE_INVALID_SECRET_KEY;
       rsp["error_msg"] = "empty host key";
       return false;
@@ -172,14 +172,14 @@ Error Commands::Initialize(Authenticator* auth, Secrets* secrets)
 Error Commands::Dispatch(const SSH::SessionInfo& sessInfo, std::string_view cmdName, SSH::Stream& stream)
 {
   ESP_LOGI(TAG, "[%s] called command: %s", sessInfo.Id.c_str(), cmdName.cbegin());
-  DynamicJsonDocument req(CONFIG_COMMAND_BUFFER_SIZE);
+  JsonDocument req;
   DeserializationError jsonErr = deserializeJson(req, stream);
   if (jsonErr && jsonErr != DeserializationError::Code::EmptyInput) {
     ESP_LOGE(TAG, "[%s] unable to read request: %s", sessInfo.Id.c_str(), jsonErr.c_str());
     return Error::CommandFailed;
   }
 
-  DynamicJsonDocument rspDoc(CONFIG_COMMAND_BUFFER_SIZE);
+  JsonDocument rspDoc;
   JsonObject rsp = rspDoc.to<JsonObject>();
 
   bool ok = Handle(sessInfo, cmdName, req.as<JsonObjectConst>(), rsp);
@@ -247,13 +247,13 @@ bool Commands::Handle(const SSH::SessionInfo& sessInfo, std::string_view cmdName
   };
 
   if (cmdName == "/help") {
-    JsonArray jsonCommands = rsp.createNestedArray("commands");
+    JsonArray jsonCommands = rsp["commands"].to<JsonArray>();
     for (const auto& cmd : commands) {
       if (!cmd.UsedAllowed && sessInfo.User.Role != SSH::UserRole::SysOp) {
         continue;
       }
 
-      JsonObject jsonCmd = jsonCommands.createNestedObject();
+      JsonObject jsonCmd = jsonCommands.add<JsonObject>();
       jsonCmd["command"] = cmd.Name;
       jsonCmd["description"] = cmd.Help;
     }
