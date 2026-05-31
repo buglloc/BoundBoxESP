@@ -1,6 +1,8 @@
 #include <sdkconfig.h>
 #include "ssh/stream.h"
 
+#include <algorithm>
+
 #include <freertos/FreeRTOS.h>
 
 #include <esp_log.h>
@@ -15,39 +17,79 @@ namespace
 
 int Stream::read()
 {
-  if (ssh_channel_is_eof(chan)) {
+  if (readPos >= readSize) {
+    readPos = 0;
+    readSize = readBytes(reinterpret_cast<char *>(readBuf), sizeof(readBuf));
+  }
+
+  if (readPos >= readSize) {
     return -1;
   }
 
-  char buf;
-  if (readBytes(&buf, 1) == 1) {
-    return buf;
-  }
-
-  return -1;
+  return readBuf[readPos++];
 }
 
 size_t Stream::readBytes(char* buffer, size_t length)
 {
+  readTimedOut = false;
+  readFailed = false;
+
+  if (length == 0) {
+    return 0;
+  }
+
+  if (readPos < readSize) {
+    size_t buffered = std::min(length, readSize - readPos);
+    std::copy(readBuf + readPos, readBuf + readPos + buffered, reinterpret_cast<uint8_t *>(buffer));
+    readPos += buffered;
+    return buffered;
+  }
+
   if (ssh_channel_is_eof(chan)) {
     return 0;
   }
 
   int rc = ssh_channel_poll_timeout(chan, CONFIG_SSH_STREAM_POLL_TIMEOUT, 0);
-  if (rc <= 0) {
-    // err or timeout or no data
+  if (rc == SSH_ERROR) {
+    readFailed = true;
+    ESP_LOGE(TAG, "stream poll error");
+    return 0;
+  }
+  if (rc == SSH_EOF) {
+    return 0;
+  }
+  if (rc == 0) {
+    readTimedOut = true;
     return 0;
   }
 
-  do {
-    rc = ssh_channel_read_timeout(chan, buffer, length, 0, CONFIG_SSH_STREAM_READ_TIMEOUT);
-  } while (rc == SSH_AGAIN);
-  return rc < 0 ? 0 : rc;
+  rc = ssh_channel_read_timeout(chan, buffer, length, 0, CONFIG_SSH_STREAM_READ_TIMEOUT);
+  if (rc == SSH_AGAIN) {
+    readTimedOut = true;
+    return 0;
+  }
+  if (rc < 0) {
+    readFailed = true;
+    ESP_LOGE(TAG, "stream read error: %d", rc);
+    return 0;
+  }
+
+  return rc;
+}
+
+bool Stream::ReadTimedOut() const
+{
+  return readTimedOut;
+}
+
+bool Stream::ReadFailed() const
+{
+  return readFailed;
 }
 
 size_t Stream::write(uint8_t b)
 {
-  if (writeSize + 1 >= CONFIG_SSH_STREAM_BUFFER_SIZE && !flush()) {
+  if (writeSize + 1 >= CONFIG_SSH_STREAM_WRITE_BUFFER_SIZE && !flush()) {
     return 0;
   }
 
@@ -80,12 +122,21 @@ bool Stream::flush()
     return false;
   }
 
-  int rc = ssh_channel_write(chan, writeBuf, writeSize);
-  if (rc > 0) {
-    writeSize = 0;
-    return true;
+  size_t written = 0;
+  while (written < writeSize) {
+    int rc = ssh_channel_write(chan, writeBuf + written, writeSize - written);
+    if (rc <= 0) {
+      ESP_LOGE(TAG, "stream write error: %d", rc);
+      if (written > 0) {
+        writeSize -= written;
+        std::copy(writeBuf + written, writeBuf + written + writeSize, writeBuf);
+      }
+      return false;
+    }
+
+    written += rc;
   }
 
-  ESP_LOGE(TAG, "stream write error: %d", rc);
-  return false;
+  writeSize = 0;
+  return true;
 }

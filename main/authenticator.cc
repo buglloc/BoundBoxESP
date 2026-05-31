@@ -45,10 +45,11 @@ std::expected<Blob::Bytes, Error> Authenticator::MakeHmacSecret(const Blob::Byte
   }
 
   std::expected<Blob::Bytes, Error> out = makeHmacSecret(salt);
-  if (out) {
-    ui.ShowAssertation(client);
+  if (!out) {
+    return std::unexpected<Error>{out.error()};
   }
 
+  ui.ShowAssertation(client);
   return std::move(out.value());
 }
 

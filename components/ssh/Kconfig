@@ -10,16 +10,20 @@ menu "SSH Server"
     range 1 46
     default 5
 
-  config SSH_STREAM_BUFFER_SIZE
-    int "Stream buf size"
+  config SSH_STREAM_WRITE_BUFFER_SIZE
+    int "Stream write buffer size"
     default 4096
 
+  config SSH_STREAM_READ_BUFFER_SIZE
+    int "Stream read buffer size"
+    default 256
+
   config SSH_STREAM_POLL_TIMEOUT
-    int "Stream buf size"
+    int "Stream poll timeout (ms)"
     default 100
 
   config SSH_STREAM_READ_TIMEOUT
-    int "Stream buf size"
+    int "Stream read timeout (ms)"
     default 5000
 
   config SSH_AUTH_RETRIES

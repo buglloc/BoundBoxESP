@@ -46,6 +46,16 @@ namespace
       return exceeded;
     }
 
+    bool TimedOut() const
+    {
+      return stream.ReadTimedOut();
+    }
+
+    bool Failed() const
+    {
+      return stream.ReadFailed();
+    }
+
     int read()
     {
       if (remaining == 0) {
@@ -225,10 +235,22 @@ Error Commands::Dispatch(const SSH::SessionInfo& sessInfo, std::string_view cmdN
     reqReader,
     DeserializationOption::NestingLimit(CONFIG_COMMAND_JSON_NESTING_LIMIT)
   );
+
   if (reqReader.Exceeded()) {
     ESP_LOGE(TAG, "[%s] request is too large: limit is %d bytes", sessInfo.Id.c_str(), CONFIG_COMMAND_JSON_MAX_SIZE);
     return Error::CommandFailed;
   }
+
+  if (reqReader.Failed()) {
+    ESP_LOGE(TAG, "[%s] request read failed", sessInfo.Id.c_str());
+    return Error::CommandFailed;
+  }
+
+  if (reqReader.TimedOut()) {
+    ESP_LOGE(TAG, "[%s] request read timed out", sessInfo.Id.c_str());
+    return Error::CommandFailed;
+  }
+
   if (jsonErr && jsonErr != DeserializationError::Code::EmptyInput) {
     ESP_LOGE(TAG, "[%s] unable to read request: %s", sessInfo.Id.c_str(), jsonErr.c_str());
     return Error::CommandFailed;
