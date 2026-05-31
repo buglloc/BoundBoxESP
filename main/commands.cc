@@ -33,6 +33,52 @@ namespace
 
   using HandleFn = std::function<bool(const SSH::SessionInfo& sessInfo, const JsonObjectConst& req, JsonObject& rsp)>;
 
+  class LimitedStreamReader
+  {
+  public:
+    LimitedStreamReader(SSH::Stream& stream, size_t limit)
+      : stream(stream)
+      , remaining(limit)
+    {}
+
+    bool Exceeded() const
+    {
+      return exceeded;
+    }
+
+    int read()
+    {
+      if (remaining == 0) {
+        exceeded = true;
+        return -1;
+      }
+
+      int ch = stream.read();
+      if (ch >= 0) {
+        remaining--;
+      }
+      return ch;
+    }
+
+    size_t readBytes(char* buffer, size_t length)
+    {
+      if (remaining == 0) {
+        exceeded = true;
+        return 0;
+      }
+
+      size_t toRead = length < remaining ? length : remaining;
+      size_t read = stream.readBytes(buffer, toRead);
+      remaining -= read;
+      return read;
+    }
+
+  private:
+    SSH::Stream& stream;
+    size_t remaining;
+    bool exceeded = false;
+  };
+
   struct Command
   {
     std::string Name;
@@ -173,7 +219,16 @@ Error Commands::Dispatch(const SSH::SessionInfo& sessInfo, std::string_view cmdN
 {
   ESP_LOGI(TAG, "[%s] called command: %s", sessInfo.Id.c_str(), cmdName.cbegin());
   JsonDocument req;
-  DeserializationError jsonErr = deserializeJson(req, stream);
+  LimitedStreamReader reqReader(stream, CONFIG_COMMAND_JSON_MAX_SIZE);
+  DeserializationError jsonErr = deserializeJson(
+    req,
+    reqReader,
+    DeserializationOption::NestingLimit(CONFIG_COMMAND_JSON_NESTING_LIMIT)
+  );
+  if (reqReader.Exceeded()) {
+    ESP_LOGE(TAG, "[%s] request is too large: limit is %d bytes", sessInfo.Id.c_str(), CONFIG_COMMAND_JSON_MAX_SIZE);
+    return Error::CommandFailed;
+  }
   if (jsonErr && jsonErr != DeserializationError::Code::EmptyInput) {
     ESP_LOGE(TAG, "[%s] unable to read request: %s", sessInfo.Id.c_str(), jsonErr.c_str());
     return Error::CommandFailed;

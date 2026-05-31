@@ -99,4 +99,14 @@ menu "BoundBox"
     range 1 256
     default 16
 
+  config COMMAND_JSON_MAX_SIZE
+    int "Maximum command request JSON size"
+    range 32 65536
+    default 2048
+
+  config COMMAND_JSON_NESTING_LIMIT
+    int "Maximum command request JSON nesting"
+    range 1 32
+    default 8
+
 endmenu
