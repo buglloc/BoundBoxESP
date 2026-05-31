@@ -23,7 +23,7 @@
 
 namespace {
   static const char *TAG = "main";
-  const TickType_t xWaitDelay = 100 / portTICK_PERIOD_MS;
+  const TickType_t xWaitDelay = pdMS_TO_TICKS(100);
   Hardware::Manager& hw = Hardware::Manager::Instance();
   UI::Manager& ui = UI::Manager::Instance();
   SSH::Server sshd;
@@ -39,7 +39,7 @@ namespace {
     SshdCtx* ctx = reinterpret_cast<SshdCtx *>(arg);
     assert(ctx);
 
-    const TickType_t sshDelay = 500 / portTICK_PERIOD_MS;
+    const TickType_t sshDelay = pdMS_TO_TICKS(500);
     SSH::ListenError listenErr;
     for (;;) {
       listenErr = ctx->Srv.Listen([ctx](const SSH::SessionInfo& sessInfo, const std::string_view cmd, SSH::Stream& stream) -> int {
@@ -132,7 +132,7 @@ extern "C" void app_main(void)
   xTaskCreate(sshdTask, "sshd", CONFIG_SSHD_TASK_STACK_SIZE, &sshdCtx, tskIDLE_PRIORITY, nullptr);
 
   ESP_LOGI(TAG, "app initialized, switched to busy looping");
-  const TickType_t xDelay = 500 / portTICK_PERIOD_MS;
+  const TickType_t xDelay = pdMS_TO_TICKS(500);
   for (;;) {
       taskYIELD();
       vTaskDelay(xDelay);
