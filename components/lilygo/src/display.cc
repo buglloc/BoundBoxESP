@@ -60,11 +60,11 @@ esp_err_t Display::Initialize()
 
   // reset display
   SET_TFT_RST(HIGH);
-  vTaskDelay(200 / portTICK_PERIOD_MS);
+  vTaskDelay(pdMS_TO_TICKS(200));
   SET_TFT_RST(LOW);
-  vTaskDelay(300 / portTICK_PERIOD_MS);
+  vTaskDelay(pdMS_TO_TICKS(300));
   SET_TFT_RST(HIGH);
-  vTaskDelay(200 / portTICK_PERIOD_MS);
+  vTaskDelay(pdMS_TO_TICKS(200));
 
   spi_bus_config_t buscfg = {
     .data0_io_num = TFT_QSPI_D0,
@@ -101,13 +101,13 @@ esp_err_t Display::Initialize()
       cmdRet = WriteCommand(lcd_init[i]);
       if (cmdRet != ESP_OK) {
         ESP_LOGE(TAG, "initialization: write command %d failed", lcd_init[i].Addr);
-        vTaskDelay(120 / portTICK_PERIOD_MS);
+        vTaskDelay(pdMS_TO_TICKS(120));
         continue;
       }
 
       if (lcd_init[i].Size == 0) {
         // ???
-        vTaskDelay(120 / portTICK_PERIOD_MS);
+        vTaskDelay(pdMS_TO_TICKS(120));
       }
     }
   }

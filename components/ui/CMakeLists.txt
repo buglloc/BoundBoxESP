@@ -1,4 +1,26 @@
-file(GLOB_RECURSE IMAGE_SOURCES assets/*.c)
+set(ASSET_SOURCES
+  "assets/bg_notify.c"
+  "assets/font_roboto_black_20.c"
+  "assets/font_roboto_mono_20.c"
+  "assets/font_roboto_mono_24.c"
+  "assets/font_roboto_mono_32.c"
+  "assets/pad_icon_00.c"
+  "assets/pad_icon_01.c"
+  "assets/pad_icon_02.c"
+  "assets/pad_icon_03.c"
+  "assets/pad_icon_04.c"
+  "assets/pad_icon_05.c"
+  "assets/pad_icon_06.c"
+  "assets/pad_icon_07.c"
+  "assets/pad_icon_08.c"
+  "assets/pad_icon_09.c"
+  "assets/pad_icon_10.c"
+  "assets/pad_icon_11.c"
+  "assets/pad_icon_12.c"
+  "assets/pad_icon_13.c"
+  "assets/pad_icon_14.c"
+  "assets/pad_icon_15.c"
+)
 
 idf_component_register(
 SRCS
@@ -6,7 +28,7 @@ SRCS
   "src/gui.cc"
   "src/manager.cc"
   "src/scene.cc"
-  ${IMAGE_SOURCES}
+  ${ASSET_SOURCES}
 INCLUDE_DIRS
   "include"
 REQUIRES

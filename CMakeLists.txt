@@ -7,9 +7,6 @@ cmake_minimum_required(VERSION 3.30)
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(BoundBoxESP)
 
-idf_build_set_property(COMPILE_OPTIONS "-DLV_CONF_INCLUDE_SIMPLE=1" APPEND)
-idf_build_set_property(COMPILE_OPTIONS "-I../hacks" APPEND)
-
 # Display Compile Time Information
 message(STATUS "--------------Compile Info------------")
 message(STATUS "IDF_PATH = ${IDF_PATH}")

@@ -112,7 +112,7 @@ esp_err_t Board::InitializeLVGL()
     ESP_RETURN_ON_ERROR(ret, TAG, "create lvgl display");
   }
 
-  lv_display_set_color_format(lvDisplay, LV_COLOR_FORMAT_RGB565);
+  lv_display_set_color_format(lvDisplay, LV_COLOR_FORMAT_RGB565_SWAPPED);
   lv_display_set_buffers(lvDisplay, buf1, buf2, LV_LCD_BUF_SIZE * sizeof(lv_color_t), LV_DISPLAY_RENDER_MODE_PARTIAL);
   lv_display_set_user_data(lvDisplay, &display);
   lv_display_set_flush_cb(lvDisplay, [](lv_display_t* disp, const lv_area_t* area, uint8_t* pxMap) -> void {

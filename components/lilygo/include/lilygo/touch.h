@@ -4,7 +4,7 @@
 #include <esp_types.h>
 #include <esp_lcd_types.h>
 
-#include <stdatomic.h>
+#include <atomic>
 
 
 // fwd
@@ -28,7 +28,7 @@ namespace LilyGo
     bool HomePressed() const;
 
   private:
-    atomic_bool homePressed;
+    std::atomic_bool homePressed{false};
     i2c_master_bus_handle_t i2cBus = nullptr;
     esp_lcd_touch_handle_t tp = nullptr;
     esp_lcd_panel_io_handle_t tpIO = nullptr;
