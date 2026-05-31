@@ -38,9 +38,11 @@ namespace UI
     lv_obj_t* notifyLabel = nullptr;
     lv_obj_t* stateLabel = nullptr;
     lv_obj_t* ipLabel = nullptr;
-    lv_obj_t* assesLabel = nullptr;
+    lv_obj_t* assertsLabel = nullptr;
     lv_obj_t* tempLabel = nullptr;
     lv_obj_t* battLabel = nullptr;
+    // stable storage for static labels (lv_label_set_text_static doesn't copy)
+    std::string notifyMsgBuf;
     std::function<void(int8_t)> pinPromptHandler;
   };
 }

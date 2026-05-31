@@ -147,7 +147,8 @@ esp_err_t Board::InitializeLVGL()
   lv_indev_set_display(inDevTouchpad, lvDisplay);
   lv_indev_set_user_data(inDevTouchpad, &touchSensor);
   lv_indev_set_read_cb(inDevTouchpad, [](lv_indev_t *indev, lv_indev_data_t *data) -> void {
-    uint16_t x, y = 0;
+    uint16_t x = 0;
+    uint16_t y = 0;
     bool pressed = static_cast<LilyGo::TouchSensor *>(lv_indev_get_user_data(indev))->GetPoint(x, y);
 
     data->point.x = x;

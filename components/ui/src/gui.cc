@@ -296,6 +296,8 @@ void GUI::ShowScreenNotification(const std::string& msg)
     return;
   }
 
+  notifyMsgBuf = msg;
+
   notifyScreen = switchScreen(nullptr);
   lv_obj_t* cont = createPage(notifyScreen);
   lv_obj_t* img = lv_image_create(cont);
@@ -313,7 +315,7 @@ void GUI::ShowScreenNotification(const std::string& msg)
   lv_obj_set_width(notifyLabel, 300);
   lv_obj_set_style_text_font(notifyLabel, &font_roboto_mono_32, 0);
   lv_obj_set_style_text_align(notifyLabel, LV_TEXT_ALIGN_RIGHT, 0);
-  lv_label_set_text(notifyLabel, msg.c_str());
+  lv_label_set_text_static(notifyLabel, notifyMsgBuf.c_str());
   lv_obj_align_to(notifyLabel, titleLabel, LV_ALIGN_OUT_BOTTOM_MID, 0, 8);
 }
 
@@ -339,11 +341,11 @@ void GUI::ShowInfoScreen()
   lv_obj_set_style_text_align(ipLabel, LV_TEXT_ALIGN_LEFT, 0);
   lv_label_set_text_static(ipLabel, "IP: N/A");
 
-  assesLabel = lv_label_create(cont);
-  lv_obj_align(assesLabel, LV_ALIGN_TOP_RIGHT, -24, 24);
-  lv_obj_set_style_text_font(assesLabel, &font_roboto_mono_20, 0);
-  lv_obj_set_style_text_align(assesLabel, LV_TEXT_ALIGN_LEFT, 0);
-  lv_label_set_text_static(assesLabel, "Asses: 0000");
+  assertsLabel = lv_label_create(cont);
+  lv_obj_align(assertsLabel, LV_ALIGN_TOP_RIGHT, -24, 24);
+  lv_obj_set_style_text_font(assertsLabel, &font_roboto_mono_20, 0);
+  lv_obj_set_style_text_align(assertsLabel, LV_TEXT_ALIGN_LEFT, 0);
+  lv_label_set_text_static(assertsLabel, "Asserts: 0000");
 
   tempLabel = lv_label_create(cont);
   lv_obj_align(tempLabel, LV_ALIGN_BOTTOM_LEFT, 24, -24);
@@ -366,9 +368,13 @@ void GUI::SetPinPromptHandler(std::function<void(int8_t)> handler)
 
 void GUI::UpdateNotification(const char* msg)
 {
-  if (notifyLabel != nullptr) {
-    lv_label_set_text(notifyLabel, msg);
+  if (notifyLabel == nullptr) {
+    return;
   }
+
+  // keep text in stable storage; lv_label_set_text_static doesn't strdup
+  notifyMsgBuf = msg;
+  lv_label_set_text_static(notifyLabel, notifyMsgBuf.c_str());
 }
 
 void GUI::UpdateBoardState(BoardState state)
@@ -393,14 +399,14 @@ void GUI::UpdateLocalAddr(uint32_t addr)
 
 void GUI::UpdateAssertations(uint32_t assertations)
 {
-  if (assesLabel == nullptr) {
+  if (assertsLabel == nullptr) {
     return;
   }
 
   if (assertations == 0) {
-    lv_label_set_text_static(assesLabel, "Asses: 0000");
+    lv_label_set_text_static(assertsLabel, "Asserts: 0000");
   } else {
-    lv_label_set_text_fmt(assesLabel, "Asses: %4" PRIu32, assertations);
+    lv_label_set_text_fmt(assertsLabel, "Asserts: %4" PRIu32, assertations);
   }
 }
 
@@ -433,7 +439,7 @@ GUI::~GUI()
     infoScreen = nullptr;
     stateLabel = nullptr;
     ipLabel = nullptr;
-    assesLabel = nullptr;
+    assertsLabel = nullptr;
     tempLabel = nullptr;
     battLabel = nullptr;
   }

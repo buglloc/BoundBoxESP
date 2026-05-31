@@ -102,6 +102,13 @@ ListenError Server::Listen(const HandlerCallback& handler)
     return ListenError::Internal;
   }
 
+  unsigned int bindPort = CONFIG_SSH_SERVER_PORT;
+  rc = ssh_bind_options_set(sshBind, SSH_BIND_OPTIONS_BINDPORT, &bindPort);
+  if (rc != SSH_OK) {
+    ESP_LOGE(TAG, "bind port failed: %s", ssh_get_error(sshBind));
+    return ListenError::Internal;
+  }
+
   rc = ssh_bind_listen(sshBind);
   if (rc != SSH_OK) {
     ESP_LOGE(TAG, "listen failed: %s", ssh_get_error(sshBind));
