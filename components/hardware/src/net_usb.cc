@@ -3,6 +3,8 @@
 #include "net_common.h"
 
 #include <assert.h>
+#include <atomic>
+#include <cstring>
 
 #include <tinyusb.h>
 #include <tinyusb_default_config.h>
@@ -22,6 +24,44 @@ using namespace Hardware;
 namespace
 {
   static const char* TAG = "hardware::net::usb";
+  constexpr size_t RX_POOL_SIZE = 8;
+  constexpr size_t RX_BUFFER_SIZE = 1600;
+
+  struct RxBuffer
+  {
+    std::atomic<bool> used{false};
+    uint8_t data[RX_BUFFER_SIZE];
+  };
+
+  RxBuffer rxPool[RX_POOL_SIZE];
+
+  void *rxBufferAlloc(size_t len)
+  {
+    if (len > RX_BUFFER_SIZE) {
+      return nullptr;
+    }
+
+    for (auto& buf : rxPool) {
+      bool expected = false;
+      if (buf.used.compare_exchange_strong(expected, true)) {
+        return buf.data;
+      }
+    }
+
+    return nullptr;
+  }
+
+  bool rxBufferFree(void *buffer)
+  {
+    for (auto& buf : rxPool) {
+      if (buf.data == buffer) {
+        buf.used.store(false);
+        return true;
+      }
+    }
+
+    return false;
+  }
 
   esp_err_t wired_send(void *buffer, uint16_t len, void *buff_free_arg)
   {
@@ -30,7 +70,9 @@ namespace
 
   static void l2_free(void *h, void *buffer)
   {
-    free(buffer);
+    if (!rxBufferFree(buffer)) {
+      ESP_LOGW(TAG, "ignore unknown RX buffer free: %p", buffer);
+    }
   }
 
   static esp_err_t netif_transmit (void *h, void *buffer, size_t len)
@@ -49,12 +91,17 @@ namespace
       return ESP_OK;
     }
 
-    void *buf_copy = malloc(len);
+    void *buf_copy = rxBufferAlloc(len);
     if (!buf_copy) {
-        return ESP_ERR_NO_MEM;
+      ESP_LOGW(TAG, "drop RX packet: no buffer for %u bytes", static_cast<unsigned>(len));
+      return ESP_ERR_NO_MEM;
     }
-    memcpy(buf_copy, buffer, len);
-    return esp_netif_receive(netif, buf_copy, len, NULL);
+    std::memcpy(buf_copy, buffer, len);
+    esp_err_t err = esp_netif_receive(netif, buf_copy, len, NULL);
+    if (err != ESP_OK) {
+      rxBufferFree(buf_copy);
+    }
+    return err;
   }
 }
 

@@ -79,8 +79,8 @@ esp_err_t NetWiFiSta::Attach(esp_netif_t* netif)
     ESP_RETURN_ON_FALSE(ok, ESP_ERR_INVALID_ARG, TAG, "no SSID provided");
     ok = netCfg.WiFi.Ssid.size() < MAX_SSID_LEN;
     ESP_RETURN_ON_FALSE(ok, ESP_ERR_INVALID_ARG, TAG, "maximum SSID (%d) length exceed: %d", MAX_SSID_LEN, netCfg.WiFi.Ssid.size());
-    ok = netCfg.WiFi.Passwd.empty() || netCfg.WiFi.Passwd.size() > 8;
-    ESP_RETURN_ON_FALSE(ok, ESP_ERR_INVALID_ARG, TAG, "passphrase must not be 8+ chars");
+    ok = netCfg.WiFi.Passwd.empty() || netCfg.WiFi.Passwd.size() >= 8;
+    ESP_RETURN_ON_FALSE(ok, ESP_ERR_INVALID_ARG, TAG, "passphrase must be at least 8 chars");
     ok = netCfg.WiFi.Passwd.size() < MAX_PASSPHRASE_LEN;
     ESP_RETURN_ON_FALSE(ok, ESP_ERR_INVALID_ARG, TAG, "maximum passphrase (%d) length exceed: %d", MAX_PASSPHRASE_LEN, netCfg.WiFi.Passwd.size());
   }

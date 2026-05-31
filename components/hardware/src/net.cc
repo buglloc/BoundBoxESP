@@ -6,6 +6,8 @@
 #include "net_wifi.h"
 #include "net_eth.h"
 
+#include <atomic>
+
 #include <esp_netif.h>
 #include <esp_event.h>
 #include <esp_log.h>
@@ -17,8 +19,8 @@ using namespace Hardware;
 namespace
 {
   static const char* TAG = "hardware::net";
-  static bool netReady = false;
-  static esp_ip4_addr_t localIP;
+  static std::atomic<bool> netReady{false};
+  static std::atomic<uint32_t> localIPAddr{ZERO_IP};
 
   void ipEventHandler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
   {
@@ -29,13 +31,13 @@ namespace
     switch (event_id) {
       case IP_EVENT_ETH_LOST_IP:
       case IP_EVENT_STA_LOST_IP:
-        netReady = false;
-        localIP.addr = ZERO_IP;
+        netReady.store(false);
+        localIPAddr.store(ZERO_IP);
         break;
       case IP_EVENT_ETH_GOT_IP:
       case IP_EVENT_STA_GOT_IP:
-        netReady = true;
-        localIP = ip_info->ip;
+        localIPAddr.store(ip_info->ip.addr);
+        netReady.store(true);
 
         switch (event_id) {
         case IP_EVENT_ETH_GOT_IP:
@@ -127,10 +129,13 @@ esp_err_t Net::Attach()
 
 esp_ip4_addr_t Net::LocalIP()
 {
-  return localIP;
+  esp_ip4_addr_t out = {
+    .addr = localIPAddr.load()
+  };
+  return out;
 }
 
 bool Net::Ready()
 {
-  return netReady;
+  return netReady.load();
 }
