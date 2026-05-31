@@ -141,7 +141,7 @@ Error PrivateKey::Own(ssh_key keyPtr)
 
 std::expected<std::string, Error> PrivateKey::Marshal(const std::string& passphrase) const
 {
-  char* blob;
+  char* blob = nullptr;
   const char* passPtr = passphrase.empty() ? nullptr : passphrase.c_str();
   int rc = ssh_pki_export_privkey_base64(keyPtr, passPtr, nullptr, nullptr, &blob);
   if (rc != SSH_OK) {
@@ -150,8 +150,44 @@ std::expected<std::string, Error> PrivateKey::Marshal(const std::string& passphr
   }
 
   std::string out(blob);
-  ssh_string_from_char(blob);
+  ssh_string_free_char(blob);
   return out;
+}
+
+std::expected<std::string, Error> SSH::PublicKeySHA256Fingerprint(const ssh_key key)
+{
+  unsigned char *hash = nullptr;
+  char* pHash = nullptr;
+  size_t hlen = 0;
+  int rc = ssh_get_publickey_hash(key, SSH_PUBLICKEY_HASH_SHA256, &hash, &hlen);
+  if (rc != SSH_OK) {
+    return std::unexpected<Error>{Error::Internal};
+  }
+
+  pHash = ssh_get_fingerprint_hash(SSH_PUBLICKEY_HASH_SHA256, hash, hlen);
+  if (!pHash) {
+    ssh_clean_pubkey_hash(&hash);
+    return std::unexpected<Error>{Error::Internal};
+  }
+
+  std::string out(pHash);
+
+  ssh_string_free_char(pHash);
+  ssh_clean_pubkey_hash(&hash);
+  return out;
+}
+
+std::expected<Blob::Bytes, Error> SSH::ExportPublicKeyBase64(const ssh_key key)
+{
+  char* b64Key = nullptr;
+  int rc = ssh_pki_export_pubkey_base64(key, &b64Key);
+  if (rc != SSH_OK) {
+    return std::unexpected<Error>{Error::Internal};
+  }
+
+  Blob::Bytes keyBytes{reinterpret_cast<const uint8_t*>(b64Key)};
+  ssh_string_free_char(b64Key);
+  return keyBytes;
 }
 
 ssh_key PrivateKey::Get() const

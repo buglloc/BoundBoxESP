@@ -71,15 +71,29 @@ Error AuthProvider::Initialize(const ServerConfig& cfg)
 
 bool AuthProvider::Authenticate(const std::string_view user, const ssh_key key) const
 {
-  if (user != rootUser) {
-    return true;
-  }
-
-  if (rootUser.empty()) {
+  if (user.empty()) {
     return false;
   }
 
-  return rootKeyring.Contains(key);
+  if (user == rootUser) {
+    if (rootUser.empty()) {
+      return false;
+    }
+
+    return rootKeyring.Contains(key);
+  }
+
+  if (!user.starts_with("SHA256:")) {
+    return true;
+  }
+
+  std::expected<std::string, Error> fingerprint = PublicKeySHA256Fingerprint(key);
+  if (!fingerprint) {
+    ESP_LOGW(TAG, "unable to make user key fingerprint: %d", static_cast<int>(fingerprint.error()));
+    return false;
+  }
+
+  return user == fingerprint.value();
 }
 
 UserRole AuthProvider::Role(const std::string_view user) const
