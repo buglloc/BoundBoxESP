@@ -1,8 +1,8 @@
 #include <sdkconfig.h>
 #include "commands.h"
 
-#include <vector>
-#include <functional>
+#include <array>
+#include <string_view>
 
 #include <esp_log.h>
 
@@ -31,7 +31,13 @@ namespace
   Hardware::Manager& hw = Hardware::Manager::Instance();
   UI::Manager& ui = UI::Manager::Instance();
 
-  using HandleFn = std::function<bool(const SSH::SessionInfo& sessInfo, const JsonObjectConst& req, JsonObject& rsp)>;
+  struct CmdContext
+  {
+    Authenticator* Auth;
+    Secrets* SecretsStore;
+  };
+
+  using HandleFn = bool(*)(const CmdContext& ctx, const SSH::SessionInfo& sessInfo, const JsonObjectConst& req, JsonObject& rsp);
 
   class LimitedStreamReader
   {
@@ -91,14 +97,15 @@ namespace
 
   struct Command
   {
-    std::string Name;
-    bool UsedAllowed;
-    std::string Help;
+    std::string_view Name;
+    bool UserAllowed;
+    std::string_view Help;
     HandleFn Handle;
   };
 
-  bool HandleHmacSecret(Authenticator* auth, const SSH::SessionInfo& sessInfo, const JsonObjectConst& req, JsonObject& rsp)
+  bool HandleHmacSecret(const CmdContext& ctx, const SSH::SessionInfo& sessInfo, const JsonObjectConst& req, JsonObject& rsp)
   {
+    Authenticator* auth = ctx.Auth;
     std::string_view encodedSalt = req["salt"].as<std::string_view>();
     if (encodedSalt.empty()) {
       rsp["error_code"] = CMD_ERR_CODE_HMAC_SECRET_INVALID_SALT;
@@ -141,15 +148,16 @@ namespace
     return true;
   }
 
-  bool HandleStatus(const SSH::SessionInfo& sessInfo, const JsonObjectConst& req, JsonObject& rsp)
+  bool HandleStatus(const CmdContext& ctx, const SSH::SessionInfo& sessInfo, const JsonObjectConst& req, JsonObject& rsp)
   {
     // TODO(buglloc): show something usefull
     return true;
   }
 
 #if CONFIG_DUMPABLE_SECRETS
-  bool HandleSecretsGet(Secrets* secrets, const SSH::SessionInfo& sessInfo, const JsonObjectConst& req, JsonObject& rsp)
+  bool HandleSecretsGet(const CmdContext& ctx, const SSH::SessionInfo& sessInfo, const JsonObjectConst& req, JsonObject& rsp)
   {
+    Secrets* secrets = ctx.SecretsStore;
     JsonObject secretsObj = rsp.createNestedObject("secrets");
     Error err = secrets->ToJson(secretsObj);
     if (err != Error::None) {
@@ -161,8 +169,9 @@ namespace
   }
 #endif
 
-  bool HandleSecretsStore(Secrets* secrets, const SSH::SessionInfo& sessInfo, const JsonObjectConst& req, JsonObject& rsp)
+  bool HandleSecretsStore(const CmdContext& ctx, const SSH::SessionInfo& sessInfo, const JsonObjectConst& req, JsonObject& rsp)
   {
+    Secrets* secrets = ctx.SecretsStore;
     JsonObjectConst secretsJson = req["secrets"].as<JsonObjectConst>();
     if (!secretsJson["host_key"].is<std::string>()) {
       rsp["error_code"] = CMD_ERR_CODE_SECRETS_STORE_INVALID_HOST_KEY;
@@ -193,8 +202,9 @@ namespace
     return true;
   }
 
-  bool HandleSecretsReset(Secrets* secrets, const SSH::SessionInfo& sessInfo, const JsonObjectConst& req, JsonObject& rsp)
+  bool HandleSecretsReset(const CmdContext& ctx, const SSH::SessionInfo& sessInfo, const JsonObjectConst& req, JsonObject& rsp)
   {
+    Secrets* secrets = ctx.SecretsStore;
     Error err = secrets->Erase();
     if (err != Error::None) {
       rsp["error_code"] = static_cast<uint8_t>(err);
@@ -205,7 +215,7 @@ namespace
     return true;
   }
 
-  bool HandleRestart(const SSH::SessionInfo& sessInfo, const JsonObjectConst& req, JsonObject& rsp)
+  bool HandleRestart(const CmdContext& ctx, const SSH::SessionInfo& sessInfo, const JsonObjectConst& req, JsonObject& rsp)
   {
     ui.SetBoardState(UI::BoardState::Restart);
     esp_err_t err = hw.ScheduleRestart(req["delay_ms"] | CONFIG_DEFAULT_RESTART_DELAY_MS);
@@ -227,7 +237,7 @@ Error Commands::Initialize(Authenticator* auth, Secrets* secrets)
 
 Error Commands::Dispatch(const SSH::SessionInfo& sessInfo, std::string_view cmdName, SSH::Stream& stream)
 {
-  ESP_LOGI(TAG, "[%s] called command: %s", sessInfo.Id.c_str(), cmdName.cbegin());
+  ESP_LOGI(TAG, "[%s] called command: %.*s", sessInfo.Id.c_str(), (int)cmdName.size(), cmdName.data());
   JsonDocument req;
   LimitedStreamReader reqReader(stream, CONFIG_COMMAND_JSON_MAX_SIZE);
   DeserializationError jsonErr = deserializeJson(
@@ -236,23 +246,16 @@ Error Commands::Dispatch(const SSH::SessionInfo& sessInfo, std::string_view cmdN
     DeserializationOption::NestingLimit(CONFIG_COMMAND_JSON_NESTING_LIMIT)
   );
 
-  if (reqReader.Exceeded()) {
-    ESP_LOGE(TAG, "[%s] request is too large: limit is %d bytes", sessInfo.Id.c_str(), CONFIG_COMMAND_JSON_MAX_SIZE);
-    return Error::CommandFailed;
-  }
-
-  if (reqReader.Failed()) {
-    ESP_LOGE(TAG, "[%s] request read failed", sessInfo.Id.c_str());
-    return Error::CommandFailed;
-  }
-
-  if (reqReader.TimedOut()) {
-    ESP_LOGE(TAG, "[%s] request read timed out", sessInfo.Id.c_str());
-    return Error::CommandFailed;
-  }
-
   if (jsonErr && jsonErr != DeserializationError::Code::EmptyInput) {
-    ESP_LOGE(TAG, "[%s] unable to read request: %s", sessInfo.Id.c_str(), jsonErr.c_str());
+    if (reqReader.Exceeded()) {
+      ESP_LOGE(TAG, "[%s] request is too large: limit is %d bytes", sessInfo.Id.c_str(), CONFIG_COMMAND_JSON_MAX_SIZE);
+    } else if (reqReader.Failed()) {
+      ESP_LOGE(TAG, "[%s] request read failed", sessInfo.Id.c_str());
+    } else if (reqReader.TimedOut()) {
+      ESP_LOGE(TAG, "[%s] request read timed out", sessInfo.Id.c_str());
+    } else {
+      ESP_LOGE(TAG, "[%s] unable to parse request: %s", sessInfo.Id.c_str(), jsonErr.c_str());
+    }
     return Error::CommandFailed;
   }
 
@@ -264,7 +267,7 @@ Error Commands::Dispatch(const SSH::SessionInfo& sessInfo, std::string_view cmdN
   rspDoc["id"] = sessInfo.Id;
 
   if (serializeJson(rspDoc, stream) == 0) {
-    ESP_LOGE(TAG, "[%s] unable to write response: %s", sessInfo.Id.c_str(), jsonErr.c_str());
+    ESP_LOGE(TAG, "[%s] unable to write response: stream write failed", sessInfo.Id.c_str());
     return Error::CommandFailed;
   }
 
@@ -276,57 +279,33 @@ Error Commands::Dispatch(const SSH::SessionInfo& sessInfo, std::string_view cmdN
 
 bool Commands::Handle(const SSH::SessionInfo& sessInfo, std::string_view cmdName, const JsonObjectConst& req, JsonObject& rsp)
 {
-  static const std::vector<Command> commands = {
-    {
-      .Name = "/hmac/secret",
-      .UsedAllowed = true,
-      .Help = "Generate HMAC secret for req[\"salt\"] into rsp[\"secret\"]",
-      .Handle = std::bind(HandleHmacSecret, auth, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)
-    },
-    {
-      .Name = "/help",
-      .UsedAllowed = true,
-      .Help = "Returns commands info",
-      .Handle = nullptr
-    },
-    {
-      .Name = "/status",
-      .UsedAllowed = false,
-      .Help = "Returns BoundBoxESP status",
-      .Handle = HandleStatus,
-    },
-    {
-      .Name = "/restart",
-      .UsedAllowed = false,
-      .Help = R"(Restart BoundBoxESP in req["delay_ms"])",
-      .Handle = HandleRestart
-    },
-    #if CONFIG_DUMPABLE_SECRETS
-    {
-      .Name = "/secrets/get",
-      .UsedAllowed = false,
-      .Help = "Returns runtime secrets in rsp[\"secrets\"]",
-      .Handle = std::bind(HandleSecretsGet, secrets, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)
-    },
-    #endif
-    {
-      .Name = "/secrets/store",
-      .UsedAllowed = false,
-      .Help = "Store runtime secrets from req[\"secrets\"]",
-      .Handle = std::bind(HandleSecretsStore, secrets, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)
-    },
-    {
-      .Name = "/secrets/reset",
-      .UsedAllowed = false,
-      .Help = "Reset secrets to it's default values",
-      .Handle = std::bind(HandleSecretsReset, secrets, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)
-    }
-  };
+  // Stored in .rodata: literal type, all string_view + function pointer members   are constexpr-friendly
+  static constexpr std::array<Command, 0
+    + 1 // hmac/secret
+    + 1 // helpq
+    + 1 // status
+    + 1 // restart
+#if CONFIG_DUMPABLE_SECRETS
+    + 1 // secrets/get
+#endif
+    + 1 // secrets/store
+    + 1 // secrets/reset
+  > commands = {{
+    {"/hmac/secret",   true,  "Generate HMAC secret for req[\"salt\"] into rsp[\"secret\"]", &HandleHmacSecret},
+    {"/help",          true,  "Returns commands info",                                       nullptr},
+    {"/status",        false, "Returns BoundBoxESP status",                                  &HandleStatus},
+    {"/restart",       false, R"(Restart BoundBoxESP in req["delay_ms"])",                   &HandleRestart},
+#if CONFIG_DUMPABLE_SECRETS
+    {"/secrets/get",   false, "Returns runtime secrets in rsp[\"secrets\"]",                 &HandleSecretsGet},
+#endif
+    {"/secrets/store", false, "Store runtime secrets from req[\"secrets\"]",                 &HandleSecretsStore},
+    {"/secrets/reset", false, "Reset secrets to it's default values",                        &HandleSecretsReset},
+  }};
 
   if (cmdName == "/help") {
     JsonArray jsonCommands = rsp["commands"].to<JsonArray>();
     for (const auto& cmd : commands) {
-      if (!cmd.UsedAllowed && sessInfo.User.Role != SSH::UserRole::SysOp) {
+      if (!cmd.UserAllowed && sessInfo.User.Role != SSH::UserRole::SysOp) {
         continue;
       }
 
@@ -338,22 +317,25 @@ bool Commands::Handle(const SSH::SessionInfo& sessInfo, std::string_view cmdName
     return true;
   }
 
+  const CmdContext ctx{this->auth, this->secrets};
   for (const auto& cmd : commands) {
     if (cmd.Name != cmdName) {
       continue;
     }
 
-    if (!cmd.UsedAllowed && sessInfo.User.Role != SSH::UserRole::SysOp) {
+    if (!cmd.UserAllowed && sessInfo.User.Role != SSH::UserRole::SysOp) {
       rsp["error"] = "403: command can only be used by sysops, but you are just a random user";
 
-      ESP_LOGW(TAG, "[%s] try to call privileged command '%s' from '%s' w/o permissions", sessInfo.Id.c_str(), cmdName.cbegin(), sessInfo.ClientIP.c_str());
+      ESP_LOGW(TAG, "[%s] try to call privileged command '%.*s' from '%s' w/o permissions",
+        sessInfo.Id.c_str(), (int)cmdName.size(), cmdName.data(), sessInfo.ClientIP.c_str());
       return false;
     }
 
-    return cmd.Handle(sessInfo, req, rsp);
+    return cmd.Handle(ctx, sessInfo, req, rsp);
   }
 
   rsp["error"] = "404: command not found";
-  ESP_LOGW(TAG, "[%s] called unknown command '%s' from '%s'", sessInfo.Id.c_str(), cmdName.cbegin(), sessInfo.ClientIP.c_str());
+  ESP_LOGW(TAG, "[%s] called unknown command '%.*s' from '%s'",
+    sessInfo.Id.c_str(), (int)cmdName.size(), cmdName.data(), sessInfo.ClientIP.c_str());
   return false;
 }

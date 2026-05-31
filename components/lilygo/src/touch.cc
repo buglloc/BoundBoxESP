@@ -22,17 +22,18 @@ using namespace LilyGo;
 namespace
 {
   static const char* TAG = "lilygo::touch";
-  static SemaphoreHandle_t xTouchMu;
+  // signalled from the touch IRQ to notify GetPoint() that new data is available
+  static SemaphoreHandle_t touchIrqSem;
 }
 
 esp_err_t TouchSensor::Initialize()
 {
   esp_err_t ret;
 
-  xTouchMu = xSemaphoreCreateBinary();
-  if (xTouchMu == nullptr) {
+  touchIrqSem = xSemaphoreCreateBinary();
+  if (touchIrqSem == nullptr) {
     ret = ESP_ERR_NO_MEM;
-    ESP_RETURN_ON_ERROR(ret, TAG, "no mutex allocated");
+    ESP_RETURN_ON_ERROR(ret, TAG, "no IRQ semaphore allocated");
   }
 
   ESP_LOGD(TAG, "initializing");
@@ -79,7 +80,7 @@ esp_err_t TouchSensor::Initialize()
     },
     .interrupt_callback = [](esp_lcd_touch_handle_t tp) -> void {
       BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-      xSemaphoreGiveFromISR(xTouchMu, &xHigherPriorityTaskWoken);
+      xSemaphoreGiveFromISR(touchIrqSem, &xHigherPriorityTaskWoken);
       if (xHigherPriorityTaskWoken) {
         portYIELD_FROM_ISR();
       }
@@ -116,7 +117,7 @@ bool TouchSensor::GetPoint(uint16_t& x, uint16_t& y)
   uint8_t cnts = 0;
 
   // Read data from touch controller into memory
-  if (xSemaphoreTake(xTouchMu, 0) == pdTRUE) {
+  if (xSemaphoreTake(touchIrqSem, 0) == pdTRUE) {
       esp_lcd_touch_read_data(tp);
   }
 

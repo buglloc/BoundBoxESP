@@ -74,21 +74,29 @@ std::expected<Blob::Bytes, Error> Authenticator::MakeHmacSecret(const Blob::Byte
 
 void Authenticator::OnPinEnter(uint8_t ch)
 {
-  xSemaphoreTake(credMu, portMAX_DELAY);
-  REF_DEFER(xSemaphoreGive(credMu));
+  bool restart = false;
+  {
+    xSemaphoreTake(credMu, portMAX_DELAY);
+    REF_DEFER(xSemaphoreGive(credMu));
 
-  if (!credBuilding) {
-    ESP_LOGE(TAG, "unexpected OnPinChar calling");
-    return;
+    if (!credBuilding) {
+      ESP_LOGE(TAG, "unexpected OnPinChar calling");
+      return;
+    }
+
+    Blob::Bytes salt(&ch, 1);
+    std::expected<Blob::Bytes, Error> ret = makeHmacSecretLocked(salt);
+    if (!ret) {
+      ESP_LOGE(TAG, "HMAC step failed during PIN entry, restarting credential build");
+      restart = true;
+    } else {
+      credential = ret.value();
+    }
   }
 
-  Blob::Bytes salt(&ch, 1);
-  std::expected<Blob::Bytes, Error> ret = makeHmacSecretLocked(salt);
-  if (!ret) {
-    return;
+  if (restart) {
+    BuildCredential();
   }
-
-  credential = ret.value();
 }
 
 void Authenticator::OnPinEntered(bool ok)

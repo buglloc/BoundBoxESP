@@ -185,7 +185,6 @@ Error Secrets::migrate()
     ESP_LOGW(TAG, "no %s found: generate new one", SECRET_KEY_KEY);
 
     secretKey = genSecretKey(CONFIG_SECRET_KEY_SIZE);
-    assert(secretKey[0] != '\xff');
 
     ESP_LOGI(TAG, "new secret key generated");
     restore = true;

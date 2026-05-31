@@ -2,6 +2,7 @@
 #include "ssh/stream.h"
 
 #include <algorithm>
+#include <cstring>
 
 #include <freertos/FreeRTOS.h>
 
@@ -89,7 +90,7 @@ bool Stream::ReadFailed() const
 
 size_t Stream::write(uint8_t b)
 {
-  if (writeSize + 1 >= CONFIG_SSH_STREAM_WRITE_BUFFER_SIZE && !flush()) {
+  if (writeSize >= CONFIG_SSH_STREAM_WRITE_BUFFER_SIZE && !flush()) {
     return 0;
   }
 
@@ -103,13 +104,20 @@ size_t Stream::write(const uint8_t *buffer, size_t length)
     return 0;
   }
 
-  for (size_t i = 0; i < length; ++i) {
-    if (write(buffer[i]) != 1) {
-      return i;
+  size_t written = 0;
+  while (written < length) {
+    if (writeSize >= CONFIG_SSH_STREAM_WRITE_BUFFER_SIZE && !flush()) {
+      return written;
     }
+
+    size_t freeSpace = CONFIG_SSH_STREAM_WRITE_BUFFER_SIZE - writeSize;
+    size_t chunk = std::min(freeSpace, length - written);
+    std::memcpy(writeBuf + writeSize, buffer + written, chunk);
+    writeSize += chunk;
+    written += chunk;
   }
 
-  return length;
+  return written;
 }
 
 bool Stream::flush()

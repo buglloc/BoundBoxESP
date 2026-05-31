@@ -23,43 +23,41 @@
 #ifndef BB_UTIL_DEFER_H
 #define BB_UTIL_DEFER_H
 
-#include <functional>
+#include <utility>
 
 #define VAR_DEFER__(x) DEFER__ ## x
 #define VAR_DEFER_(x) VAR_DEFER__(x)
 
 // Capture all by ref
-#define REF_DEFER(ops) Defer VAR_DEFER_(__COUNTER__)([&]{ ops; })
+#define REF_DEFER(ops) Defer VAR_DEFER_(__COUNTER__){[&]{ ops; }}
 // Capture all by val
-#define VAL_DEFER(ops) Defer VAR_DEFER_(__COUNTER__)([=]{ ops; })
+#define VAL_DEFER(ops) Defer VAR_DEFER_(__COUNTER__){[=]{ ops; }}
 // Capture nothing
-#define NONE_DEFER(ops) Defer VAR_DEFER_(__COUNTER__)([ ]{ ops; })
+#define NONE_DEFER(ops) Defer VAR_DEFER_(__COUNTER__){[ ]{ ops; }}
 
 
+template<class F>
 class Defer
 {
 public:
-    using action = std::function<void(void)>;
+    explicit Defer(F&& act)
+        : action(std::forward<F>(act)) {}
 
-public:
-    Defer(const action& act)
-        : _action(act) {}
-    Defer(action&& act)
-        : _action(std::move(act)) {}
+    Defer(const Defer&) = delete;
+    Defer& operator=(const Defer&) = delete;
 
-    Defer(const Defer& act) = delete;
-    Defer& operator=(const Defer& act) = delete;
-
-    Defer(Defer&& act) = delete;
-    Defer& operator=(Defer&& act) = delete;
+    Defer(Defer&&) = delete;
+    Defer& operator=(Defer&&) = delete;
 
     ~Defer()
     {
-        _action();
+        action();
     }
 
 private:
-    action _action;
+    F action;
 };
+
+template<class F> Defer(F) -> Defer<F>;
 
 #endif

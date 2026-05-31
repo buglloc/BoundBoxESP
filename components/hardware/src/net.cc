@@ -24,9 +24,6 @@ namespace
 
   void ipEventHandler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
   {
-    ip_event_got_ip_t* event = reinterpret_cast<ip_event_got_ip_t *>(event_data);
-    const esp_netif_ip_info_t* ip_info = &event->ip_info;
-
     ESP_LOGI(TAG, "got event %s:%ld", event_base, event_id);
     switch (event_id) {
       case IP_EVENT_ETH_LOST_IP:
@@ -34,22 +31,16 @@ namespace
         netReady.store(false);
         localIPAddr.store(ZERO_IP);
         break;
+
       case IP_EVENT_ETH_GOT_IP:
-      case IP_EVENT_STA_GOT_IP:
+      case IP_EVENT_STA_GOT_IP: {
+        const auto* event = reinterpret_cast<const ip_event_got_ip_t*>(event_data);
+        const esp_netif_ip_info_t* ip_info = &event->ip_info;
+
         localIPAddr.store(ip_info->ip.addr);
         netReady.store(true);
 
-        switch (event_id) {
-        case IP_EVENT_ETH_GOT_IP:
-          ESP_LOGI(TAG, "ethernet connected");
-          break;
-        case IP_EVENT_STA_GOT_IP:
-          ESP_LOGI(TAG, "wifi connected");
-          break;
-        default:
-          ESP_LOGI(TAG, "something connected");
-        }
-
+        ESP_LOGI(TAG, "%s connected", event_id == IP_EVENT_ETH_GOT_IP ? "ethernet" : "wifi");
         ESP_LOGI(TAG, "~~~~~~~~~~~");
 
         if (!ip4_addr_isany_val(ip_info->ip)) {
@@ -66,11 +57,17 @@ namespace
 
         ESP_LOGI(TAG, "~~~~~~~~~~~");
         break;
-      case IP_EVENT_AP_STAIPASSIGNED:
+      }
+
+      case IP_EVENT_AP_STAIPASSIGNED: {
+        const auto* event = reinterpret_cast<const ip_event_ap_staipassigned_t*>(event_data);
         ESP_LOGI(TAG, "new client connected");
-        ESP_LOGI(TAG, "IP: " IPSTR, IP2STR(&ip_info->ip));
+        ESP_LOGI(TAG, "IP: " IPSTR, IP2STR(&event->ip));
+        break;
+      }
+
       default:
-        return;
+        break;
     }
   }
 }
@@ -78,6 +75,9 @@ namespace
 esp_err_t Net::Initialize(NetConfig cfg)
 {
   this->cfg = std::move(cfg);
+
+  // esp_netif must be initialized before any impl that builds netif configs.
+  ESP_RETURN_ON_ERROR(esp_netif_init(), TAG, "failed to initialize netif");
 
   switch (this->cfg.Kind)
   {
@@ -104,7 +104,6 @@ esp_err_t Net::Initialize(NetConfig cfg)
   }
 
   ESP_RETURN_ON_ERROR(impl->Initialize(), TAG, "failed to initialize network impl");
-  ESP_RETURN_ON_ERROR(esp_netif_init(), TAG, "failed to initialize netif");
   return ESP_OK;
 }
 

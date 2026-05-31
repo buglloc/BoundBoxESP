@@ -3,7 +3,7 @@
 #include <hardware/manager.h>
 
 
-Hardware::Config HwConfig()
+inline Hardware::Config HwConfig()
 {
   Hardware::NetConfig netCfg = {
     #if CONFIG_NET_KIND_USB
