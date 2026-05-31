@@ -32,6 +32,12 @@ esp_err_t Manager::Initialize(Handler* handler)
   ESP_LOGI(TAG, "initialize scene manager");
   ESP_RETURN_ON_ERROR(sceneManager.Initialize(), TAG, "scene manager initialization");
 
+  textMu = xSemaphoreCreateMutex();
+  if (textMu == nullptr) {
+    ESP_LOGE(TAG, "unable to allocate text mutex");
+    return ESP_ERR_NO_MEM;
+  }
+
   ESP_LOGI(TAG, "create GUI");
   this->gui = std::make_unique<GUI>();
   this->handler = handler;
@@ -82,14 +88,22 @@ void Manager::ShowRequestPin()
 
 void Manager::ShowVerifyPin(const std::string& verification)
 {
-  pinVerification = verification;
+  xSemaphoreTake(textMu, portMAX_DELAY);
+  {
+    REF_DEFER(xSemaphoreGive(textMu));
+    pinVerification = verification;
+  }
   sceneManager.SwitchTo(SceneId::PinVerify);
 }
 
 void Manager::ShowAssertation(const std::string& client)
 {
   assertations++;
-  notifyMsg = client;
+  xSemaphoreTake(textMu, portMAX_DELAY);
+  {
+    REF_DEFER(xSemaphoreGive(textMu));
+    notifyMsg = client;
+  }
   sceneManager.SwitchTo(SceneId::Notify);
 }
 
@@ -222,12 +236,28 @@ void Manager::tickStateTransition()
   case SceneId::PinVerify:
     ESP_LOGI(TAG, "switch to pin verify screen");
     hw.Board().Display().SetBrightness(CONFIG_UI_DEFAULT_BRIGHTNESS);
-    gui->ShowScreenPinVerify(pinVerification);
+    {
+      std::string verification;
+      xSemaphoreTake(textMu, portMAX_DELAY);
+      {
+        REF_DEFER(xSemaphoreGive(textMu));
+        verification = pinVerification;
+      }
+      gui->ShowScreenPinVerify(verification);
+    }
     break;
   case SceneId::Notify:
     ESP_LOGI(TAG, "switch to notify screen");
     hw.Board().Display().SetBrightness(CONFIG_UI_DEFAULT_BRIGHTNESS);
-    gui->ShowScreenNotification(notifyMsg);
+    {
+      std::string msg;
+      xSemaphoreTake(textMu, portMAX_DELAY);
+      {
+        REF_DEFER(xSemaphoreGive(textMu));
+        msg = notifyMsg;
+      }
+      gui->ShowScreenNotification(msg);
+    }
     break;
   case SceneId::Boot:
     hw.Board().Display().SetBrightness(CONFIG_UI_DEFAULT_BRIGHTNESS);

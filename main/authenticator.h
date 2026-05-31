@@ -2,6 +2,9 @@
 
 #include <expected>
 
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
+
 #include <ui/manager.h>
 #include <blob/bytes.h>
 #include <hardware/manager.h>
@@ -22,10 +25,11 @@ public:
   void OnPinVerified(bool ok);
 
 private:
-  std::expected<Blob::Bytes, Error> makeHmacSecret(const Blob::Bytes& salt);
+  std::expected<Blob::Bytes, Error> makeHmacSecretLocked(const Blob::Bytes& salt);
 
 private:
   Blob::Bytes credential;
-  bool credBuilding;
+  bool credBuilding = false;
+  SemaphoreHandle_t credMu = nullptr;
   Secrets* secrets = nullptr;
 };
