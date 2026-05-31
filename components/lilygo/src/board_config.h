@@ -48,6 +48,6 @@
 #define HOME_BUTTON_Y         120
 
 #define BATT_ADC_PIN          GPIO_NUM_4
-#define BATT_ADC_ATTEN        ADC_ATTEN_DB_11
+#define BATT_ADC_ATTEN        ADC_ATTEN_DB_12
 #define BATT_ADC_WIDTH_BIT    ADC_BITWIDTH_12
 #define BATT_ADC_DEF_VREF     1100
