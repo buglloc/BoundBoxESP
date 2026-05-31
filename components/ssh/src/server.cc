@@ -3,6 +3,9 @@
 #include "ssh/common.h"
 #include "ssh/keys.h"
 
+#include <array>
+#include <cstdio>
+
 #include <freertos/FreeRTOS.h>
 
 #include <esp_check.h>
@@ -41,9 +44,9 @@ namespace
     uint8_t raw[6];
     esp_fill_random(raw, sizeof(raw));
 
-    std::string out(13, '\xff');
-		sprintf(out.data(), "%02x%02x%02x-%02x%02x%02x", raw[0], raw[1], raw[2], raw[3], raw[4], raw[5]);
-		return out;
+    std::array<char, 14> out = {};
+    snprintf(out.data(), out.size(), "%02x%02x%02x-%02x%02x%02x", raw[0], raw[1], raw[2], raw[3], raw[4], raw[5]);
+    return std::string(out.data(), out.size() - 1);
   }
 
   std::string getClientIp(ssh_session session)

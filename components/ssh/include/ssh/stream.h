@@ -30,6 +30,8 @@ namespace SSH
     int read();
     // Reads several bytes, returns the number of bytes read.
     size_t readBytes(char* buffer, size_t length);
+    bool ReadTimedOut() const;
+    bool ReadFailed() const;
 
     // ArduinoJson CustomWriter: https://arduinojson.org/news/2019/11/01/version-6-13-0/#custom-writer
     // Writes one byte, returns the number of bytes written (0 or 1)
@@ -39,7 +41,12 @@ namespace SSH
 
   private:
     ssh_channel chan;
+    size_t readPos = 0;
+    size_t readSize = 0;
+    bool readTimedOut = false;
+    bool readFailed = false;
+    uint8_t readBuf[CONFIG_SSH_STREAM_READ_BUFFER_SIZE];
     size_t writeSize;
-    uint8_t writeBuf[CONFIG_SSH_STREAM_BUFFER_SIZE];
+    uint8_t writeBuf[CONFIG_SSH_STREAM_WRITE_BUFFER_SIZE];
   };
 }
