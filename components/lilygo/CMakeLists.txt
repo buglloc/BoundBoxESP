@@ -8,7 +8,7 @@ SRCS
 INCLUDE_DIRS
   "include"
 REQUIRES
-  driver esp_adc esp_lcd esp_lcd_touch_cst816s
+  driver esp_adc esp_driver_i2c esp_lcd esp_lcd_touch_cst816s
   lvgl
 PRIV_REQUIRES
   esp_timer heap esp_hw_support

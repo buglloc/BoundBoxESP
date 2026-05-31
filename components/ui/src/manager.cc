@@ -41,21 +41,21 @@ esp_err_t Manager::Initialize(Handler* handler)
   // Otherwise there can be problem such as memory corruption and so on.
   // source: https://github.com/lvgl/lv_port_esp32/blob/cffa173c6e410965da12875103b934ec9d28f4e5/main/main.c#L64-L66
   ESP_LOGI(TAG, "initialize ui task timer");
+  if (!hw.Board().GuiLock()) {
+    return ESP_FAIL;
+  }
   lv_timer_create([](lv_timer_t *t) {
-    reinterpret_cast<Manager *>(t->user_data)->Tick();
+    reinterpret_cast<Manager *>(lv_timer_get_user_data(t))->Tick();
   }, CONFIG_UI_PERIOD_TIME_MS, this);
+  hw.Board().GuiUnlock();
 
-  lv_msg_subscribe(GUI_MESSAGE_PIN_PROMPT,
-    [](void* s, lv_msg_t* m) -> void {
-      const int8_t* value = reinterpret_cast<const int8_t *>(lv_msg_get_payload(m));
-      Handler* handler = reinterpret_cast<Handler *>(lv_msg_get_user_data(m));
-      handler->OnPinEnter(*value);
-    },
-    this->handler
-  );
+  gui->SetPinPromptHandler([this](int8_t value) {
+    if (this->handler != nullptr) {
+      this->handler->OnPinEnter(value);
+    }
+  });
 
   ShowBoot();
-  Tick();
   hw.Board().Display().SetBrightness(CONFIG_UI_DEFAULT_BRIGHTNESS);
   return ESP_OK;
 }
@@ -63,7 +63,6 @@ esp_err_t Manager::Initialize(Handler* handler)
 void Manager::SetBoardState(UI::BoardState newState)
 {
   boardState = newState;
-  lv_msg_send(GUI_MESSAGE_NEW_BOARD_STATE, &newState);
 }
 
 UI::BoardState Manager::BoardState()
@@ -90,8 +89,6 @@ void Manager::ShowVerifyPin(const std::string& verification)
 void Manager::ShowAssertation(const std::string& client)
 {
   assertations++;
-  lv_msg_send(GUI_MESSAGE_NEW_ASSERTATIONS, &assertations);
-
   notifyMsg = client;
   sceneManager.SwitchTo(SceneId::Notify);
 }
@@ -105,6 +102,8 @@ void Manager::Tick()
 {
   tickHomeButton();
   tickStateTransition();
+  tickBoardState();
+  tickAssertations();
   tickBoardInfo();
 }
 
@@ -159,20 +158,52 @@ void Manager::tickBoardInfo()
   uint32_t newLocalAddr = hw.Net().LocalIP().addr;
   if (newLocalAddr != lastLocalAddr) {
     lastLocalAddr = newLocalAddr;
-    lv_msg_send(GUI_MESSAGE_NEW_ADDR, &lastLocalAddr);
+    if (gui != nullptr) {
+      gui->UpdateLocalAddr(lastLocalAddr);
+    }
   }
 
   uint32_t battVoltage = hw.Board().BattVoltage();
   if (battVoltage > 0) {
-    lv_msg_send(GUI_MESSAGE_NEW_BATT_VOLTAGE, &battVoltage);
+    if (gui != nullptr) {
+      gui->UpdateBattVoltage(battVoltage);
+    }
   }
 
   uint32_t coreTemp = hw.Board().CoreTemp();
   if (coreTemp > 0) {
-    lv_msg_send(GUI_MESSAGE_NEW_CORE_TEMP, &coreTemp);
+    if (gui != nullptr) {
+      gui->UpdateCoreTemp(coreTemp);
+    }
   }
 
   ticksToUpdate = (CONFIG_UI_UPDATE_INFO_PERIOD_MS /CONFIG_UI_PERIOD_TIME_MS);
+}
+
+void Manager::tickBoardState()
+{
+  UI::BoardState newState = BoardState();
+  if (newState == displayedBoardState) {
+    return;
+  }
+
+  displayedBoardState = newState;
+  if (gui != nullptr) {
+    gui->UpdateBoardState(newState);
+  }
+}
+
+void Manager::tickAssertations()
+{
+  uint32_t newAssertations = assertations.load();
+  if (newAssertations == lastAssertations) {
+    return;
+  }
+
+  lastAssertations = newAssertations;
+  if (gui != nullptr) {
+    gui->UpdateAssertations(newAssertations);
+  }
 }
 
 void Manager::tickStateTransition()
@@ -204,6 +235,8 @@ void Manager::tickStateTransition()
   case SceneId::Idle:
     ESP_LOGI(TAG, "switch to info screen");
     gui->ShowInfoScreen();
+    gui->UpdateLocalAddr(hw.Net().LocalIP().addr);
+    gui->UpdateAssertations(assertations.load());
     break;
   default:
     ESP_LOGE(TAG, "unexpected scene: %d", (int)sceneManager.Id());

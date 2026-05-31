@@ -53,6 +53,8 @@ namespace UI
 
   private:
     void tickHomeButton();
+    void tickBoardState();
+    void tickAssertations();
     void tickBoardInfo();
     void tickStateTransition();
 
@@ -64,8 +66,10 @@ namespace UI
     Button homeButton;
     std::string pinVerification;
     std::string notifyMsg;
+    UI::BoardState displayedBoardState = UI::BoardState::None;
     uint16_t ticksToUpdate = 0;
     uint32_t lastLocalAddr = 0;
-    uint32_t assertations = 0;
+    uint32_t lastAssertations = 0;
+    std::atomic<uint32_t> assertations = 0;
   };
 }

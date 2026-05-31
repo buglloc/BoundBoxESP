@@ -8,15 +8,6 @@
 #include "ui/manager.h"
 
 
-#define GUI_MESSAGE_PIN_PROMPT 100
-#define GUI_MESSAGE_NOTIFY 101
-#define GUI_MESSAGE_NEW_BOARD_STATE 110
-#define GUI_MESSAGE_NEW_ADDR 111
-#define GUI_MESSAGE_NEW_BATT_VOLTAGE 112
-#define GUI_MESSAGE_NEW_CORE_TEMP 113
-#define GUI_MESSAGE_NEW_ASSERTATIONS 114
-
-
 namespace UI
 {
   class GUI
@@ -27,6 +18,13 @@ namespace UI
     void ShowScreenPinVerify(const std::string& verification);
     void ShowScreenNotification(const std::string& msg);
     void ShowInfoScreen();
+    void SetPinPromptHandler(std::function<void(int8_t)> handler);
+    void UpdateNotification(const char* msg);
+    void UpdateBoardState(BoardState state);
+    void UpdateLocalAddr(uint32_t addr);
+    void UpdateAssertations(uint32_t assertations);
+    void UpdateCoreTemp(uint32_t temp);
+    void UpdateBattVoltage(uint32_t voltage);
 
     ~GUI();
   private:
@@ -37,5 +35,12 @@ namespace UI
   private:
     lv_obj_t* notifyScreen = nullptr;
     lv_obj_t* infoScreen = nullptr;
+    lv_obj_t* notifyLabel = nullptr;
+    lv_obj_t* stateLabel = nullptr;
+    lv_obj_t* ipLabel = nullptr;
+    lv_obj_t* assesLabel = nullptr;
+    lv_obj_t* tempLabel = nullptr;
+    lv_obj_t* battLabel = nullptr;
+    std::function<void(int8_t)> pinPromptHandler;
   };
 }

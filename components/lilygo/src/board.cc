@@ -25,9 +25,6 @@ namespace
   static const char* LV_TAG = "lilygo::lvgl";
 
   static bool initialized = false;
-  static lv_disp_draw_buf_t dispBuf; // Internal graphic buffer(s) called draw buffer(s)
-  static lv_disp_drv_t dispDrv;      // Display driver (LCD)
-  static lv_indev_drv_t inDevDrv;    // Input device driver (Touch)
 
   void lvGuiTask(void *arg)
   {
@@ -38,7 +35,7 @@ namespace
     {
       taskDelayMS = 0;
       if (board->GuiLock()) {
-        taskDelayMS = lv_task_handler();
+        taskDelayMS = lv_timer_handler();
         board->GuiUnlock();
       }
 
@@ -109,27 +106,21 @@ esp_err_t Board::InitializeLVGL()
   assert(buf1);
   lv_color_t* buf2 = reinterpret_cast<lv_color_t *>(heap_caps_malloc(LV_LCD_BUF_SIZE * sizeof(lv_color_t), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT));
   assert(buf2);
-  lv_disp_draw_buf_init(&dispBuf, buf1, buf2, LV_LCD_BUF_SIZE);
-
-  lv_disp_drv_init(&dispDrv);
-  dispDrv.hor_res = TFT_WIDTH;
-  dispDrv.ver_res = TFT_HEIGHT;
-  // dispDrv.full_refresh = 1;
-  dispDrv.draw_buf = &dispBuf;
-
-  dispDrv.user_data = &display;
-  dispDrv.flush_cb = [](lv_disp_drv_t* dispDrv, const lv_area_t* area, lv_color_t* colorP) -> void {
-    uint32_t w = ( area->x2 - area->x1 + 1 );
-    uint32_t h = ( area->y2 - area->y1 + 1 );
-    static_cast<LilyGo::Display *>(dispDrv->user_data)->PushColors(area->x1, area->y1, w, h, reinterpret_cast<uint16_t *>(colorP));
-    lv_disp_flush_ready(dispDrv);
-  };
-
-  lv_disp_t* lvDisplay = lv_disp_drv_register(&dispDrv);
+  lv_display_t* lvDisplay = lv_display_create(TFT_WIDTH, TFT_HEIGHT);
   if (lvDisplay == nullptr) {
     ret = ESP_ERR_NO_MEM;
-    ESP_RETURN_ON_ERROR(ret, TAG, "register lvgl driver");
+    ESP_RETURN_ON_ERROR(ret, TAG, "create lvgl display");
   }
+
+  lv_display_set_color_format(lvDisplay, LV_COLOR_FORMAT_RGB565);
+  lv_display_set_buffers(lvDisplay, buf1, buf2, LV_LCD_BUF_SIZE * sizeof(lv_color_t), LV_DISPLAY_RENDER_MODE_PARTIAL);
+  lv_display_set_user_data(lvDisplay, &display);
+  lv_display_set_flush_cb(lvDisplay, [](lv_display_t* disp, const lv_area_t* area, uint8_t* pxMap) -> void {
+    uint32_t w = ( area->x2 - area->x1 + 1 );
+    uint32_t h = ( area->y2 - area->y1 + 1 );
+    static_cast<LilyGo::Display *>(lv_display_get_user_data(disp))->PushColors(area->x1, area->y1, w, h, reinterpret_cast<uint16_t *>(pxMap));
+    lv_display_flush_ready(disp);
+  });
 
   /* Create and start a periodic timer interrupt to call lv_tick_inc */
   const esp_timer_create_args_t periodic_timer_args = {
@@ -146,24 +137,23 @@ esp_err_t Board::InitializeLVGL()
   ret = esp_timer_start_periodic(periodic_timer, LV_TICK_PERIOD_MS * 1000);
   ESP_RETURN_ON_ERROR(ret, TAG, "start lvgl_tick timer");
 
-  lv_indev_drv_init(&inDevDrv);
-  inDevDrv.type = LV_INDEV_TYPE_POINTER;
-  inDevDrv.disp = lvDisplay;
-  inDevDrv.user_data = &touchSensor;
-  inDevDrv.read_cb = [](lv_indev_drv_t *drv, lv_indev_data_t *data) -> void {
+  lv_indev_t* inDevTouchpad = lv_indev_create();
+  if (inDevTouchpad == nullptr) {
+    ret = ESP_ERR_NO_MEM;
+    ESP_RETURN_ON_ERROR(ret, TAG, "create lvgl indev");
+  }
+
+  lv_indev_set_type(inDevTouchpad, LV_INDEV_TYPE_POINTER);
+  lv_indev_set_display(inDevTouchpad, lvDisplay);
+  lv_indev_set_user_data(inDevTouchpad, &touchSensor);
+  lv_indev_set_read_cb(inDevTouchpad, [](lv_indev_t *indev, lv_indev_data_t *data) -> void {
     uint16_t x, y = 0;
-    bool pressed = static_cast<LilyGo::TouchSensor *>(drv->user_data)->GetPoint(x, y);
+    bool pressed = static_cast<LilyGo::TouchSensor *>(lv_indev_get_user_data(indev))->GetPoint(x, y);
 
     data->point.x = x;
     data->point.y = y;
     data->state = pressed ? LV_INDEV_STATE_PRESSED : LV_INDEV_STATE_RELEASED;
-  };
-
-  lv_indev_t* inDevTouchpad = lv_indev_drv_register(&inDevDrv);
-  if (inDevTouchpad == nullptr) {
-    ret = ESP_ERR_NO_MEM;
-    ESP_RETURN_ON_ERROR(ret, TAG, "register lvgl indev driver");
-  }
+  });
 
   xTaskCreatePinnedToCore(lvGuiTask, "lvgl gui task", LV_TASK_STACK_DEPTH, this, LV_TASK_PRIO, nullptr, LV_TASK_CORE);
   return ESP_OK;
