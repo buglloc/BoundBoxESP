@@ -193,6 +193,7 @@ namespace
       return &mainStyle;
     }
 
+    lv_style_init(&mainStyle);
     lv_style_set_border_width(&mainStyle, 0);
     lv_style_set_bg_color(&mainStyle, bgColor);
     lv_style_set_text_font(&mainStyle, &font_roboto_mono_24);

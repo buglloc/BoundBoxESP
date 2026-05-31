@@ -6,6 +6,9 @@
 #include <string>
 #include <atomic>
 
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
+
 #include <hardware/manager.h>
 
 #include "button.h"
@@ -64,6 +67,7 @@ namespace UI
     Handler* handler = nullptr;
     SceneManager sceneManager;
     Button homeButton;
+    SemaphoreHandle_t textMu = nullptr;
     std::string pinVerification;
     std::string notifyMsg;
     UI::BoardState displayedBoardState = UI::BoardState::None;
