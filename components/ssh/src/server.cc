@@ -59,39 +59,6 @@ namespace
     return out;
   }
 
-  std::expected<std::string, int> genKeyFingerprint(const ssh_key key)
-  {
-    unsigned char *hash = nullptr;
-    char* pHash = nullptr;
-    size_t hlen = 0;
-    int rc = ssh_get_publickey_hash(key, SSH_PUBLICKEY_HASH_SHA256, &hash, &hlen);
-    if (rc != SSH_OK) {
-      return std::unexpected<int>{rc};
-    }
-
-    pHash = ssh_get_fingerprint_hash(SSH_PUBLICKEY_HASH_SHA256, hash, hlen);
-    std::string out(pHash);
-
-    ssh_string_free_char(pHash);
-    ssh_clean_pubkey_hash(&hash);
-    return out;
-  }
-
-  std::expected<Blob::Bytes, int> exportKey(const ssh_key key)
-  {
-    char* b64Key = NULL;
-    int rc = ssh_pki_export_pubkey_base64(key, &b64Key);
-    if (rc != SSH_OK) {
-      return std::unexpected<int>{rc};
-    }
-
-    Blob::Bytes keyBytes{reinterpret_cast<const uint8_t*>(b64Key)};
-    if (b64Key != nullptr) {
-      free(b64Key);
-    }
-
-    return keyBytes;
-  }
 }
 
 Error Server::Initialize(const ServerConfig& cfg)
@@ -306,7 +273,7 @@ std::expected<UserInfo, ListenError> Server::authenticate(ssh_session session, c
           .Role = auth.Role(ssh_message_auth_user(message))
         };
 
-        auto exportedKey = exportKey(userKey);
+        auto exportedKey = ExportPublicKeyBase64(userKey);
         if (exportedKey) {
           userInfo.Key = exportedKey.value();
         } else {
@@ -314,7 +281,7 @@ std::expected<UserInfo, ListenError> Server::authenticate(ssh_session session, c
           userInfo.Key = (const uint8_t*)"N/A";
         }
 
-        auto keyFp = genKeyFingerprint(userKey);
+        auto keyFp = PublicKeySHA256Fingerprint(userKey);
         if (keyFp) {
           userInfo.KeyFingerprint = keyFp.value();
         } else {

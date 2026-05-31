@@ -2,7 +2,6 @@
 
 #include <expected>
 #include <string>
-#include <expected>
 
 #include <blob/bytes.h>
 #include "common.h"
@@ -41,4 +40,7 @@ namespace SSH
     KeyType keyType = KeyType::None;
     ssh_key keyPtr = nullptr;
   };
+
+  std::expected<std::string, Error> PublicKeySHA256Fingerprint(const ssh_key key);
+  std::expected<Blob::Bytes, Error> ExportPublicKeyBase64(const ssh_key key);
 }
