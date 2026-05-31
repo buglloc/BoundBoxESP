@@ -5,6 +5,7 @@
 #include <assert.h>
 
 #include <tinyusb.h>
+#include <tinyusb_default_config.h>
 #include <tinyusb_net.h>
 
 #include <esp_netif.h>
@@ -59,9 +60,8 @@ namespace
 
 esp_err_t NetUsb::Initialize()
 {
-  const tinyusb_config_t usbCfg = {
-      .external_phy = false,
-  };
+  tinyusb_config_t usbCfg = TINYUSB_CONFIG_FULL_SPEED(nullptr, nullptr);
+  usbCfg.task.xCoreID = 0;
   esp_err_t err = tinyusb_driver_install(&usbCfg);
   ESP_RETURN_ON_ERROR(err, TAG, "install TinyUSB driver");
 
@@ -118,7 +118,7 @@ esp_err_t NetUsb::Attach(esp_netif_t* netif)
   err = esp_derive_local_mac(tinyNetCfg.mac_addr, efuseMac);
   ESP_RETURN_ON_ERROR(err, TAG, "derive local MAC");
 
-  err = tinyusb_net_init(TINYUSB_USBDEV_0, &tinyNetCfg);
+  err = tinyusb_net_init(&tinyNetCfg);
   ESP_RETURN_ON_ERROR(err, TAG, "initialize USB Net device");
 
   uint8_t netifMac[6];

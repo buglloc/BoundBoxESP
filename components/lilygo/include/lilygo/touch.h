@@ -8,6 +8,8 @@
 
 
 // fwd
+struct i2c_master_bus_t;
+typedef i2c_master_bus_t* i2c_master_bus_handle_t;
 struct esp_lcd_touch_s;
 typedef esp_lcd_touch_s* esp_lcd_touch_handle_t;
 struct esp_lcd_panel_io_t;
@@ -19,12 +21,15 @@ namespace LilyGo
   {
   public:
     TouchSensor() = default;
+    ~TouchSensor();
+
     esp_err_t Initialize();
     bool GetPoint(uint16_t& x, uint16_t& y);
     bool HomePressed() const;
 
   private:
     atomic_bool homePressed;
+    i2c_master_bus_handle_t i2cBus = nullptr;
     esp_lcd_touch_handle_t tp = nullptr;
     esp_lcd_panel_io_handle_t tpIO = nullptr;
   };
